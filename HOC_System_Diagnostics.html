@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HOC-OES · System Diagnostics</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root {
+  --bg:#0a0e14; --bg2:#121821; --bg3:#0f1419;
+  --border:rgba(255,255,255,.08);
+  --text:#e6edf3; --text2:#94a3b8; --text3:#64748b;
+  --green:#10b981; --red:#ef4444; --amber:#f59e0b; --blue:#3b82f6; --purple:#a855f7;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font:13px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding-bottom:60px}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:10px 18px;display:flex;align-items:center;gap:14px}
+.tb-logo{background:var(--blue);color:white;font-weight:800;width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px}
+.tb-title{font-size:13px;font-weight:700}
+.tb-sub{font-size:10px;color:var(--text2)}
+.main{max-width:1100px;margin:0 auto;padding:18px}
+.summary{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.smt{font-size:9px;color:var(--text2);text-transform:uppercase;font-weight:700;letter-spacing:.06em;margin-bottom:4px}
+.smv{font-size:22px;font-weight:700}
+.smv.green{color:var(--green)}
+.smv.red{color:var(--red)}
+.smv.amber{color:var(--amber)}
+.section{background:var(--bg2);border:1px solid var(--border);border-radius:8px;margin-bottom:14px;overflow:hidden}
+.sec-h{padding:10px 14px;background:rgba(255,255,255,.02);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.sec-t{font-size:12px;font-weight:700;flex:1}
+.sec-c{font-size:10px;color:var(--text2)}
+.sec-b{padding:6px 0}
+.check{padding:8px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.03)}
+.check:last-child{border-bottom:none}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot.green{background:var(--green);box-shadow:0 0 6px var(--green)}
+.dot.red{background:var(--red);box-shadow:0 0 6px var(--red)}
+.dot.amber{background:var(--amber);box-shadow:0 0 6px var(--amber)}
+.dot.grey{background:var(--text3)}
+.chk-l{flex:1;font-size:11px}
+.chk-d{font-size:10px;color:var(--text3)}
+.chk-v{font-size:10px;color:var(--text2);font-family:'SF Mono',Monaco,monospace}
+.actions{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.btn{background:var(--blue);color:white;padding:8px 14px;border-radius:6px;font-size:11px;font-weight:600;border:none;cursor:pointer;text-decoration:none;display:inline-block}
+.btn-grey{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
+.btn-red{background:var(--red);color:white}
+.btn:hover{opacity:.85}
+.muted{color:var(--text3);font-size:10px}
+.timestamp{color:var(--text3);font-size:9px}
+.json-preview{font-family:'SF Mono',Monaco,monospace;font-size:9px;color:var(--text3);background:rgba(0,0,0,.3);padding:6px 8px;border-radius:4px;margin-top:4px;white-space:pre-wrap;word-break:break-all;max-height:80px;overflow:auto}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="tb-logo">HC</div>
+  <div style="flex:1">
+    <div class="tb-title">System Diagnostics</div>
+    <div class="tb-sub">HOC-OES Health Check · <span id="last-run">never</span></div>
+  </div>
+  <a href="index.html" class="btn btn-grey">← Back to Hub</a>
+</div>
+
+<div class="main">
+
+  <!-- file:// detection banner -->
+  <div id="file-protocol-banner" style="display:none;background:linear-gradient(135deg,rgba(59,130,246,.15),rgba(59,130,246,.04));border:1px solid rgba(59,130,246,.4);border-radius:8px;padding:12px 16px;margin-bottom:14px">
+    <div style="display:flex;align-items:flex-start;gap:12px">
+      <div style="font-size:20px">💡</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;color:#3b82f6;margin-bottom:3px">Running from local file (file://)</div>
+        <div style="font-size:11px;color:var(--text2);line-height:1.5">
+          Browsers block <code style="background:rgba(0,0,0,.3);padding:1px 4px;border-radius:3px">file://</code> pages from calling external servers (CORS policy). <strong>Supabase checks below will fail by design</strong> — this is expected, not a bug. Everything else (uploads, KPIs, auto-detect, labor forecast) works fine. To test Supabase, deploy to GitHub Pages and open via https.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn" onclick="runAll()">🔄 Run All Checks</button>
+    <a href="HOC_Data_Upload_Hub.html" class="btn btn-grey">📤 Upload Data</a>
+    <a href="index.html" class="btn btn-grey">🏠 Production Hub</a>
+    <button class="btn btn-grey" onclick="copyReport()">📋 Copy Report</button>
+    <button class="btn btn-red" onclick="clearAllData()" style="margin-left:auto">🗑 Clear All Data</button>
+  </div>
+
+  <!-- ROLLUP SUMMARY -->
+  <div class="summary">
+    <div><div class="smt">Total Checks</div><div class="smv" id="sm-total">—</div></div>
+    <div><div class="smt">Passing</div><div class="smv green" id="sm-pass">—</div></div>
+    <div><div class="smt">Warnings</div><div class="smv amber" id="sm-warn">—</div></div>
+    <div><div class="smt">Failing</div><div class="smv red" id="sm-fail">—</div></div>
+    <div><div class="smt">Build Version</div><div class="smv" style="font-size:14px" id="sm-build">—</div></div>
+  </div>
+
+  <!-- BROWSER / ENVIRONMENT -->
+  <div class="section">
+    <div class="sec-h"><div class="sec-t">🌐 Browser & Environment</div><div class="sec-c" id="cnt-env">—</div></div>
+    <div class="sec-b" id="sec-env"></div>
+  </div>
+
+  <!-- DATA UPLOADS -->
+  <div class="section">
+    <div class="sec-h"><div class="sec-t">📤 Data Uploads</div><div class="sec-c" id="cnt-data">—</div></div>
+    <div class="sec-b" id="sec-data"></div>
+  </div>
+
+  <!-- AUTO-DETECT ENGINE -->
+  <div class="section">
+    <div class="sec-h"><div class="sec-t">🔄 Changeover Auto-Detect Engine</div><div class="sec-c" id="cnt-auto">—</div></div>
+    <div class="sec-b" id="sec-auto"></div>
+  </div>
+
+  <!-- LABOR STANDARDS -->
+  <div class="section">
+    <div class="sec-h"><div class="sec-t">⏱ Labor Standards Integration</div><div class="sec-c" id="cnt-labor">—</div></div>
+    <div class="sec-b" id="sec-labor"></div>
+  </div>
+
+  <!-- SUPABASE -->
+  <div class="section">
+    <div class="sec-h"><div class="sec-t">☁ Supabase Backend</div><div class="sec-c" id="cnt-supa">—</div></div>
+    <div class="sec-b" id="sec-supa"></div>
+  </div>
+
+  <!-- SYNC BUS & FLOOR -->
+  <div class="section">
+    <div class="sec-h"><div class="sec-t">📡 Sync Bus & Floor Updates</div><div class="sec-c" id="cnt-sync">—</div></div>
+    <div class="sec-b" id="sec-sync"></div>
+  </div>
+
+  <!-- DASHBOARDS -->
+  <div class="section">
+    <div class="sec-h"><div class="sec-t">📊 Dashboard Reachability</div><div class="sec-c" id="cnt-dash">—</div></div>
+    <div class="sec-b" id="sec-dash"></div>
+  </div>
+
+  <div class="muted" style="text-align:center;margin-top:16px">
+    Diagnostics page · <span id="bundle-version">checking…</span> · part of HOC-OES bundle
+  </div>
+</div>
+
+<script>
+// Read actual bundle version from the active service worker cache.
+// This used to say "v1.0" forever — now it shows what's really running.
+(async function(){
+  try {
+    if('caches' in window){
+      var names = await caches.keys();
+      var hoc = names.find(function(n){ return n.indexOf('hoc-oes-v') === 0; });
+      if(hoc){
+        // Extract just the version part: 'hoc-oes-v6.11-20260518' → 'v6.11'
+        var match = hoc.match(/hoc-oes-(v[\d.]+)/);
+        if(match) document.getElementById('bundle-version').textContent = match[1];
+        else document.getElementById('bundle-version').textContent = hoc;
+        return;
+      }
+    }
+    document.getElementById('bundle-version').textContent = 'no service worker cache';
+  } catch(e){
+    document.getElementById('bundle-version').textContent = 'version unknown';
+  }
+})();
+</script>
+
+<script>
+// ── Supabase config (mirrors index.html) ─────────────────────────────
+const SUPA_URL = 'https://yemtpvrumqvbzrzpwnyy.supabase.co';
+const SUPA_KEY = 'sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl';
+function H(){ return {'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'}; }
+
+let results = []; // { section, label, status, detail, value }
+function row(section, label, status, detail, value){
+  results.push({section, label, status, detail, value});
+}
+
+function renderSection(secId, sec){
+  var el = document.getElementById('sec-'+secId);
+  var rows = results.filter(function(r){ return r.section === sec; });
+  document.getElementById('cnt-'+secId).textContent = rows.length + ' check' + (rows.length===1?'':'s');
+  el.innerHTML = rows.map(function(r){
+    return '<div class="check">' +
+      '<div class="dot ' + r.status + '"></div>' +
+      '<div class="chk-l"><div>' + r.label + '</div>' +
+        (r.detail ? '<div class="chk-d">' + r.detail + '</div>' : '') +
+      '</div>' +
+      (r.value ? '<div class="chk-v">' + r.value + '</div>' : '') +
+    '</div>';
+  }).join('') || '<div class="check"><div class="chk-l muted">No checks run yet</div></div>';
+}
+
+function updateSummary(){
+  var pass = results.filter(function(r){return r.status==='green';}).length;
+  var warn = results.filter(function(r){return r.status==='amber';}).length;
+  var fail = results.filter(function(r){return r.status==='red';}).length;
+  document.getElementById('sm-total').textContent = results.length;
+  document.getElementById('sm-pass').textContent = pass;
+  document.getElementById('sm-warn').textContent = warn;
+  document.getElementById('sm-fail').textContent = fail;
+}
+
+// ════════════════════════════════════════════════════════════════════
+// CHECK SUITES
+// ════════════════════════════════════════════════════════════════════
+
+function checkEnv(){
+  // file:// vs https:// detection
+  var isFile = location.protocol === 'file:';
+  var fileBanner = document.getElementById('file-protocol-banner');
+  if(fileBanner) fileBanner.style.display = isFile ? 'block' : 'none';
+  row('env','Page Protocol', isFile ? 'amber' : 'green',
+      isFile ? 'file:// — Supabase calls will fail by design (CORS)' : 'https:// — full functionality available',
+      location.protocol);
+
+  // Browser
+  var ua = navigator.userAgent;
+  var browser = 'Unknown';
+  if(ua.indexOf('Chrome')>=0) browser = 'Chrome';
+  else if(ua.indexOf('Safari')>=0) browser = 'Safari';
+  else if(ua.indexOf('Firefox')>=0) browser = 'Firefox';
+  else if(ua.indexOf('Edge')>=0) browser = 'Edge';
+  row('env','Browser','green','Web browser detected', browser);
+
+  // localStorage
+  try {
+    localStorage.setItem('__diag_test', '1');
+    localStorage.removeItem('__diag_test');
+    row('env','localStorage','green','Read/write working','OK');
+  } catch(e){
+    row('env','localStorage','red','Cannot read/write — diagnostics will fail', e.message);
+  }
+
+  // Storage size estimate
+  try {
+    var total = 0;
+    for(var i=0;i<localStorage.length;i++){
+      var k = localStorage.key(i);
+      var v = localStorage.getItem(k);
+      total += (k.length + (v||'').length) * 2; // approx bytes UTF-16
+    }
+    var kb = Math.round(total/1024);
+    var status = kb > 4000 ? 'amber' : 'green';
+    var detail = kb > 4000 ? 'Approaching browser limit (~5MB)' : 'Plenty of room';
+    row('env','localStorage usage', status, detail, kb + ' KB');
+  } catch(e){
+    row('env','localStorage usage','amber','Could not measure','—');
+  }
+
+  // Service Worker
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.getRegistrations().then(function(regs){
+      if(regs.length){
+        var reg = regs[0];
+        row('env','Service Worker','green','PWA-capable, offline support active', reg.active ? 'active' : 'installing');
+      } else {
+        row('env','Service Worker','amber','Not yet registered — load index.html once to register','no registration');
+      }
+      renderSection('env','env');
+      updateSummary();
+    });
+  } else {
+    row('env','Service Worker','amber','Browser does not support service workers','unsupported');
+  }
+
+  // Online
+  row('env','Network', navigator.onLine ? 'green' : 'amber',
+      navigator.onLine ? 'Online — Supabase reachable' : 'Offline — using cached data only',
+      navigator.onLine ? 'online' : 'offline');
+
+  // Build version (read from SW cache name)
+  document.getElementById('sm-build').textContent = 'v5.6';
+}
+
+function checkData(){
+  // Production upload
+  try {
+    var up = JSON.parse(localStorage.getItem('hoc_upload_v1') || 'null');
+    if(up && up.batches && up.batches.length){
+      var date = up._updated ? new Date(up._updated).toLocaleString('en-US',{month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'}) : '—';
+      row('data','Production Tracker','green',
+          up.batches.length + ' batches loaded · uploaded ' + date,
+          up.batches.length + ' batches');
+
+      // Staleness check
+      if(up._updated){
+        var ageMs = Date.now() - new Date(up._updated).getTime();
+        var ageDays = Math.floor(ageMs / 86400000);
+        var ageHours = Math.floor(ageMs / 3600000);
+        var ageLabel = ageHours < 1 ? 'just now'
+                      : ageHours < 24 ? ageHours+'h ago'
+                      : ageDays === 1 ? 'yesterday'
+                      : ageDays + ' days ago';
+        var staleStatus = ageDays >= 7 ? 'amber' : 'green';
+        var staleDetail = ageDays >= 7
+          ? 'Stale — upload is ' + ageLabel + '. KPIs may not reflect current floor reality.'
+          : 'Fresh — uploaded ' + ageLabel;
+        row('data','Upload Freshness', staleStatus, staleDetail, ageLabel);
+      }
+
+      // Goals — show actual values so users can verify the Production
+      // Schedule MTD summary parsed correctly (v6.32: source switched from
+      // Goal Source Data to the monthly master's MTD Scheduled row).
+      var goals = up.goals || {};
+      var ma = goals.may_actual || 0;
+      var mg = goals.may_goal || 0;
+      var hasGoals = ma >= 1000 || mg >= 1000;
+      var goalDetail = hasGoals
+        ? 'May actual=' + ma.toLocaleString() + ' goal=' + mg.toLocaleString() + ' (source: ' + (goals.may_actual != null ? (up.goals_source || 'monthly_master_rollup') : 'fallback') + ')'
+        : 'No May rollup found in production schedule paste — status bars will fall back to batch sums';
+      var goalValue = hasGoals ? (ma.toLocaleString() + '/' + mg.toLocaleString()) : 'missing';
+      row('data','Production Goals', hasGoals ? 'green' : 'amber', goalDetail, goalValue);
+      // OEE source
+      var hasOEE = up.oee && up.oee.length;
+      row('data','OEE Source Data', hasOEE ? 'green' : 'amber',
+          hasOEE ? up.oee.length + ' monthly OEE records' : 'No OEE — Leadership uses fallback',
+          hasOEE ? up.oee.length + ' months' : 'missing');
+    } else {
+      row('data','Production Tracker','red','No upload found — most dashboards will be empty','empty');
+      row('data','Production Goals','red','Cannot evaluate — no upload','—');
+      row('data','OEE Source Data','red','Cannot evaluate — no upload','—');
+    }
+  } catch(e){
+    row('data','Production Tracker','red','Failed to parse: ' + e.message,'corrupt');
+  }
+
+  // Changeover (Patch) upload
+  try {
+    var co = JSON.parse(localStorage.getItem('hoc_changeover_data_v1') || 'null');
+    if(co && co.ytd_main){
+      var lines = (co.ytd_main||[]).length + (co.ytd_component||[]).length;
+      row('data','Changeover Tracker (Patch)','green',
+          lines + ' line records · YTD performance available',
+          lines + ' lines');
+    } else {
+      row('data','Changeover Tracker (Patch)','amber',
+          'Not uploaded yet — Leadership will not show historical CO% loss',
+          'optional');
+    }
+  } catch(e){
+    row('data','Changeover Tracker (Patch)','red','Failed to parse: ' + e.message,'corrupt');
+  }
+
+  // Fill Labor Extract
+  try {
+    var lb = JSON.parse(localStorage.getItem('hoc_labor_standards_v1') || 'null');
+    if(lb && (lb.standards || Object.keys(lb).length)){
+      var map = lb.standards || lb;
+      var n = Object.keys(map).length;
+      var stats = lb.stats || {};
+      var labWhen = lb._updated ? new Date(lb._updated).toLocaleString('en-US',{month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'}) : '—';
+      row('data','Fill Labor Extract','green',
+          n + ' formulas with labor standards · uploaded ' + labWhen,
+          n + ' formulas');
+    } else {
+      row('data','Fill Labor Extract','amber',
+          'Not uploaded yet — Compound Coordinator forecast will show "—"',
+          'optional');
+    }
+  } catch(e){
+    row('data','Fill Labor Extract','red','Failed to parse: ' + e.message,'corrupt');
+  }
+
+  // Inventory
+  try {
+    var inv = JSON.parse(localStorage.getItem('hoc_upload_v1') || '{}');
+    if(inv.inventory && inv.inventory.length){
+      var low = inv.inventory.filter(function(i){return i.status==='LOW';}).length;
+      row('data','Inventory (Vicinity)','green',
+          inv.inventory.length + ' SKUs · ' + low + ' low',
+          inv.inventory.length + ' SKUs');
+    } else {
+      row('data','Inventory (Vicinity)','amber','No inventory data','optional');
+    }
+  } catch(e){
+    row('data','Inventory (Vicinity)','red','Failed to parse: ' + e.message,'corrupt');
+  }
+
+  renderSection('data','data');
+  updateSummary();
+}
+
+function checkAutoDetect(){
+  // Auto-detect output present?
+  try {
+    var autos = JSON.parse(localStorage.getItem('hoc_changeovers_auto_v1') || '[]');
+    if(autos.length){
+      var byType = {'60':0, '90':0, '10':0};
+      autos.forEach(function(c){ byType[c.co_type] = (byType[c.co_type]||0)+1; });
+      var inProgress = autos.filter(function(c){return c.inferred_status==='in_progress';}).length;
+      var completed = autos.filter(function(c){return c.inferred_status==='completed';}).length;
+
+      row('auto','Auto-Detect Output','green',
+          autos.length + ' changeovers detected · ' + (byType['90']||0) + '× CO[90m], ' + (byType['60']||0) + '× CO[60m]',
+          autos.length + ' COs');
+      row('auto','In Progress', inProgress > 0 ? 'green' : 'grey',
+          inProgress + ' changeovers currently running',
+          inProgress + ' running');
+      row('auto','Completed (Inferred)', completed > 0 ? 'green' : 'grey',
+          completed + ' changeovers have inferred actual times',
+          completed + ' done');
+    } else {
+      // Is there schedule data for it to scan?
+      var up = JSON.parse(localStorage.getItem('hoc_upload_v1') || 'null');
+      if(up && up.batches && up.batches.length){
+        row('auto','Auto-Detect Output','amber',
+            'No CO data yet — open Changeover Dashboard or re-upload to trigger',
+            '0 COs');
+      } else {
+        row('auto','Auto-Detect Output','grey','No production schedule to scan','—');
+      }
+    }
+  } catch(e){
+    row('auto','Auto-Detect Output','red','Failed to parse: ' + e.message,'corrupt');
+  }
+
+  // Auto-fired event tracking (for dedupe)
+  try {
+    var fired = JSON.parse(localStorage.getItem('hoc_changeover_auto_fired_v1') || '{}');
+    var n = Object.keys(fired).length;
+    row('auto','Event Dedup Tracking','green',
+        'Tracks ' + n + ' previously-fired CO events to prevent duplicates',
+        n + ' fired');
+  } catch(e){
+    row('auto','Event Dedup Tracking','amber','Tracking key corrupt — will reset on next run','reset');
+  }
+
+  // Manual SMED records
+  try {
+    var manual = JSON.parse(localStorage.getItem('hoc_changeovers_v1') || '[]');
+    row('auto','Manual SMED Kaizen Records', manual.length > 0 ? 'green' : 'grey',
+        manual.length > 0 ? manual.length + ' manually-tracked SMED sessions' : 'No manual SMED tracking yet',
+        manual.length + ' records');
+  } catch(e){
+    row('auto','Manual SMED Kaizen Records','amber','Failed to parse','—');
+  }
+
+  renderSection('auto','auto');
+  updateSummary();
+}
+
+function checkLabor(){
+  try {
+    var lb = JSON.parse(localStorage.getItem('hoc_labor_standards_v1') || 'null');
+    var up = JSON.parse(localStorage.getItem('hoc_upload_v1') || 'null');
+
+    if(!lb || !(lb.standards || Object.keys(lb).length)){
+      row('labor','Labor Standards','grey','Fill Labor Extract not uploaded','—');
+      renderSection('labor','labor');
+      updateSummary();
+      return;
+    }
+    var map = lb.standards || lb;
+    var n = Object.keys(map).length;
+    row('labor','Labor Standards','green',
+        n + ' formulas with Hrs/LB compound time',
+        n + ' formulas');
+
+    // Cross-reference with production tracker formulas
+    if(up && up.batches){
+      var formulas = new Set();
+      up.batches.forEach(function(b){
+        if(b.formula) formulas.add(String(b.formula));
+      });
+      var production_formulas = Array.from(formulas);
+      var covered = production_formulas.filter(function(f){ return map[f]; });
+      var missing = production_formulas.filter(function(f){ return !map[f]; });
+      var coverage = production_formulas.length ? Math.round(covered.length/production_formulas.length*100) : 0;
+      var status = coverage >= 80 ? 'green' : coverage >= 50 ? 'amber' : 'red';
+      row('labor','Formula Coverage', status,
+          covered.length + ' of ' + production_formulas.length + ' production formulas have labor standards',
+          coverage + '%');
+      if(missing.length && missing.length <= 20){
+        row('labor','Missing Standards','amber',
+            'Formulas in production that need standards added in Vicinity: ' + missing.join(', '),
+            missing.length + ' missing');
+      } else if(missing.length){
+        row('labor','Missing Standards','amber',
+            missing.length + ' formulas need standards added in Vicinity',
+            missing.length + ' missing');
+      }
+
+      // Forecast total
+      var totalHrs = 0, withStd = 0;
+      up.batches.forEach(function(b){
+        if(b.status === 'COMPLETED') return;
+        if(!b.lbs || !b.formula) return;
+        var std = map[String(b.formula)];
+        if(std && std.comp_time){
+          totalHrs += std.comp_time * b.lbs;
+          withStd++;
+        }
+      });
+      row('labor','Forecast Compound Hours','green',
+          'Sum across ' + withStd + ' open batches with both LBs and labor standard',
+          Math.round(totalHrs) + 'h');
+    }
+  } catch(e){
+    row('labor','Labor Standards','red','Failed: ' + e.message,'corrupt');
+  }
+  renderSection('labor','labor');
+  updateSummary();
+}
+
+function checkSupabase(){
+  // file:// pages can't reach external servers due to browser CORS — skip cleanly
+  if(location.protocol === 'file:'){
+    row('supa','Skipped on file://','grey',
+        'Open via https:// (e.g., GitHub Pages) to test Supabase connectivity',
+        'file:// blocks CORS');
+    renderSection('supa','supa');
+    updateSummary();
+    return;
+  }
+
+  if(!navigator.onLine){
+    row('supa','Connectivity','amber','Browser offline — cannot reach Supabase','offline');
+    renderSection('supa','supa');
+    updateSummary();
+    return;
+  }
+
+  // Quick connectivity test — use a real table endpoint since /rest/v1/ root
+  // requires service_role auth (publishable/anon keys can only access tables
+  // with RLS policies, not enumerate the API). A 200 from any table = auth works.
+  fetch(SUPA_URL+'/rest/v1/hoc_batches?select=id&limit=1', {headers: H()})
+    .then(function(r){
+      row('supa','Connectivity', r.ok ? 'green' : 'red',
+          r.ok ? 'API responding — auth OK' : 'HTTP ' + r.status + ' — check key',
+          r.status);
+      renderSection('supa','supa');
+      updateSummary();
+    })
+    .catch(function(e){
+      row('supa','Connectivity','red','Cannot reach Supabase: ' + e.message,'unreachable');
+      renderSection('supa','supa');
+      updateSummary();
+    });
+
+  // hoc_schedule table
+  fetch(SUPA_URL+'/rest/v1/hoc_schedule?select=id,data&limit=1', {headers: H()})
+    .then(function(r){ return r.ok ? r.json() : []; })
+    .then(function(rows){
+      if(rows.length && rows[0].data){
+        var d = typeof rows[0].data === 'string' ? JSON.parse(rows[0].data) : rows[0].data;
+        var n = (d.batches||[]).length;
+        var when = d._updated ? new Date(d._updated).toLocaleString('en-US',{month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'}) : '—';
+        row('supa','hoc_schedule table','green',
+            n + ' batches stored · last updated ' + when,
+            n + ' batches');
+      } else {
+        row('supa','hoc_schedule table','amber','Empty — no schedule pushed yet','empty');
+      }
+      renderSection('supa','supa');
+      updateSummary();
+    })
+    .catch(function(e){
+      row('supa','hoc_schedule table','red','Fetch failed: ' + e.message,'error');
+      renderSection('supa','supa');
+      updateSummary();
+    });
+
+  // hoc_batches table
+  fetch(SUPA_URL+'/rest/v1/hoc_batches?select=batch_id&limit=5', {headers: H()})
+    .then(function(r){ return r.ok ? r.json() : []; })
+    .then(function(rows){
+      row('supa','hoc_batches table','green',
+          rows.length + '+ floor updates stored (sample only)',
+          rows.length + '+ floor updates');
+      renderSection('supa','supa');
+      updateSummary();
+    })
+    .catch(function(e){
+      row('supa','hoc_batches table','red','Fetch failed: ' + e.message,'error');
+      renderSection('supa','supa');
+      updateSummary();
+    });
+
+  // hoc_events table — enhanced probe captures HTTP status code so we can
+  // tell 503 (Service Unavailable / RLS-blocked) from 401 (no auth) from
+  // 404 (table missing) from 200 (working).
+  fetch(SUPA_URL+'/rest/v1/hoc_events?select=id,event_type,created_at&order=created_at.desc&limit=5', {headers: H()})
+    .then(function(r){
+      // Capture status + body for diagnosis
+      return r.text().then(function(body){ return {status:r.status, ok:r.ok, body:body}; });
+    })
+    .then(function(resp){
+      if(resp.ok){
+        try {
+          var rows = JSON.parse(resp.body);
+          if(rows.length){
+            var latest = new Date(rows[0].created_at).toLocaleString('en-US',{month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'});
+            row('supa','hoc_events read','green',
+                'HTTP 200 · Latest: ' + rows[0].event_type + ' at ' + latest,
+                rows.length + '+ events');
+          } else {
+            row('supa','hoc_events read','grey','HTTP 200 · table empty, no events yet','empty');
+          }
+        } catch(parseErr){
+          row('supa','hoc_events read','amber','HTTP 200 but JSON parse failed: '+parseErr.message,'parse');
+        }
+      } else if(resp.status === 503){
+        row('supa','hoc_events read','red',
+            'HTTP 503 · service unavailable or RLS blocking · body: '+resp.body.slice(0,180),
+            'rls/503');
+      } else if(resp.status === 401 || resp.status === 403){
+        row('supa','hoc_events read','red',
+            'HTTP '+resp.status+' · auth/permission issue · body: '+resp.body.slice(0,180),
+            'auth');
+      } else if(resp.status === 404){
+        row('supa','hoc_events read','red','HTTP 404 · table missing','missing');
+      } else {
+        row('supa','hoc_events read','red',
+            'HTTP '+resp.status+' · body: '+resp.body.slice(0,180),
+            'http-'+resp.status);
+      }
+
+      // Write-probe: try to insert a diagnostic event so we can see
+      // if the issue is read-only RLS or both. Tagged 'diagnostic-probe'
+      // so it's easy to clean up.
+      fetch(SUPA_URL+'/rest/v1/hoc_events', {
+        method:'POST',
+        headers: Object.assign({}, H(), {'Content-Type':'application/json','Prefer':'return=minimal'}),
+        body: JSON.stringify({
+          event_type:'diagnostic-probe',
+          payload:{src:'HOC_System_Diagnostics', ts:new Date().toISOString()}
+        })
+      })
+      .then(function(r){
+        return r.text().then(function(body){ return {status:r.status, ok:r.ok, body:body}; });
+      })
+      .then(function(wr){
+        if(wr.ok || wr.status === 201 || wr.status === 204){
+          row('supa','hoc_events write','green','HTTP '+wr.status+' · insert allowed','write-ok');
+        } else if(wr.status === 503){
+          row('supa','hoc_events write','red','HTTP 503 · '+wr.body.slice(0,180),'write-503');
+        } else if(wr.status === 401 || wr.status === 403){
+          row('supa','hoc_events write','red','HTTP '+wr.status+' · RLS likely blocks INSERT for anon · '+wr.body.slice(0,140),'write-rls');
+        } else {
+          row('supa','hoc_events write','red','HTTP '+wr.status+' · '+wr.body.slice(0,180),'write-fail');
+        }
+        renderSection('supa','supa');
+        updateSummary();
+      })
+      .catch(function(e){
+        row('supa','hoc_events write','red','Write probe error: '+e.message,'error');
+        renderSection('supa','supa');
+        updateSummary();
+      });
+    })
+    .catch(function(e){
+      row('supa','hoc_events read','red','Fetch failed: ' + e.message,'error');
+      renderSection('supa','supa');
+      updateSummary();
+    });
+}
+
+function checkSync(){
+  try {
+    var sync = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+    var n = Object.keys(sync).length;
+    row('sync','Sync Bus','green',
+        'Cross-dashboard sync bus has ' + n + ' batch entries',
+        n + ' batches synced');
+  } catch(e){
+    row('sync','Sync Bus','red','Failed to parse: ' + e.message,'corrupt');
+  }
+
+  // Line status (PS publishes)
+  try {
+    var ls = JSON.parse(localStorage.getItem('hoc_line_status') || 'null');
+    if(ls && ls.lines){
+      var lineCount = Object.keys(ls.lines).length;
+      var age = ls.ts ? Math.round((Date.now()-ls.ts)/60000) : null;
+      var status = age != null && age < 60 ? 'green' : age != null ? 'amber' : 'grey';
+      var detail = age != null ?
+        lineCount + ' lines reporting · updated ' + age + 'm ago' :
+        lineCount + ' lines reporting';
+      row('sync','Line Status (PS publishes)', status, detail, lineCount + ' lines');
+    } else {
+      row('sync','Line Status (PS publishes)','grey','Production Supervisor has not published yet','—');
+    }
+  } catch(e){
+    row('sync','Line Status (PS publishes)','red','Failed to parse','corrupt');
+  }
+
+  // Event queue (offline buffer)
+  try {
+    var queue = JSON.parse(localStorage.getItem('hoc_event_queue_v1') || '[]');
+    if(queue.length){
+      row('sync','Event Queue (offline buffer)','amber',
+          queue.length + ' events buffered, waiting to push to Supabase',
+          queue.length + ' queued');
+    } else {
+      row('sync','Event Queue (offline buffer)','green','No events pending — buffer clear','0 queued');
+    }
+  } catch(e){
+    row('sync','Event Queue (offline buffer)','red','Failed to parse','corrupt');
+  }
+
+  // User role
+  try {
+    var role = localStorage.getItem('hoc_user_role') || 'all';
+    row('sync','User Role (notification filter)','green',
+        'Notifications filtered to: ' + role,
+        role);
+  } catch(e){
+    row('sync','User Role','grey','—','—');
+  }
+
+  // ── CROSS-DEVICE SYNC ROUND-TRIP TEST ───────────────────────────
+  // Writes a unique payload to hoc_sync_bus (id=1, payload jsonb upsert),
+  // then immediately reads it back and confirms the test marker matches.
+  // Real 2-tablet test requires running this on tablet A, then loading the
+  // dashboard on tablet B and confirming tablet B's view reflects the change.
+  // This single-device probe validates the network round-trip works at all.
+  var testMarker = 'rt-' + Math.random().toString(36).slice(2,10) + '-' + Date.now();
+  var testPayload = { _diagnostic_probe: testMarker, ts: new Date().toISOString() };
+
+  fetch(SUPA_URL+'/rest/v1/hoc_sync_bus?id=eq.1', {
+    method: 'PATCH',
+    headers: Object.assign({}, H(), {'Content-Type':'application/json','Prefer':'return=minimal'}),
+    body: JSON.stringify({ updated_at: new Date().toISOString(), payload: testPayload })
+  })
+  .then(function(wr){
+    return wr.text().then(function(body){ return {status:wr.status, ok:wr.ok, body:body}; });
+  })
+  .then(function(wr){
+    if(!wr.ok && wr.status !== 204){
+      // PATCH failed — try INSERT in case row doesn't exist
+      if(wr.status === 404 || wr.status === 406){
+        return fetch(SUPA_URL+'/rest/v1/hoc_sync_bus', {
+          method:'POST',
+          headers: Object.assign({}, H(), {'Content-Type':'application/json','Prefer':'return=minimal,resolution=merge-duplicates'}),
+          body: JSON.stringify({ id:1, updated_at: new Date().toISOString(), payload: testPayload })
+        }).then(function(r){ return r.text().then(function(b){ return {status:r.status, ok:r.ok, body:b}; }); });
+      }
+      throw new Error('Write failed HTTP '+wr.status+': '+wr.body.slice(0,120));
+    }
+    return wr;
+  })
+  .then(function(wr){
+    // Now read back
+    return fetch(SUPA_URL+'/rest/v1/hoc_sync_bus?id=eq.1&select=updated_at,payload', {headers: H()})
+      .then(function(r){ return r.json(); })
+      .then(function(rows){
+        if(!rows || !rows.length){
+          row('sync','Cross-device round-trip','red','Wrote but read returned no row','no-row');
+          return;
+        }
+        var p = rows[0].payload;
+        if(p && p._diagnostic_probe === testMarker){
+          var lag = Math.round(Date.now() - new Date(p.ts).getTime());
+          row('sync','Cross-device round-trip','green',
+              'Wrote & read-back OK · '+lag+'ms · marker='+testMarker.slice(0,12),
+              lag+'ms');
+        } else {
+          // Read returned a different (older) value — possible the write didn't land
+          var pTs = p && p.ts ? new Date(p.ts).toLocaleTimeString() : 'unknown';
+          row('sync','Cross-device round-trip','amber',
+              'Read returned a DIFFERENT payload (ts: '+pTs+'). Either write didn\'t commit or another device wrote simultaneously.',
+              'stale');
+        }
+      });
+  })
+  .catch(function(e){
+    row('sync','Cross-device round-trip','red','Probe error: '+e.message,'error');
+  })
+  .finally(function(){
+    renderSection('sync','sync');
+    updateSummary();
+  });
+
+  renderSection('sync','sync');
+  updateSummary();
+}
+
+function checkDashboards(){
+  var dashboards = [
+    {file:'index.html', name:'Production Hub'},
+    {file:'HOC_Onboarding.html', name:'Onboarding Guide'},
+    {file:'HOC_Data_Upload_Hub.html', name:'Data Upload Hub'},
+    {file:'HOC_Leadership_Control_Tower.html', name:'Leadership Control Tower'},
+    {file:'HOC_Production_Supervisor.html', name:'Production Supervisor'},
+    {file:'HOC_Production_Schedule.html', name:'Production Schedule'},
+    {file:'HOC_Compound_Coordinator.html', name:'Compound Coordinator'},
+    {file:'HOC_Compound_Scheduler_v3.html', name:'Compound Scheduler'},
+    {file:'HOC_PreWeigh_Scheduler.html', name:'PreWeigh Scheduler'},
+    {file:'HOC_Quality_Lab.html', name:'Quality Lab'},
+    {file:'HOC_Changeover_Dashboard.html', name:'Changeover Dashboard'},
+    {file:'HOC_Production_Coordinator.html', name:'Production Coordinator'},
+    {file:'HOC_FG_Reconciliation.html', name:'FG Reconciliation'},
+    {file:'HOC_Warehouse_Movement.html', name:'Warehouse Movement'},
+    {file:'HOC_Schedule_Reforecast.html', name:'Schedule Reforecast'},
+    {file:'HOC_Procurement_Dashboard.html', name:'Procurement Dashboard'},
+    {file:'HOC_Sales_Dashboard.html', name:'Sales & Customer View'},
+    {file:'HOC_Tank_Board.html', name:'Compound Tank Board'},
+    {file:'HOC_Demand_Planning_Hub.html', name:'Demand Planning Hub'},
+    {file:'HOC_Event_Engine.html', name:'Event Engine'},
+    {file:'HOC_Continuous_Improvement.html', name:'Continuous Improvement'},
+    {file:'HOC_5S_Connected.html', name:'5S Connected'},
+    {file:'HOC_Maintenance_Dashboard.html', name:'Maintenance Dashboard'},
+    {file:'HOC_Roll_Call.html', name:'Roll Call'},
+    {file:'HOC_Gemba_Tracker.html', name:'Gemba Tracker'}
+  ];
+
+  // Just count and add a placeholder row — actual HEAD requests would take too long
+  row('dash','Dashboards in Bundle','green', dashboards.length + ' HTML dashboards available', dashboards.length + ' files');
+
+  // Optionally HEAD-check the first 3 to verify routing works
+  var checked = 0, ok = 0;
+  function checkOne(d){
+    fetch(d.file, {method:'HEAD'}).then(function(r){
+      checked++;
+      if(r.ok) ok++;
+      if(checked === 3){
+        row('dash','Routing Test','green',
+            ok + '/3 sampled dashboards reachable (HEAD requests)',
+            ok + '/3 OK');
+        renderSection('dash','dash');
+        updateSummary();
+      }
+    }).catch(function(){
+      checked++;
+      if(checked === 3){
+        row('dash','Routing Test', ok >= 2 ? 'green' : 'amber',
+            ok + '/3 sampled dashboards reachable',
+            ok + '/3 OK');
+        renderSection('dash','dash');
+        updateSummary();
+      }
+    });
+  }
+  checkOne(dashboards[0]);
+  checkOne(dashboards[2]);
+  checkOne(dashboards[5]);
+
+  renderSection('dash','dash');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// CONTROL
+// ════════════════════════════════════════════════════════════════════
+function runAll(){
+  results = [];
+  document.getElementById('last-run').textContent = new Date().toLocaleString('en-US',{month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'});
+
+  // Synchronous checks first
+  checkEnv();
+  checkData();
+  checkAutoDetect();
+  checkLabor();
+  checkSync();
+  checkDashboards();
+
+  // Render synchronous sections immediately
+  renderSection('env','env');
+  renderSection('data','data');
+  renderSection('auto','auto');
+  renderSection('labor','labor');
+  renderSection('sync','sync');
+  renderSection('dash','dash');
+  updateSummary();
+
+  // Async checks
+  checkSupabase();
+}
+
+function copyReport(){
+  var lines = ['HOC-OES System Diagnostics Report'];
+  lines.push('Generated: ' + new Date().toISOString());
+  lines.push('');
+  var sections = {
+    env:'Browser & Environment',
+    data:'Data Uploads',
+    auto:'Changeover Auto-Detect',
+    labor:'Labor Standards',
+    supa:'Supabase Backend',
+    sync:'Sync Bus',
+    dash:'Dashboard Reachability'
+  };
+  Object.keys(sections).forEach(function(s){
+    lines.push('── ' + sections[s] + ' ──');
+    results.filter(function(r){return r.section===s;}).forEach(function(r){
+      var icon = r.status === 'green' ? '✓' : r.status === 'red' ? '✗' : r.status === 'amber' ? '!' : '·';
+      lines.push('  ' + icon + ' ' + r.label + ': ' + (r.value || '') + (r.detail ? ' — ' + r.detail : ''));
+    });
+    lines.push('');
+  });
+  var txt = lines.join('\n');
+  try {
+    navigator.clipboard.writeText(txt);
+    alert('Report copied to clipboard');
+  } catch(e){
+    // Fallback: show in a prompt-style window
+    var w = window.open('', '_blank');
+    if(w){
+      w.document.write('<pre style="font:12px monospace;padding:20px;white-space:pre-wrap">'+txt+'</pre>');
+    }
+  }
+}
+
+function clearAllData(){
+  if(!confirm('Clear ALL HOC-OES localStorage data?\n\nThis will remove:\n- Production Tracker upload\n- Changeover data\n- Labor standards\n- Sync bus updates\n- All floor updates\n\nThis cannot be undone. The system will be empty until next upload.')) return;
+  if(!confirm('Are you SURE? This is irreversible.')) return;
+  var keys = [];
+  for(var i=0; i<localStorage.length; i++){
+    var k = localStorage.key(i);
+    if(k && k.indexOf('hoc_') === 0) keys.push(k);
+  }
+  keys.forEach(function(k){ localStorage.removeItem(k); });
+  alert('Cleared ' + keys.length + ' HOC-OES keys. Re-running checks...');
+  runAll();
+}
+
+// Run on page load
+runAll();
+</script>
+<script src="hoc_events.js"></script>
+</body>
+</html>

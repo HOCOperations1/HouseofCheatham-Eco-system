@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HOC OES — Datalink Health</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root{
+  --bg:#0B0E17;--bg2:#111520;--bg3:#161C28;
+  --border:#1E293B;--border2:#293548;
+  --text:#E2E8F3;--text2:#94A3B8;--text3:#64748B;
+  --green:#22C55E;--red:#EF4444;--amber:#F59E0B;--blue:#3B82F6;
+  --purple:#A78BFA;--cyan:#22D3EE;
+  --green-l:rgba(34,197,94,.1);--red-l:rgba(239,68,68,.1);
+  --amber-l:rgba(245,158,11,.1);--blue-l:rgba(59,130,246,.1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:ui-monospace,monospace;background:var(--bg);color:var(--text);font-size:11px;min-height:100vh}
+.topbar{display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;flex-wrap:wrap}
+.topbar a{color:var(--text2);text-decoration:none;padding:5px 9px;border-radius:5px;font-size:11px}
+.topbar a:hover{background:var(--bg3);color:var(--text)}
+.brand{font-size:13px;font-weight:700;color:var(--cyan);margin-right:8px}
+.brand-sub{font-size:9px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase}
+.content{padding:14px 16px;max-width:1400px;margin:0 auto}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.card-title{font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px;letter-spacing:.04em;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:10px}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.kl{font-size:9px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px}
+.kv{font-size:24px;font-weight:700;color:var(--text);margin-bottom:1px;line-height:1}
+.ks{font-size:9px;color:var(--text2)}
+table{width:100%;border-collapse:collapse;font-size:10px}
+thead th{background:var(--bg3);color:var(--text3);font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);font-size:9px;position:sticky;top:0}
+tbody td{padding:7px 8px;border-bottom:1px solid rgba(30,41,59,.45)}
+.tbl-wrap{overflow-x:auto;border-radius:6px;border:1px solid var(--border);max-height:520px;overflow-y:auto}
+.pill{display:inline-block;font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;letter-spacing:.04em}
+.p-grn{background:var(--green-l);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.p-amb{background:var(--amber-l);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.p-red{background:var(--red-l);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.p-blu{background:var(--blue-l);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.p-grey{background:rgba(100,116,139,.1);color:var(--text3);border:1px solid rgba(100,116,139,.25)}
+button.btn{font:inherit;font-size:11px;font-weight:700;padding:8px 14px;border-radius:6px;border:none;cursor:pointer}
+.btn-pri{background:var(--cyan);color:#000}
+.btn-pri:hover{filter:brightness(1.1)}
+.btn-ok{background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.35)}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--text);border-color:var(--border2)}
+.hero-status{font-size:32px;font-weight:700;letter-spacing:.05em;line-height:1;padding:14px 18px;border-radius:10px;text-align:center;margin-bottom:6px}
+.hero-status.ok{background:linear-gradient(135deg,rgba(34,197,94,.15),rgba(34,197,94,.05));color:var(--green);border:2px solid rgba(34,197,94,.45)}
+.hero-status.bad{background:linear-gradient(135deg,rgba(239,68,68,.15),rgba(239,68,68,.05));color:var(--red);border:2px solid rgba(239,68,68,.45)}
+.hero-status.warn{background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(245,158,11,.05));color:var(--amber);border:2px solid rgba(245,158,11,.45)}
+.hero-status.idle{background:linear-gradient(135deg,rgba(100,116,139,.15),rgba(100,116,139,.05));color:var(--text3);border:2px solid rgba(100,116,139,.4)}
+.hero-sub{text-align:center;color:var(--text2);font-size:11px;margin-top:6px}
+.diag-line{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(30,41,59,.45);font-size:11px}
+.diag-line:last-child{border-bottom:none}
+.diag-label{color:var(--text3)}
+.diag-value{font-weight:700;color:var(--text);font-family:ui-monospace,monospace}
+.log-pre{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px;font-family:ui-monospace,monospace;font-size:10px;color:var(--text2);max-height:300px;overflow:auto;white-space:pre-wrap;line-height:1.5}
+.copy-btn{font-size:9px;padding:3px 8px;cursor:pointer;border-radius:4px;background:var(--bg3);border:1px solid var(--border);color:var(--text2)}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="brand">HOC OES</span>
+  <span class="brand-sub">Datalink Health · diagnostics for IT &amp; support</span>
+  <span style="flex:1"></span>
+  <a href="index.html">← Hub</a>
+  <a href="HOC_Data_Upload_Hub.html">Data Upload Hub</a>
+  <a href="HOC_System_Diagnostics.html">System Diagnostics</a>
+</div>
+
+<div class="content">
+
+  <!-- ── HERO STATUS — at-a-glance is the link working? ───────────── -->
+  <div class="card">
+    <div id="hero-status" class="hero-status idle">⊙ NOT YET TESTED</div>
+    <div class="hero-sub" id="hero-sub">Click "Run All Probes" to diagnose · this page is intended for the datalink terminal server</div>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap">
+      <button class="btn btn-pri" onclick="runAllProbes()">⚡ Run All Probes</button>
+      <button class="btn btn-ok" onclick="pullAllTier1()">📥 Pull All Tier 1 Now</button>
+      <button class="btn btn-ghost" onclick="copyDiagnostics()">📋 Copy Diagnostics</button>
+      <button class="btn btn-ghost" onclick="resetMeta()">🔄 Clear Meta &amp; Retest</button>
+    </div>
+  </div>
+
+  <!-- ── KPI ROW ─────────────────────────────────────────────────── -->
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kl">Connection</div><div class="kv" id="k-conn">—</div><div class="ks" id="k-conn-sub">Vicinity OData</div></div>
+    <div class="kpi"><div class="kl">Latency</div><div class="kv" id="k-latency">—</div><div class="ks">round-trip ms</div></div>
+    <div class="kpi"><div class="kl">Last Successful Pull</div><div class="kv" id="k-lastpull" style="font-size:14px">—</div><div class="ks" id="k-lastpull-sub">across all endpoints</div></div>
+    <div class="kpi"><div class="kl">Endpoints Pulled (24h)</div><div class="kv" id="k-pulled24">—</div><div class="ks">of 32 mapped</div></div>
+    <div class="kpi"><div class="kl">Supabase Push</div><div class="kv" id="k-supa" style="font-size:14px">—</div><div class="ks" id="k-supa-sub">last cloud sync</div></div>
+    <div class="kpi"><div class="kl">Datalink PC Mode</div><div class="kv" id="k-dlmode" style="font-size:14px">—</div><div class="ks" id="k-dlmode-sub">host detection</div></div>
+  </div>
+
+  <!-- ── ENVIRONMENT FACTS ──────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title">Environment</div>
+    <div id="env-list"></div>
+  </div>
+
+  <!-- ── ENDPOINT HEALTH ─────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title">
+      <span>Endpoint health — all 32 Vicinity views</span>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost" onclick="probeAllEndpoints()" style="font-size:10px;padding:5px 10px">Probe all (T1 only)</button>
+        <select id="ep-tier" onchange="renderEndpoints()" style="font:inherit;font-size:10px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:4px 8px">
+          <option value="">All tiers</option>
+          <option value="1">Tier 1 only</option>
+          <option value="2">Tier 2 only</option>
+          <option value="3">Tier 3 only</option>
+          <option value="4">Tier 4 only</option>
+          <option value="5">Tier 5 only</option>
+        </select>
+      </div>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr>
+        <th>Endpoint</th><th>Tier</th><th>Purpose</th>
+        <th style="text-align:right">Records</th>
+        <th>Last Success</th><th>Last Failure</th>
+        <th>Status</th><th></th>
+      </tr></thead>
+      <tbody id="ep-tbody"><tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text3)">Loading…</td></tr></tbody>
+    </table></div>
+  </div>
+
+  <!-- ── DIAGNOSTIC LOG (copyable for IT) ────────────────────────── -->
+  <div class="card">
+    <div class="card-title">
+      <span>Diagnostic log <span style="font-weight:400;color:var(--text3);font-size:9px;margin-left:5px">copy this when asking for help</span></span>
+      <button class="copy-btn" onclick="copyLog()">📋 Copy log</button>
+    </div>
+    <pre class="log-pre" id="diag-log">No probes run yet. Click "Run All Probes" above.</pre>
+  </div>
+
+  <!-- ── TROUBLESHOOTING TIPS ────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title">Troubleshooting reference</div>
+    <div style="font-size:11px;color:var(--text2);line-height:1.7">
+      <p style="margin-bottom:8px"><strong style="color:var(--text)">Connection: red, "Failed to fetch"</strong></p>
+      <ul style="margin-left:18px;margin-bottom:10px">
+        <li>If running on <code>https://hocoperations1.github.io/</code> → expected. Mixed-content block. Run from a datalink PC on <code>http://localhost:8080</code> instead.</li>
+        <li>If running on <code>http://localhost</code> → check the Python web server is still running. Check that the terminal server is on the corporate network and can reach <code>hoc-dts-svr-025:5555</code>.</li>
+      </ul>
+      <p style="margin-bottom:8px"><strong style="color:var(--text)">Connection: red, "HTTP 401" or "HTTP 403"</strong></p>
+      <ul style="margin-left:18px;margin-bottom:10px">
+        <li>Vicinity OData requires authentication. The browser/RDP session needs to be running under a Windows account with Vicinity access.</li>
+        <li>Verify by opening <code>http://hoc-dts-svr-025:5555/VicinityWeb/odata/HOCVIC/vv_Planning_Production%20Schedule?$top=1</code> directly in Edge — does it return JSON?</li>
+      </ul>
+      <p style="margin-bottom:8px"><strong style="color:var(--text)">Pull succeeds but Supabase sync fails</strong></p>
+      <ul style="margin-left:18px;margin-bottom:10px">
+        <li>Supabase URL/key may have changed. Run System Diagnostics to verify cloud connection.</li>
+        <li>Local cache (<code>hoc_upload_v1</code>) is still updated — tablets on the same datalink PC will see data. Other tablets won't until Supabase push recovers.</li>
+      </ul>
+      <p style="margin-bottom:8px"><strong style="color:var(--text)">Some endpoints succeed, others fail</strong></p>
+      <ul style="margin-left:18px">
+        <li>Normal — Vicinity may not have data in every view, or some views may require additional permissions.</li>
+        <li>Tier 1 endpoints (Production Schedule, Open Batches, Patch OEE, etc.) are the must-haves. Tier 2-5 are bonus.</li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<script src="vicinity_datalink.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//  HOC-OES — Datalink Health Diagnostic Page
+//
+//  Built specifically for the datalink terminal server's IT/operator to:
+//    1. Verify Vicinity OData is reachable
+//    2. See which endpoints have been pulling successfully
+//    3. Copy a clean diagnostic log to share with IT support
+//
+//  Reads from:
+//    - VicinityDatalink module (hoc_vicinity_v1 metadata)
+//    - localStorage (cache state across all dashboards)
+//    - Live probe via VicinityDatalink.probe()
+// ═══════════════════════════════════════════════════════════════════
+
+const SUPA_URL = 'https://yemtpvrumqvbzrzpwnyy.supabase.co';
+const SUPA_KEY = 'sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl';
+
+// Diagnostic log buffer
+var DIAG_LOG = [];
+function diag(level, msg){
+  var ts = new Date().toLocaleTimeString();
+  var line = '[' + ts + '] ' + level.toUpperCase().padEnd(5) + ' ' + msg;
+  DIAG_LOG.push(line);
+  if(DIAG_LOG.length > 200) DIAG_LOG.shift();
+  var el = document.getElementById('diag-log');
+  if(el) el.textContent = DIAG_LOG.join('\n');
+  el && (el.scrollTop = el.scrollHeight);
+}
+
+function setHero(state, big, sub){
+  var el = document.getElementById('hero-status');
+  var sb = document.getElementById('hero-sub');
+  el.className = 'hero-status ' + state;
+  el.textContent = big;
+  if(sub != null) sb.textContent = sub;
+}
+
+function fmtAgo(iso){
+  if(!iso) return 'never';
+  try {
+    var t = new Date(iso).getTime();
+    var m = Math.round((Date.now() - t) / 60000);
+    if(m < 1) return 'just now';
+    if(m < 60) return m + ' min ago';
+    var h = Math.round(m / 60);
+    if(h < 48) return h + ' hr ago';
+    return Math.round(h / 24) + ' days ago';
+  } catch(e){ return iso; }
+}
+
+// ── ENVIRONMENT DETECTION ──────────────────────────────────────────
+function renderEnv(){
+  var rows = [];
+  var url = window.location.href;
+  var host = window.location.hostname;
+  var proto = window.location.protocol;
+  var isLocalhost = /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(host) || proto === 'file:';
+  var isGitHub = host.indexOf('github.io') >= 0;
+
+  rows.push({label:'Page URL',                  value: url});
+  rows.push({label:'Hostname',                  value: host || '(file://)'});
+  rows.push({label:'Protocol',                  value: proto});
+  rows.push({label:'Datalink PC mode',          value: isLocalhost ? '✓ YES — this is a designated datalink host' : (isGitHub ? '✗ no — GitHub Pages (use a localhost PC for the datalink)' : '? unknown environment')});
+  rows.push({label:'Vicinity base URL',         value: window.VicinityDatalink ? window.VicinityDatalink.getBaseUrl() : '(datalink module not loaded)'});
+  rows.push({label:'Browser',                   value: navigator.userAgent.split(') ')[0].split('(').pop() || navigator.userAgent});
+  rows.push({label:'Service Worker',            value: 'serviceWorker' in navigator ? 'available' : 'not available'});
+  rows.push({label:'Local storage available',   value: typeof localStorage !== 'undefined' ? 'yes' : 'NO ⚠'});
+  rows.push({label:'Online',                    value: navigator.onLine ? 'yes' : 'NO ⚠'});
+
+  document.getElementById('env-list').innerHTML = rows.map(function(r){
+    return '<div class="diag-line"><span class="diag-label">'+r.label+'</span><span class="diag-value">'+r.value+'</span></div>';
+  }).join('');
+
+  // Update Datalink PC Mode KPI
+  var dlEl = document.getElementById('k-dlmode');
+  var dlSub = document.getElementById('k-dlmode-sub');
+  if(isLocalhost){
+    dlEl.textContent = '✓ YES'; dlEl.style.color = 'var(--green)';
+    dlSub.textContent = 'this host can be the bridge';
+  } else if(isGitHub){
+    dlEl.textContent = '✗ NO'; dlEl.style.color = 'var(--amber)';
+    dlSub.textContent = 'GitHub Pages — reads from cloud only';
+  } else {
+    dlEl.textContent = '?'; dlEl.style.color = 'var(--text3)';
+    dlSub.textContent = 'unknown environment';
+  }
+}
+
+// ── PROBE ──────────────────────────────────────────────────────────
+async function runAllProbes(){
+  if(!window.VicinityDatalink){
+    setHero('bad', '✗ DATALINK MODULE NOT LOADED', 'vicinity_datalink.js failed to load — check Service Worker cache');
+    diag('err', 'VicinityDatalink global is undefined');
+    return;
+  }
+  setHero('warn', '⟳ PROBING…', 'Testing Vicinity connection');
+  diag('info', 'Starting full probe sequence');
+  diag('info', 'Vicinity base URL: ' + window.VicinityDatalink.getBaseUrl());
+
+  // Step 1: probe the connection
+  var probeResult = await window.VicinityDatalink.probe();
+  diag('info', 'Probe result: ' + JSON.stringify(probeResult));
+
+  document.getElementById('k-conn').textContent = probeResult.ok ? '✓ OK' : '✗ FAIL';
+  document.getElementById('k-conn').style.color = probeResult.ok ? 'var(--green)' : 'var(--red)';
+  document.getElementById('k-conn-sub').textContent = probeResult.ok ? 'Vicinity OData responding' : (probeResult.error || 'unreachable').slice(0, 50);
+
+  document.getElementById('k-latency').textContent = probeResult.latency_ms + ' ms';
+  document.getElementById('k-latency').style.color = probeResult.latency_ms < 500 ? 'var(--green)' : probeResult.latency_ms < 2000 ? 'var(--amber)' : 'var(--red)';
+
+  if(!probeResult.ok){
+    setHero('bad', '✗ VICINITY UNREACHABLE', probeResult.error || 'fetch failed — see log');
+    diag('err', 'Connection probe failed: ' + (probeResult.error || 'unknown'));
+    // Common diagnosis hints
+    if((probeResult.error||'').toLowerCase().indexOf('failed to fetch') >= 0){
+      var host = window.location.hostname;
+      if(/github\.io/i.test(host)){
+        diag('hint', 'Running on GitHub Pages → expected: Mixed Content blocks HTTP→HTTPS fetches. Use the datalink terminal server.');
+      } else if(/^(localhost|127\.0\.0\.1)$/i.test(host)){
+        diag('hint', 'Running on localhost but fetch failed → confirm this host can reach hoc-dts-svr-025:5555. Try opening that URL directly in the browser.');
+      } else {
+        diag('hint', 'Unknown host. Verify network access to internal Vicinity server.');
+      }
+    }
+    if((probeResult.error||'').toLowerCase().indexOf('http 401') >= 0 || (probeResult.error||'').toLowerCase().indexOf('http 403') >= 0){
+      diag('hint', 'Authentication failure — your Windows account may not have Vicinity OData access');
+    }
+    renderEndpoints();
+    return;
+  }
+
+  setHero('ok', '✓ VICINITY CONNECTED', 'OData reachable · ' + probeResult.latency_ms + ' ms · ready to pull endpoints');
+  diag('ok', 'Connection probe succeeded · ' + probeResult.latency_ms + ' ms');
+  renderEndpoints();
+}
+
+async function probeAllEndpoints(){
+  if(!window.VicinityDatalink){ diag('err', 'datalink module missing'); return; }
+  diag('info', 'Probing all Tier 1 endpoints individually');
+  var t1Keys = Object.keys(window.VicinityDatalink.VIEWS).filter(function(k){
+    return window.VicinityDatalink.VIEWS[k].tier === 1;
+  });
+  for(var i = 0; i < t1Keys.length; i++){
+    var k = t1Keys[i];
+    diag('info', '→ probing ' + k);
+    try {
+      var r = await window.VicinityDatalink.pull(k, {top:1, timeout:6000});
+      diag('ok', '✓ ' + k + ' · ' + r.records.length + ' rec');
+    } catch(err){
+      diag('err', '✗ ' + k + ' · ' + (err.message || err));
+    }
+  }
+  renderEndpoints();
+  renderKpis();
+}
+
+async function pullAllTier1(){
+  if(!window.VicinityDatalink){ diag('err', 'datalink module missing'); return; }
+  setHero('warn', '⟳ PULLING…', 'Fetching all Tier 1 endpoints');
+  diag('info', '─── Full Tier 1 pull ───');
+  var success = 0, fail = 0;
+  try {
+    var r = await window.VicinityDatalink.pullProductionSchedule();
+    diag('ok', '✓ Production Schedule · ' + r.records.length + ' batches → hoc_upload_v1');
+    success++;
+  } catch(e){ diag('err', '✗ Production Schedule · ' + (e.message||e)); fail++; }
+  try {
+    var r = await window.VicinityDatalink.pullLaborStandards();
+    var n = r.saved && r.saved.stats ? r.saved.stats.formulas : 0;
+    diag('ok', '✓ Labor Standards · ' + n + ' formulas → hoc_labor_standards_v1');
+    success++;
+  } catch(e){ diag('err', '✗ Labor Standards · ' + (e.message||e)); fail++; }
+  try {
+    var r = await window.VicinityDatalink.pullPatchOEE();
+    diag('ok', '✓ Patch OEE · ' + r.records.length + ' records → hoc_patch_oee_v1');
+    success++;
+  } catch(e){ diag('err', '✗ Patch OEE · ' + (e.message||e)); fail++; }
+
+  var msg = success + ' of 3 succeeded';
+  if(fail === 0){
+    setHero('ok', '✓ ALL TIER 1 PULLED', msg + ' · tablets will see data within 30 seconds');
+  } else if(success === 0){
+    setHero('bad', '✗ ALL PULLS FAILED', 'Check the log below for details');
+  } else {
+    setHero('warn', '⚠ PARTIAL SUCCESS', msg);
+  }
+  renderEndpoints();
+  renderKpis();
+}
+
+// ── ENDPOINT TABLE ─────────────────────────────────────────────────
+function renderEndpoints(){
+  if(!window.VicinityDatalink){
+    document.getElementById('ep-tbody').innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--red)">⚠ vicinity_datalink.js not loaded</td></tr>';
+    return;
+  }
+  var tierFilter = document.getElementById('ep-tier').value;
+  var meta = window.VicinityDatalink.loadMeta();
+  var keys = Object.keys(window.VicinityDatalink.VIEWS);
+  if(tierFilter) keys = keys.filter(function(k){ return String(window.VicinityDatalink.VIEWS[k].tier) === tierFilter; });
+
+  var html = keys.map(function(k){
+    var v = window.VicinityDatalink.VIEWS[k];
+    var m = meta[k] || {};
+    var lastSuccess = m.success_at ? fmtAgo(m.success_at) : '—';
+    var lastFail = m.failure_at ? fmtAgo(m.failure_at) : '—';
+    var records = m.record_count != null ? m.record_count : '—';
+
+    // Status: green if last success is within 24h AND newer than last failure
+    var statusPill;
+    if(m.success_at && (!m.failure_at || m.success_at > m.failure_at)){
+      var ageHr = (Date.now() - new Date(m.success_at).getTime()) / 3600000;
+      if(ageHr < 1) statusPill = '<span class="pill p-grn">✓ FRESH</span>';
+      else if(ageHr < 24) statusPill = '<span class="pill p-grn">✓ OK</span>';
+      else statusPill = '<span class="pill p-amb">STALE</span>';
+    } else if(m.failure_at){
+      statusPill = '<span class="pill p-red">✗ FAILED</span>';
+    } else {
+      statusPill = '<span class="pill p-grey">—</span>';
+    }
+
+    return '<tr>' +
+      '<td><code style="font-size:10px;color:var(--text);background:var(--bg3);padding:1px 5px;border-radius:3px">'+k+'</code></td>' +
+      '<td><span style="color:'+(v.tier===1?'var(--green)':v.tier===2?'var(--blue)':v.tier===3?'var(--amber)':v.tier===4?'var(--purple)':'var(--text3)')+';font-weight:700">T'+v.tier+'</span></td>' +
+      '<td style="color:var(--text2);font-size:10px">'+v.purpose+'</td>' +
+      '<td style="text-align:right;font-family:ui-monospace,monospace">'+records+'</td>' +
+      '<td style="color:var(--text3);font-size:10px">'+lastSuccess+'</td>' +
+      '<td style="color:var(--text3);font-size:10px">'+lastFail+'</td>' +
+      '<td>'+statusPill+'</td>' +
+      '<td style="text-align:right"><button class="btn btn-ghost" onclick="pullOne(\''+k+'\')" style="font-size:9px;padding:3px 9px">Probe</button></td>' +
+      '</tr>';
+  }).join('');
+
+  document.getElementById('ep-tbody').innerHTML = html || '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text3)">No endpoints match filter</td></tr>';
+}
+
+async function pullOne(key){
+  if(!window.VicinityDatalink) return;
+  diag('info', '→ ' + key);
+  try {
+    var r = await window.VicinityDatalink.pull(key, {top:50, timeout:12000});
+    diag('ok', '✓ ' + key + ' · ' + r.records.length + ' records');
+  } catch(err){
+    diag('err', '✗ ' + key + ' · ' + (err.message || err));
+  }
+  renderEndpoints();
+  renderKpis();
+}
+
+// ── KPI ROW ────────────────────────────────────────────────────────
+function renderKpis(){
+  if(!window.VicinityDatalink) return;
+  var meta = window.VicinityDatalink.loadMeta();
+  var keys = Object.keys(window.VicinityDatalink.VIEWS);
+  var pulledIn24h = 0;
+  var latestSuccess = null;
+  keys.forEach(function(k){
+    var m = meta[k] || {};
+    if(m.success_at){
+      var ageHr = (Date.now() - new Date(m.success_at).getTime()) / 3600000;
+      if(ageHr <= 24) pulledIn24h++;
+      if(!latestSuccess || m.success_at > latestSuccess) latestSuccess = m.success_at;
+    }
+  });
+  document.getElementById('k-pulled24').textContent = pulledIn24h + ' / 32';
+  document.getElementById('k-pulled24').style.color = pulledIn24h >= 6 ? 'var(--green)' : pulledIn24h > 0 ? 'var(--amber)' : 'var(--text3)';
+
+  document.getElementById('k-lastpull').textContent = latestSuccess ? fmtAgo(latestSuccess) : '—';
+  document.getElementById('k-lastpull-sub').textContent = latestSuccess ? new Date(latestSuccess).toLocaleString() : 'no successful pulls yet';
+
+  // Supabase push status
+  try {
+    var upload = JSON.parse(localStorage.getItem('hoc_upload_v1') || '{}');
+    var supEl = document.getElementById('k-supa');
+    var supSub = document.getElementById('k-supa-sub');
+    if(upload._source === 'vicinity:live' && upload._updated){
+      supEl.textContent = fmtAgo(upload._updated);
+      supEl.style.color = 'var(--green)';
+      supSub.textContent = 'last vicinity → cloud';
+    } else if(upload._updated){
+      supEl.textContent = fmtAgo(upload._updated);
+      supEl.style.color = 'var(--text2)';
+      supSub.textContent = 'last manual upload';
+    } else {
+      supEl.textContent = '—';
+      supSub.textContent = 'no uploads yet';
+    }
+  } catch(e){}
+}
+
+// ── COPY DIAGNOSTICS (one-button for IT support) ───────────────────
+function copyDiagnostics(){
+  var meta = window.VicinityDatalink ? window.VicinityDatalink.loadMeta() : {};
+  var report = [
+    '═══ HOC-OES DATALINK DIAGNOSTIC REPORT ═══',
+    'Generated: ' + new Date().toISOString(),
+    '',
+    '── ENVIRONMENT ──',
+    'URL: ' + window.location.href,
+    'Hostname: ' + window.location.hostname,
+    'Protocol: ' + window.location.protocol,
+    'User Agent: ' + navigator.userAgent,
+    'Online: ' + navigator.onLine,
+    'Vicinity base: ' + (window.VicinityDatalink ? window.VicinityDatalink.getBaseUrl() : 'module not loaded'),
+    '',
+    '── ENDPOINT META ──',
+    JSON.stringify(meta, null, 2),
+    '',
+    '── DIAG LOG ──',
+    DIAG_LOG.join('\n'),
+    '',
+    '═══ END REPORT ═══'
+  ].join('\n');
+
+  navigator.clipboard.writeText(report).then(function(){
+    alert('✓ Diagnostic report copied to clipboard. Paste into a ticket or message to IT.');
+  }).catch(function(){
+    // Fallback: create a textarea, select, copy
+    var t = document.createElement('textarea');
+    t.value = report;
+    document.body.appendChild(t);
+    t.select();
+    try { document.execCommand('copy'); alert('✓ Diagnostic report copied to clipboard.'); } catch(e){ alert('Copy failed — manually copy from the log section above.'); }
+    document.body.removeChild(t);
+  });
+}
+
+function copyLog(){
+  var text = DIAG_LOG.join('\n');
+  navigator.clipboard.writeText(text).then(function(){
+    alert('✓ Log copied to clipboard');
+  }).catch(function(){
+    var t = document.createElement('textarea');
+    t.value = text;
+    document.body.appendChild(t);
+    t.select();
+    try { document.execCommand('copy'); alert('✓ Log copied'); } catch(e){}
+    document.body.removeChild(t);
+  });
+}
+
+function resetMeta(){
+  if(!confirm('Clear Vicinity pull metadata? This does NOT delete data — only the pull-history tracking. Useful when re-testing.')) return;
+  try {
+    localStorage.removeItem('hoc_vicinity_v1');
+    DIAG_LOG = [];
+    document.getElementById('diag-log').textContent = 'Metadata cleared. Run All Probes to begin again.';
+    renderEndpoints();
+    renderKpis();
+    setHero('idle', '⊙ RESET', 'Click "Run All Probes" to test the connection');
+  } catch(e){}
+}
+
+// ── BOOT ───────────────────────────────────────────────────────────
+renderEnv();
+renderKpis();
+// Auto-render endpoints once datalink module has loaded
+setTimeout(function(){ renderEndpoints(); }, 300);
+diag('info', 'Datalink Health page loaded');
+
+// Auto-probe on load if running from localhost (designated datalink host)
+setTimeout(function(){
+  var host = window.location.hostname;
+  if(/^(localhost|127\.0\.0\.1|\[::1\])$/i.test(host) || window.location.protocol === 'file:'){
+    diag('info', 'Localhost detected — running auto-probe');
+    runAllProbes();
+  }
+}, 800);
+
+// Refresh KPIs periodically (in case data changes from another tab)
+setInterval(function(){ renderKpis(); renderEndpoints(); }, 30000);
+
+</script>
+<script src="hoc_events.js"></script>
+</body>
+</html>

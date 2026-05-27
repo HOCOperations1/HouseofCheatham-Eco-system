@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HOC FG Reconciliation</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0B0E17;--bg2:#111520;--bg3:#161C28;
+  --border:#1E293B;--text:#DDE4F0;--text2:#8899AA;--text3:#4A5570;
+  --green:#22C55E;--red:#EF4444;--amber:#F59E0B;--blue:#3B82F6;
+  --purple:#8B5CF6;--teal:#10B981;--gray-l:#1E293B;
+  --green-l:rgba(34,197,94,.1);--red-l:rgba(239,68,68,.1);
+  --amber-l:rgba(245,158,11,.1);--blue-l:rgba(59,130,246,.1);
+}
+body{font-family:ui-monospace,monospace;background:var(--bg);color:var(--text);font-size:11px;min-height:100vh}
+.topbar{display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.brand-name{font-size:13px;font-weight:700;color:var(--text)}
+.brand-sub{font-size:9px;color:var(--text3)}
+.logo{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.nav{display:flex;gap:2px;flex:1;overflow-x:auto}
+.nb{padding:5px 12px;border-radius:6px;font:inherit;font-size:10px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--text2);border-bottom:2px solid transparent;white-space:nowrap}
+.nb:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.nb.active{color:var(--blue);border-bottom-color:var(--blue)}
+.badges{display:flex;gap:4px;flex-wrap:wrap}
+.badge{font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.b-grn{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.25)}
+.b-red{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.25)}
+.b-amb{background:rgba(245,158,11,.12);color:var(--amber);border:1px solid rgba(245,158,11,.25)}
+.b-blu{background:rgba(59,130,246,.12);color:var(--blue);border:1px solid rgba(59,130,246,.25)}
+.b-pur{background:rgba(139,92,246,.12);color:var(--purple);border:1px solid rgba(139,92,246,.25)}
+.page{display:none}.page.active{display:block}
+.content{padding:14px 16px;max-width:1400px;margin:0 auto}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.card-title{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:12px}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.kl{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.kv{font-size:22px;font-weight:700;line-height:1;margin-bottom:2px}
+.ks{font-size:9px;color:var(--text3)}
+.sync-bar{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 12px;margin-bottom:10px;font-size:9px;color:var(--text3);display:flex;align-items:center;gap:8px}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:10px}
+th{text-align:left;padding:5px 8px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:5px 8px;border-bottom:1px solid rgba(30,41,59,.5);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+.t3{color:var(--text3)}
+.t2{color:var(--text2)}
+.btn{padding:5px 14px;border-radius:6px;font:inherit;font-size:10px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2)}
+.btn:hover{background:var(--bg2);color:var(--text)}
+.btn-grn{background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.3);color:var(--green)}
+.btn-blu{background:rgba(59,130,246,.1);border-color:rgba(59,130,246,.3);color:var(--blue)}
+.empty-state{text-align:center;padding:40px 20px;color:var(--text3)}
+.empty-icon{font-size:32px;margin-bottom:8px}
+.empty-title{font-size:13px;font-weight:700;color:var(--text2);margin-bottom:4px}
+.empty-sub{font-size:10px}
+input,select,textarea{font-family:ui-monospace,monospace;font-size:10px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:4px 8px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--blue)}
+.upd-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.upd-label{font-size:9px;font-weight:700;color:var(--text3);min-width:80px;text-transform:uppercase;letter-spacing:.06em}
+.saved-msg{font-size:9px;font-weight:700;color:var(--green);opacity:0;transition:opacity .3s}
+.saved-msg.show{opacity:1}
+
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:center;justify-content:center}
+.modal.open{display:flex}
+.modal-box{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;width:92%;max-width:500px;max-height:85vh;overflow-y:auto}
+.modal-title{font-size:13px;font-weight:700;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+.form-row{margin-bottom:10px}
+.form-label{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:4px;display:block}
+.form-control{width:100%;padding:6px 10px;font-family:ui-monospace,monospace;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);outline:none}
+.form-control:focus{border-color:var(--blue)}
+.save-btn{width:100%;padding:10px;border-radius:6px;font-family:ui-monospace,monospace;font-size:11px;font-weight:700;cursor:pointer;border:none;background:var(--blue);color:#fff;margin-top:8px}
+.save-btn:hover{background:#2563EB}
+.upd-tag{font-size:8px;padding:2px 6px;border-radius:4px;background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.2);margin-left:4px}
+.logo{background:linear-gradient(135deg,#10B981,#059669)}</style>
+</head><body>
+<div class="topbar">
+  <div class="brand">
+    <a href="index.html" style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text2);text-decoration:none;font-size:9px;font-weight:700;flex-shrink:0">← HOC-OES</a>
+    <div class="logo">FG</div>
+    <div><div class="brand-name">FG Reconciliation</div><div class="brand-sub" id="brand-sub">May 2026</div></div>
+  </div>
+  <nav class="nav"><button class="nb active" onclick="P('cmd')">Overview</button><button class="nb" onclick="P('entry')">FG Entry</button><button class="nb" onclick="P('released')">Released</button></nav>
+  <div class="badges" id="badges"></div>
+</div>
+<div class="modal" id="fg-modal" onclick="if(event.target===this)closeFG()">
+  <div class="modal-box">
+    <div class="modal-title">
+      <span id="fg-modal-title">FG Entry</span>
+      <button onclick="closeFG()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px">✕</button>
+    </div>
+    <div id="fg-info" style="margin-bottom:12px;font-size:10px"></div>
+    <div class="form-row">
+      <label class="form-label">Actual Cases Produced</label>
+      <input id="fg-inp-cases" type="number" class="form-control" placeholder="Enter FG case count">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Yield % (auto-calculated if blank)</label>
+      <input id="fg-inp-yield" type="number" step="0.1" class="form-control" placeholder="e.g. 98.5">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Notes / Reason Code</label>
+      <textarea id="fg-inp-notes" class="form-control" rows="2" placeholder="Low yield reason, overfill note..."></textarea>
+    </div>
+    <div class="form-row" style="display:flex;align-items:center;gap:10px">
+      <input id="fg-inp-release" type="checkbox" style="width:16px;height:16px;cursor:pointer">
+      <label for="fg-inp-release" style="font-size:11px;font-weight:700;cursor:pointer;color:var(--green)">✓ Release to Warehouse (QC Approved)</label>
+    </div>
+    <button class="save-btn" onclick="saveFG()">💾 Save FG Entry → All Dashboards</button>
+  </div>
+</div><div class="page active" id="page-cmd"><div class="content"><div class="sync-bar" id="sync-bar"></div>
+<div class="empty-state" id="empty-main">
+  <div class="empty-icon">📂</div>
+  <div class="empty-title">No data loaded</div>
+  <div class="empty-sub">Go to <a href="HOC_Data_Upload_Hub.html" style="color:var(--blue)">Data Upload Hub</a> and upload your Production Tracker first</div>
+</div>
+<div id="main-content"><div class="kpi-grid" id="fg-kpis"></div></div></div></div><div class="page" id="page-entry"><div class="content"><div class="card"><div class="card-title">FG Case Entry — Click any row to enter counts</div><div class="tbl-wrap"><table><thead><tr><th>Batch</th><th>Ln</th><th>Date</th><th>Description</th><th>Plan</th><th>FG Cases</th><th>Yield%</th><th>Variance</th><th>Status</th><th>FG Release</th></tr></thead><tbody id="fg-entry-tbody"></tbody></table></div></div></div></div><div class="page" id="page-released"><div class="content"><div class="card"><div class="card-title">Released to Warehouse</div><div class="tbl-wrap"><table><thead><tr><th>Batch</th><th>Ln</th><th>Date</th><th>Description</th><th>Cases</th><th>Eaches</th><th>Status</th></tr></thead><tbody id="fg-rel-tbody"></tbody></table></div></div></div></div><script>
+
+
+var SYNC_KEY = 'hoc_sync_v1';
+var SUPA_URL = 'https://yemtpvrumqvbzrzpwnyy.supabase.co';
+var SUPA_KEY = 'sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl';
+
+function syncRead(){try{return JSON.parse(localStorage.getItem(SYNC_KEY)||'{}');}catch(e){return{};}}
+function syncWrite(data){
+  try{
+    var cur=syncRead();
+    var merged=Object.assign({},cur,data,{_ts:new Date().toISOString()});
+    localStorage.setItem(SYNC_KEY,JSON.stringify(merged));
+    supaWrite(merged);
+  }catch(e){}
+}
+function supaWrite(data){
+  try{
+    fetch(SUPA_URL+'/rest/v1/hoc_sync_bus',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Prefer':'resolution=merge-duplicates'},
+      body:JSON.stringify({id:1,data:JSON.stringify(data),updated_at:new Date().toISOString()})
+    }).catch(function(){});
+  }catch(e){}
+}
+function supaRead(cb){
+  try{
+    fetch(SUPA_URL+'/rest/v1/hoc_sync_bus?id=eq.1',{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    }).then(function(r){return r.json();}).then(function(d){
+      if(d&&d[0]&&d[0].data){
+        var parsed=JSON.parse(d[0].data);
+        var cur=syncRead();
+        var ts_remote=new Date(parsed._ts||0);
+        var ts_local=new Date(cur._ts||0);
+        if(ts_remote>ts_local){
+          localStorage.setItem(SYNC_KEY,JSON.stringify(parsed));
+          if(cb)cb(parsed);
+        }
+      }
+    }).catch(function(){});
+  }catch(e){}
+}
+function showPage(id,map){
+  Object.keys(map).forEach(function(k){
+    var el=document.getElementById('page-'+k);
+    if(el)el.classList.toggle('active',k===id);
+    var nb=document.querySelector('.nb[onclick*="\'' + k + '\'"]');
+    if(nb)nb.classList.toggle('active',k===id);
+  });
+}
+function renderSyncBar(el){
+  if(!el)return;
+  var d=syncRead();
+  var ts=d._ts?new Date(d._ts).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):'—';
+  el.innerHTML='<span class="sync-dot"></span>HOC-OES Sync Bus · Last update: '+ts+' · Cross-device sync: 15s';
+}
+function N(n){return typeof n==='number'?n.toLocaleString():(n||'—');}
+function fD(s){if(!s)return'—';try{return new Date(s+'T12:00:00').toLocaleDateString('en-US',{month:'numeric',day:'numeric'});}catch(e){return s;}}
+function pct(v){return typeof v==='number'?Math.round(v*10)/10+'%':'—';}
+
+
+var _UPLOAD = {};
+var _FLOOR  = {};
+var SUPA_URL = 'https://yemtpvrumqvbzrzpwnyy.supabase.co';
+var SUPA_KEY = 'sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl';
+var FLOOR_KEY  = 'hoc_floor_v1';
+var UPLOAD_KEY = 'hoc_upload_v1';
+
+function loadAll(){
+  try{ var u=localStorage.getItem(UPLOAD_KEY); if(u)_UPLOAD=JSON.parse(u); }catch(e){}
+  try{ var f=localStorage.getItem(FLOOR_KEY);  if(f)_FLOOR=JSON.parse(f);  }catch(e){}
+}
+
+// ── Pull schedule from Supabase if remote is newer than local ─────────
+// Lets a single Data Upload Hub upload propagate to every tablet.
+function pullScheduleFromSupabase(cb){
+  try{
+    fetch(SUPA_URL+'/rest/v1/hoc_schedule?id=eq.1', {
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    }).then(function(r){ return r.ok ? r.json() : []; })
+      .then(function(rows){
+        if(!rows || !rows.length || !rows[0].data) return;
+        var remote;
+        try { remote = JSON.parse(rows[0].data); } catch(e) { return; }
+        var remoteTs = new Date(remote._updated||0).getTime();
+        var localTs  = new Date((_UPLOAD&&_UPLOAD._updated)||0).getTime();
+        if(remoteTs > localTs){
+          _UPLOAD = remote;
+          localStorage.setItem(UPLOAD_KEY, JSON.stringify(remote));
+          if(cb) cb();
+        }
+      }).catch(function(){});
+  }catch(e){}
+}
+function _currentMonthPrefix633(){
+  // v6.33: was hardcoded '2026-05' — now follows the calendar
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+function getMayBatches(){
+  var _prefix = _currentMonthPrefix633();
+  return (_UPLOAD.batches||[])
+    .filter(function(b){ return b.date&&b.date.startsWith(_prefix); })
+    .map(function(b){
+      var fl=_FLOOR[b.batch]||{};
+      return Object.assign({},b,{
+        status:      fl.status   ||b.status   ||'NOT STARTED',
+        actqty:      fl.actqty  !=null?fl.actqty  :b.actqty,
+        yield_pct:   fl.yield_pct!=null?fl.yield_pct:b.yield_pct,
+        cmpd:        fl.cmpd     ||b.cmpd     ||'',
+        cmpddue:     fl.cmpddue  ||b.cmpddue  ||'',
+        shortage:    fl.shortage !=null?fl.shortage :b.shortage,
+        fg_released: fl.fg_released||false,
+        fg_cases:    fl.fg_cases !=null?fl.fg_cases :b.actqty,
+        fg_yield:    fl.fg_yield !=null?fl.fg_yield :b.yield_pct,
+        wh_outbound: fl.wh_outbound||0,
+        wh_received: fl.wh_received||0,
+        wh_notes:    fl.wh_notes||'',
+        pw_done:     fl.pw_done||false,
+        notes:       fl.notes||'',
+        floor_ts:    fl._ts||''
+      });
+    });
+}
+function getAllBatches(){ return (_UPLOAD.batches||[]).map(function(b){ var fl=_FLOOR[b.batch]||{}; return Object.assign({},b,fl); }); }
+function getGoals(){ return _UPLOAD.goals||{}; }
+function getInventory(){ return _UPLOAD.inventory||[]; }
+function getLowItems(){ return getInventory().filter(function(i){return i.status==='LOW';}); }
+function hasData(){ return !!(_UPLOAD.batches&&_UPLOAD.batches.length); }
+
+function floorUpdate(batchId, updates){
+  if(!_FLOOR[batchId])_FLOOR[batchId]={};
+  Object.assign(_FLOOR[batchId],updates,{_ts:new Date().toISOString()});
+  localStorage.setItem(FLOOR_KEY,JSON.stringify(_FLOOR));
+  try{
+    fetch(SUPA_URL+'/rest/v1/hoc_batches',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Prefer':'resolution=merge-duplicates'},
+      body:JSON.stringify({batch_id:batchId,data:JSON.stringify(_FLOOR[batchId]),updated_at:new Date().toISOString()})
+    }).catch(function(){});
+  }catch(e){}
+}
+function pollFloor(cb){
+  try{
+    fetch(SUPA_URL+'/rest/v1/hoc_batches?limit=500',{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    }).then(function(r){return r.json();}).then(function(rows){
+      if(rows&&rows.length){
+        rows.forEach(function(row){ try{_FLOOR[row.batch_id]=JSON.parse(row.data||'{}');}catch(e){} });
+        localStorage.setItem(FLOOR_KEY,JSON.stringify(_FLOOR));
+        if(cb)cb();
+      }
+    }).catch(function(){});
+  }catch(e){}
+}
+function N(n){ return typeof n==='number'?n.toLocaleString():(n||'—'); }
+function fD(s){
+  if(!s||s==='—')return'—';
+  try{
+    var d=new Date(s.length===10?s+'T12:00:00':s);
+    if(isNaN(d))return s;
+    return d.toLocaleDateString('en-US',{month:'numeric',day:'numeric'});
+  }catch(e){return s;}
+}
+
+function getStatus(b){
+  var s=String(b.status||'').toUpperCase().trim();
+  if(s==='COMPLETED')return'COMPLETED';
+  if(s==='RUNNING')return'RUNNING';
+  return'NOT STARTED';
+}
+function statusBadge(s){
+  var map={'COMPLETED':['var(--green)','COMPLETED'],'RUNNING':['var(--amber)','RUNNING'],'NOT STARTED':['var(--text3)','NOT STARTED']};
+  var m=map[getStatus({status:s})]||['var(--text3)',s||'—'];
+  return'<span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;background:'+m[0]+'22;color:'+m[0]+';border:1px solid '+m[0]+'44">'+m[1]+'</span>';
+}
+function cmpdbadge(s){
+  if(!s||s==='—')return'<span class="t3">—</span>';
+  var c=s.includes('OVERDUE')||s.includes('CRITICAL')?'var(--red)':s.includes('AT RISK')?'var(--amber)':s.includes('COMPLETE')?'var(--green)':'var(--text3)';
+  return'<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:'+c+'22;color:'+c+';border:1px solid '+c+'44">'+s+'</span>';
+}
+
+
+
+var PM={cmd:0,entry:1,released:2};
+function P(id){showPage(id,PM);renderAll();}
+var AB=null;
+
+function renderAll(){
+  renderSyncBar(document.getElementById('sync-bar'));
+  loadAll();
+  var empty=document.getElementById('empty-main'),main=document.getElementById('main-content');
+  if(!hasData()){if(empty)empty.style.display='block';if(main)main.style.display='none';return;}
+  if(empty)empty.style.display='none';if(main)main.style.display='block';
+  var fg=getMayBatches().filter(function(b){return b.status!=='NOT STARTED';});
+  var comp=fg.filter(function(b){return b.status==='COMPLETED';}).length;
+  var rel=fg.filter(function(b){return b.fg_released;});
+  var total_act=fg.reduce(function(s,b){return s+(b.fg_cases||b.actqty||0);},0);
+  var total_ea=fg.reduce(function(s,b){return s+((b.fg_cases||b.actqty||0)*(b.casepk||12));},0);
+
+  document.getElementById('fg-kpis').innerHTML=[
+    {l:'FG Batches',    v:fg.length,    s:'Completed+running',c:'var(--text)'},
+    {l:'Total Cases',   v:N(total_act), s:'FG actual',        c:'var(--green)'},
+    {l:'Total Eaches',  v:N(total_ea),  s:'Consumer units',   c:'var(--blue)'},
+    {l:'Completed',     v:comp,         s:'Done',             c:'var(--green)'},
+    {l:'FG Released',   v:rel.length,   s:'QC approved',      c:rel.length?'var(--green)':'var(--amber)'},
+    {l:'Pending Release',v:comp-rel.length,s:'Awaiting QC',   c:comp-rel.length?'var(--amber)':'var(--green)'},
+  ].map(function(k){return '<div class="kpi"><div class="kl">'+k.l+'</div><div class="kv" style="color:'+k.c+'">'+k.v+'</div><div class="ks">'+k.s+'</div></div>';}).join('');
+
+  document.getElementById('badges').innerHTML=
+    '<span class="badge b-grn">'+comp+' DONE</span>'+
+    (comp-rel.length>0?'<span class="badge b-amb">'+(comp-rel.length)+' PENDING RELEASE</span>':'');
+
+  // Entry table — all FG batches, click to enter counts
+  document.getElementById('fg-entry-tbody').innerHTML=fg.map(function(b){
+    var cases=b.fg_cases!=null?b.fg_cases:b.actqty;
+    var yp=b.fg_yield!=null?b.fg_yield:b.yield_pct;
+    var yc=yp>=98?'var(--green)':yp>=90?'var(--amber)':'var(--red)';
+    var upd=b.floor_ts?'<span class="upd-tag">UPDATED</span>':'';
+    var rel=b.fg_released?
+      '<span style="font-size:9px;font-weight:700;color:var(--green)">✓ RELEASED</span>':
+      '<button onclick="openFG(\''+b.batch+'\')" class="btn btn-blu" style="font-size:9px;padding:3px 10px">ENTER / RELEASE</button>';
+    return '<tr onclick="openFG(\''+b.batch+'\')" style="cursor:pointer">'+
+      '<td style="font-weight:700">'+b.batch+upd+'</td>'+
+      '<td>L'+b.line+'</td><td>'+fD(b.date)+'</td>'+
+      '<td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+b.desc+'</td>'+
+      '<td style="text-align:right">'+N(b.origqty)+'</td>'+
+      '<td style="text-align:right;font-weight:700;color:'+(cases>0?'var(--green)':'var(--text3)')+'">'+N(cases)+'</td>'+
+      '<td style="text-align:right;font-weight:700;color:'+yc+'">'+yp+'%</td>'+
+      '<td style="text-align:right;color:'+(b.case_var>=0?'var(--green)':'var(--red)')+'">'+N(b.case_var)+'</td>'+
+      '<td>'+statusBadge(b.status)+'</td>'+
+      '<td>'+rel+'</td></tr>';
+  }).join('');
+
+  // Released table
+  document.getElementById('fg-rel-tbody').innerHTML=rel.map(function(b){
+    return '<tr><td style="font-weight:700">'+b.batch+'</td><td>L'+b.line+'</td><td>'+fD(b.date)+'</td>'+
+      '<td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+b.desc+'</td>'+
+      '<td style="text-align:right">'+N(b.fg_cases||b.actqty)+'</td>'+
+      '<td style="text-align:right">'+N((b.fg_cases||b.actqty)*(b.casepk||12))+'</td>'+
+      '<td style="font-size:9px;color:var(--green)">✓ RELEASED</td></tr>';
+  }).join('');
+}
+
+function openFG(batchId){
+  AB=batchId;
+  var b=getMayBatches().find(function(x){return x.batch===batchId;});
+  if(!b)return;
+  document.getElementById('fg-modal-title').textContent=b.batch+' · '+b.desc.slice(0,40);
+  document.getElementById('fg-info').innerHTML=
+    '<div class="t3">Plan: <strong>'+N(b.origqty)+'</strong> cases &nbsp;·&nbsp; Line '+b.line+' &nbsp;·&nbsp; '+fD(b.date)+'</div>';
+  document.getElementById('fg-inp-cases').value=b.fg_cases!=null?b.fg_cases:(b.actqty||'');
+  document.getElementById('fg-inp-yield').value=b.fg_yield!=null?b.fg_yield:(b.yield_pct||'');
+  document.getElementById('fg-inp-notes').value=b.notes||'';
+  document.getElementById('fg-inp-release').checked=b.fg_released||false;
+  document.getElementById('fg-modal').classList.add('open');
+}
+function closeFG(){document.getElementById('fg-modal').classList.remove('open');AB=null;}
+function saveFG(){
+  if(!AB)return;
+  var b=getMayBatches().find(function(x){return x.batch===AB;});
+  if(!b)return;
+  var cases=parseFloat(document.getElementById('fg-inp-cases').value)||0;
+  var yield_pct=parseFloat(document.getElementById('fg-inp-yield').value)||
+    (b.origqty>0?Math.round(cases/b.origqty*1000)/10:0);
+  var released=document.getElementById('fg-inp-release').checked;
+  floorUpdate(AB,{
+    fg_cases:cases,fg_yield:yield_pct,
+    actqty:cases,yield_pct:yield_pct,
+    actualea:cases*(b.casepk||12),
+    case_var:cases-b.origqty,
+    fg_released:released,
+    fg_release_ts:released?new Date().toISOString():'',
+    status:released?'COMPLETED':cases>0?'RUNNING':'NOT STARTED',
+    notes:document.getElementById('fg-inp-notes').value
+  });
+  closeFG();renderAll();
+}
+
+window.addEventListener('load',function(){
+  loadAll();
+  renderAll();
+  pullScheduleFromSupabase(function(){ loadAll(); renderAll(); });
+  setInterval(function(){pollFloor(renderAll);},15000);
+  setInterval(function(){pullScheduleFromSupabase(function(){loadAll();renderAll();});},30000);
+});
+window.addEventListener('storage',function(e){if(e.key===UPLOAD_KEY||e.key===FLOOR_KEY){loadAll();renderAll();}});
+</script><script src="hoc_events.js"></script>
+</body></html>

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>HOC-OES Cache Reset</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:ui-monospace,monospace}
+body{background:#0B0E17;color:#DDE4F0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.box{background:#111520;border:1px solid #1E293B;border-radius:12px;padding:24px;max-width:500px;width:100%}
+h1{font-size:18px;font-weight:700;margin-bottom:6px;color:#22C55E}
+.sub{font-size:11px;color:#8899AA;margin-bottom:20px}
+.log{background:#0B0E17;border:1px solid #1E293B;border-radius:8px;padding:12px;font-size:11px;min-height:200px;max-height:300px;overflow-y:auto;margin:16px 0}
+.log-line{padding:2px 0;font-size:11px}
+.ok{color:#22C55E}
+.err{color:#EF4444}
+.info{color:#8899AA}
+.done{color:#FBBF24;font-weight:700;font-size:13px;text-align:center;padding:16px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);border-radius:8px;margin-top:12px;display:none}
+.btn{display:block;width:100%;padding:12px;background:#3B82F6;color:#fff;border:none;border-radius:8px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;margin-top:12px}
+.btn:hover{background:#2563EB}
+.btn-go{background:#22C55E}.btn-go:hover{background:#16A34A}
+.steps{background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:8px;padding:12px;font-size:11px;color:#DDE4F0;margin-bottom:16px}
+.steps b{color:#3B82F6}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>🔧 HOC-OES Cache Reset</h1>
+  <div class="sub">Force-clears service worker, all caches, and reloads with fresh files from GitHub.</div>
+
+  <div class="steps">
+    <b>What this does:</b><br>
+    1. Unregisters every service worker for this site<br>
+    2. Deletes every cache the SW created<br>
+    3. Reloads the HOC-OES index from GitHub — no cache
+  </div>
+
+  <button class="btn btn-go" onclick="runReset()">RESET NOW</button>
+
+  <div class="log" id="log"><div class="log-line info">Click RESET NOW to begin…</div></div>
+
+  <div class="done" id="done">
+    ✓ RESET COMPLETE<br>
+    <span style="font-size:11px;font-weight:400;color:#DDE4F0">Click the button below to load HOC-OES fresh.</span>
+  </div>
+
+  <button class="btn" id="go-btn" style="display:none" onclick="goToHome()">→ OPEN HOC-OES (FRESH)</button>
+</div>
+
+<script>
+function log(msg, type){
+  type = type || 'info';
+  var el = document.getElementById('log');
+  var line = document.createElement('div');
+  line.className = 'log-line ' + type;
+  line.textContent = msg;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+async function runReset(){
+  log('Starting reset…', 'info');
+
+  // STEP 1: Unregister all service workers for this origin
+  if('serviceWorker' in navigator){
+    try {
+      var regs = await navigator.serviceWorker.getRegistrations();
+      log('Found ' + regs.length + ' service worker(s)', 'info');
+      for(var i = 0; i < regs.length; i++){
+        var scope = regs[i].scope;
+        var ok = await regs[i].unregister();
+        log((ok ? '✓ unregistered: ' : '✗ failed to unregister: ') + scope, ok ? 'ok' : 'err');
+      }
+    } catch(e){
+      log('SW unregister error: ' + e.message, 'err');
+    }
+  } else {
+    log('Service Worker API not available', 'info');
+  }
+
+  // STEP 2: Delete every cache
+  if('caches' in window){
+    try {
+      var keys = await caches.keys();
+      log('Found ' + keys.length + ' cache(s)', 'info');
+      for(var j = 0; j < keys.length; j++){
+        var ok = await caches.delete(keys[j]);
+        log((ok ? '✓ deleted cache: ' : '✗ failed: ') + keys[j], ok ? 'ok' : 'err');
+      }
+    } catch(e){
+      log('Cache delete error: ' + e.message, 'err');
+    }
+  } else {
+    log('Cache API not available', 'info');
+  }
+
+  // STEP 3: Try to clear localStorage (won't touch hoc_ keys to preserve data)
+  // We only want to clear bookkeeping, not user-entered data
+  try {
+    var keysToKeep = [];
+    for(var k = 0; k < localStorage.length; k++){
+      var key = localStorage.key(k);
+      if(key && key.indexOf('hoc_') === 0){
+        keysToKeep.push(key);
+      }
+    }
+    log('Preserving ' + keysToKeep.length + ' hoc_* localStorage keys', 'info');
+    // Clear only the version stamp so next load detects a fresh deploy
+    localStorage.removeItem('hoc_oes_version');
+    log('✓ cleared version stamp', 'ok');
+  } catch(e){
+    log('localStorage cleanup: ' + e.message, 'err');
+  }
+
+  log('', 'info');
+  log('=== Reset complete ===', 'ok');
+  document.getElementById('done').style.display = 'block';
+  document.getElementById('go-btn').style.display = 'block';
+}
+
+function goToHome(){
+  // Cache-busting query string to defeat any HTTP cache that might still serve stale index.html
+  var bust = '?t=' + Date.now();
+  window.location.href = 'index.html' + bust;
+}
+</script>
+</body>
+</html>

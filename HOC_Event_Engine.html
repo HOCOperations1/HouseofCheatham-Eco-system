@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HOC Event Engine</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0B0E17;--bg2:#111520;--bg3:#161C28;
+  --border:#1E293B;--text:#DDE4F0;--text2:#8899AA;--text3:#4A5570;
+  --green:#22C55E;--red:#EF4444;--amber:#F59E0B;--blue:#3B82F6;--purple:#8B5CF6;
+  --green-l:rgba(34,197,94,.1);--red-l:rgba(239,68,68,.1);
+  --amber-l:rgba(245,158,11,.1);--blue-l:rgba(59,130,246,.1);
+}
+body{font-family:ui-monospace,monospace;background:var(--bg);color:var(--text);font-size:11px;min-height:100vh}
+.topbar{display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.back{padding:3px 8px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text2);font-size:9px;font-weight:700;text-decoration:none;cursor:pointer}
+.brand-name{font-size:13px;font-weight:700;color:var(--text)}
+.brand-sub{font-size:9px;color:var(--text3)}
+.logo{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;background:linear-gradient(135deg,#F59E0B,#D97706)}
+.nav{display:flex;gap:2px;flex:1;overflow-x:auto}
+.nb{padding:5px 12px;border-radius:6px;font:inherit;font-size:10px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--text2);border-bottom:2px solid transparent;white-space:nowrap}
+.nb:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.nb.active{color:var(--amber);border-bottom-color:var(--amber)}
+.badges{display:flex;gap:4px;flex-wrap:wrap}
+.badge{font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.b-grn{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.25)}
+.b-red{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.25)}
+.b-amb{background:rgba(245,158,11,.12);color:var(--amber);border:1px solid rgba(245,158,11,.25)}
+.b-blu{background:rgba(59,130,246,.12);color:var(--blue);border:1px solid rgba(59,130,246,.25)}
+.b-pur{background:rgba(139,92,246,.12);color:var(--purple);border:1px solid rgba(139,92,246,.25)}
+.b-gray{background:rgba(74,85,112,.2);color:var(--text3);border:1px solid var(--border)}
+.page{display:none}.page.active{display:block}
+.content{padding:14px 16px;max-width:1400px;margin:0 auto}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.card-title{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:12px}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.kl{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.kv{font-size:22px;font-weight:700;line-height:1;margin-bottom:2px}
+.ks{font-size:9px;color:var(--text3)}
+.sync-bar{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 12px;margin-bottom:10px;font-size:9px;color:var(--text3);display:flex;align-items:center;gap:8px}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:10px}
+th{text-align:left;padding:5px 8px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:5px 8px;border-bottom:1px solid rgba(30,41,59,.5);vertical-align:top}
+.btn{padding:5px 10px;border-radius:6px;font:inherit;font-size:10px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text)}
+.btn:hover{background:rgba(255,255,255,.04)}
+.btn-pri{background:var(--amber);color:#fff;border-color:var(--amber)}
+.btn-grn{background:var(--green);color:#fff;border-color:var(--green)}
+.btn-red{background:var(--red);color:#fff;border-color:var(--red)}
+.btn-sm{padding:3px 8px;font-size:9px}
+.inp,.sel,.txa{width:100%;padding:6px 10px;font-family:ui-monospace,monospace;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text)}
+.txa{resize:vertical;min-height:60px;line-height:1.4}
+.lbl{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:4px;display:block}
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.field{margin-bottom:8px}
+.ev-row{padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.ev-row.ev-pending{border-left:3px solid var(--amber)}
+.ev-row.ev-sent{border-left:3px solid var(--green);opacity:.7}
+.ev-row.ev-critical{border-left:3px solid var(--red)}
+.empty{text-align:center;padding:30px 20px;color:var(--text3);font-size:10px}
+.muted{color:var(--text3)}
+.config-card{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px}
+.cfg-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.cfg-type{font-weight:700;font-size:12px}
+.flow-step{display:flex;align-items:center;gap:8px;padding:8px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;flex:1;min-width:120px}
+.flow-arrow{color:var(--text3);font-size:16px}
+@media(max-width:720px){.row-2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <a class="back" href="index.html">← HOC-OES</a>
+    <div class="logo">⚡</div>
+    <div>
+      <div class="brand-name">Event Engine</div>
+      <div class="brand-sub">Automation · Notifications · Audit</div>
+    </div>
+  </div>
+  <div class="nav">
+    <button class="nb active" id="tab-feed"   onclick="P('feed')">Event Feed</button>
+    <button class="nb"        id="tab-config" onclick="P('config')">Configuration</button>
+    <button class="nb"        id="tab-audit"  onclick="P('audit')">Send Audit</button>
+    <button class="nb"        id="tab-flow"   onclick="P('flow')">Power Automate Setup</button>
+  </div>
+  <div class="badges" id="badges"></div>
+</div>
+
+<!-- ─── EVENT FEED ─────────────────────────────────────────────── -->
+<div class="page active" id="page-feed"><div class="content">
+  <div class="sync-bar"><span class="sync-dot"></span>Live event feed · auto-refresh every 15s</div>
+
+  <div class="kpi-grid" id="feed-kpis"></div>
+
+  <div class="card">
+    <div class="card-title">
+      <span>Detector Status</span>
+      <button class="btn btn-sm" onclick="runDetectors()">⚡ Run detectors now</button>
+    </div>
+    <div id="detector-status" class="muted" style="font-size:10px">Detectors auto-run every 60s when this tab is open. They look for: critical compounds, downtime, schedule slips, FG discrepancies.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span>Pending Events <span class="muted" id="pending-count" style="font-weight:400"></span></span>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-pri btn-sm" onclick="sendPendingNow()">📧 Send All Pending Now</button>
+        <button class="btn btn-sm" onclick="loadEvents()">↻ Refresh</button>
+      </div>
+    </div>
+    <div id="pending-list"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span>Recent Sent <span class="muted" id="sent-count" style="font-weight:400"></span></span></div>
+    <div id="sent-list"></div>
+  </div>
+</div></div>
+
+<!-- ─── CONFIG ─────────────────────────────────────────────────── -->
+<div class="page" id="page-config"><div class="content">
+  <div class="sync-bar"><span class="sync-dot"></span>Per-event-type distribution lists + schedules</div>
+  <div class="card">
+    <div class="card-title">
+      <span>Event Configurations</span>
+      <button class="btn btn-sm" onclick="loadConfig(true)">↻ Reload</button>
+    </div>
+    <div class="muted" style="font-size:10px;margin-bottom:10px">
+      Recipients: comma-separated email addresses. Schedules: <code>immediate</code> sends as soon as the Power Automate flow runs after the event; <code>5pm+12am</code> batches until the next 5:00 PM or 12:00 AM send window; <code>11am+4pm</code> batches until the next 11:00 AM or 4:00 PM window.
+    </div>
+    <div id="config-list"></div>
+  </div>
+</div></div>
+
+<!-- ─── AUDIT ──────────────────────────────────────────────────── -->
+<div class="page" id="page-audit"><div class="content">
+  <div class="sync-bar"><span class="sync-dot"></span>Full history of events sent or failed</div>
+  <div class="card">
+    <div class="card-title">
+      <span>Filters</span>
+    </div>
+    <div class="row-2">
+      <div class="field">
+        <label class="lbl">Event Type</label>
+        <select class="sel" id="aud-type" onchange="renderAudit()">
+          <option value="">All</option>
+          <option>qc_release</option><option>qc_hold</option><option>qc_reject</option>
+          <option>compound_critical</option><option>downtime</option>
+          <option>schedule_slip</option><option>fg_discrepancy</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="lbl">Status</label>
+        <select class="sel" id="aud-status" onchange="renderAudit()">
+          <option value="">All</option>
+          <option value="sent">Sent</option>
+          <option value="pending">Pending</option>
+          <option value="failed">Failed (attempts ≥ 1, not sent)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">
+      <span>Audit Trail</span>
+    </div>
+    <div class="tbl-wrap"><table id="audit-table">
+      <thead><tr><th>Created</th><th>Type</th><th>Sev</th><th>Batch</th><th>Source</th><th>Sent</th><th>Attempts</th><th>Error / PDF</th></tr></thead>
+      <tbody id="audit-body"></tbody>
+    </table></div>
+  </div>
+</div></div>
+
+<!-- ─── POWER AUTOMATE SETUP ───────────────────────────────────── -->
+<div class="page" id="page-flow"><div class="content">
+  <div class="sync-bar"><span class="sync-dot"></span>How the automation layer connects</div>
+  <div class="card">
+    <div class="card-title"><span>Architecture</span></div>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <div class="flow-step"><div>📋<br>Dashboard emits event</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div>🗄️<br>hoc_events table (Supabase)</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div>⚙️<br>Power Automate flow (scheduled)</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div>📧<br>Outlook email + PDF attach</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step"><div>✅<br>Mark event sent</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span>Setup Steps</span></div>
+    <ol class="muted" style="line-height:1.7;padding-left:18px;font-size:10px">
+      <li>Open Power Automate (flow.microsoft.com) and sign in with your House of Cheatham account.</li>
+      <li>Click <b>+ Create → Scheduled cloud flow</b>.</li>
+      <li>Name: <b>HOC-OES Event Engine</b>. Run every <b>30 minutes</b> (or every hour — frequent enough to catch the 11 AM and 4 PM windows).</li>
+      <li>Add an HTTP action: <b>GET</b> <code>https://yemtpvrumqvbzrzpwnyy.supabase.co/rest/v1/hoc_events?sent_at=is.null</code> with headers <code>apikey</code> and <code>Authorization: Bearer ...</code> (use the anon key from the README).</li>
+      <li>Loop over the returned JSON array. For each event:
+        <ul style="padding-left:20px">
+          <li>Look up the matching config row from <code>hoc_event_config</code>.</li>
+          <li>Check the schedule field — if <code>5pm+12am</code>, only send when current time is 17:00–17:30 or 00:00–00:30. If <code>11am+4pm</code>, only send when current time is 11:00–11:30 or 16:00–16:30.</li>
+          <li>If <code>immediate</code>, send right away.</li>
+          <li>Use the <b>Outlook 365 → Send an email (V2)</b> action with the config's recipients, subject template, and event payload.</li>
+          <li>If <code>pdf_url</code> is present, fetch the PDF and attach it.</li>
+          <li>POST back to Supabase to set <code>sent_at = utcNow()</code> and increment <code>send_attempts</code>.</li>
+        </ul>
+      </li>
+      <li>For QC Releases on <code>5pm+12am</code> schedule, group all pending QC releases into ONE summary email with all PDFs attached.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span>Flow Template Download</span></div>
+    <div class="muted" style="font-size:10px;margin-bottom:8px">A pre-built Power Automate flow template ships alongside this dashboard as <code>HOC_OES_EventEngine_Flow.json</code>. Import it via Power Automate → My flows → Import → Import Package.</div>
+    <div class="muted" style="font-size:10px">After import, you'll be prompted to:</div>
+    <ol class="muted" style="line-height:1.7;padding-left:18px;font-size:10px">
+      <li>Connect your Outlook 365 account (for sending email)</li>
+      <li>Confirm the Supabase URL + anon key are set as Secure Inputs in the flow's HTTP actions</li>
+      <li>Turn the flow on</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span>Manual fallback (works without Power Automate)</span></div>
+    <div class="muted" style="font-size:10px">
+      Until the Power Automate flow is live, click <b>"📧 Send All Pending Now"</b> on the Event Feed tab to compose a single email containing every pending event. This opens your default email client with the body pre-filled and recipient list applied. You then review and click send.
+    </div>
+  </div>
+</div></div>
+
+<script>
+'use strict';
+
+var SUPA_URL = 'https://yemtpvrumqvbzrzpwnyy.supabase.co';
+var SUPA_KEY = 'sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl';
+var UPLOAD_KEY = 'hoc_upload_v1';
+var FLOOR_KEY  = 'hoc_floor_v1';
+
+var _EVENTS = [];
+var _CONFIG = [];
+var _UPLOAD = {};
+var _FLOOR  = {};
+var _DETECTOR_LAST = 0;
+
+function H(){ return {'apikey':SUPA_KEY, 'Authorization':'Bearer '+SUPA_KEY}; }
+function HJ(){ return Object.assign({'Content-Type':'application/json'}, H()); }
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fDT(s){ if(!s) return '—'; try{return new Date(s).toLocaleString('en-US',{month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'});}catch(e){return s;} }
+function ageH(s){ if(!s) return 0; return (Date.now() - new Date(s).getTime()) / 3600000; }
+function loadLocal(){
+  try{ var u=localStorage.getItem(UPLOAD_KEY); if(u) _UPLOAD=JSON.parse(u); }catch(e){}
+  try{ var f=localStorage.getItem(FLOOR_KEY);  if(f) _FLOOR =JSON.parse(f); }catch(e){}
+}
+
+function P(p){
+  document.querySelectorAll('.page').forEach(function(el){ el.classList.remove('active'); });
+  document.querySelectorAll('.nb').forEach(function(el){ el.classList.remove('active'); });
+  document.getElementById('page-'+p).classList.add('active');
+  document.getElementById('tab-'+p).classList.add('active');
+  if(p === 'audit') renderAudit();
+  if(p === 'config') renderConfig();
+}
+
+// ── Event loading + rendering ──────────────────────────────────────
+function loadEvents(){
+  return fetch(SUPA_URL+'/rest/v1/hoc_events?select=*&order=created_at.desc&limit=200', {headers:H()})
+    .then(function(r){ return r.ok ? r.json() : []; })
+    .then(function(rows){
+      _EVENTS = rows || [];
+      renderFeed();
+      renderAudit();
+    }).catch(function(e){ console.error('Events load failed', e); });
+}
+
+function loadConfig(force){
+  return fetch(SUPA_URL+'/rest/v1/hoc_event_config?select=*', {headers:H()})
+    .then(function(r){ return r.ok ? r.json() : []; })
+    .then(function(rows){
+      _CONFIG = rows || [];
+      if(force) renderConfig();
+    });
+}
+
+function getConfigFor(type){
+  return _CONFIG.find(function(c){ return c.event_type === type; }) || {};
+}
+
+function eventBadge(t){
+  var map = {
+    'qc_release':       ['QC RELEASE', 'b-grn'],
+    'qc_hold':          ['QC HOLD',    'b-amb'],
+    'qc_reject':        ['QC REJECT',  'b-red'],
+    'compound_critical':['COMPOUND',   'b-red'],
+    'downtime':         ['DOWNTIME',   'b-amb'],
+    'schedule_slip':    ['SLIP',       'b-amb'],
+    'fg_discrepancy':   ['FG DIFF',    'b-pur']
+  };
+  var m = map[t] || [t, 'b-gray'];
+  return '<span class="badge '+m[1]+'">'+m[0]+'</span>';
+}
+
+function sevBadge(sev){
+  var cls = sev === 'critical' ? 'b-red' : sev === 'warning' ? 'b-amb' : 'b-blu';
+  return '<span class="badge '+cls+'">'+(sev||'info').toUpperCase()+'</span>';
+}
+
+function renderFeed(){
+  var pending = _EVENTS.filter(function(e){ return !e.sent_at; });
+  var sent    = _EVENTS.filter(function(e){ return  e.sent_at; }).slice(0, 25);
+  var critical= pending.filter(function(e){ return e.severity === 'critical'; });
+
+  document.getElementById('feed-kpis').innerHTML = [
+    {l:'Pending',     v:pending.length,  s:'awaiting send',     c:pending.length?'var(--amber)':'var(--green)'},
+    {l:'Critical',    v:critical.length, s:'high severity',     c:critical.length?'var(--red)':'var(--text3)'},
+    {l:'Sent (24h)',  v:_EVENTS.filter(function(e){return e.sent_at && ageH(e.sent_at)<24;}).length, s:'last day', c:'var(--green)'},
+    {l:'Total Events',v:_EVENTS.length,  s:'last 200',          c:'var(--text)'},
+  ].map(function(k){
+    return '<div class="kpi"><div class="kl">'+k.l+'</div><div class="kv" style="color:'+k.c+'">'+k.v+'</div><div class="ks">'+k.s+'</div></div>';
+  }).join('');
+
+  document.getElementById('badges').innerHTML =
+    (pending.length  ? '<span class="badge b-amb">'+pending.length+' PENDING</span>' : '') +
+    (critical.length ? '<span class="badge b-red">'+critical.length+' CRITICAL</span>' : '');
+
+  document.getElementById('pending-count').textContent = pending.length ? '('+pending.length+')' : '';
+  document.getElementById('sent-count').textContent    = sent.length    ? '(last '+sent.length+')' : '';
+
+  var pendingEl = document.getElementById('pending-list');
+  if(!pending.length){ pendingEl.innerHTML = '<div class="empty">No pending events</div>'; }
+  else { pendingEl.innerHTML = pending.map(renderEventRow).join(''); }
+
+  var sentEl = document.getElementById('sent-list');
+  if(!sent.length){ sentEl.innerHTML = '<div class="empty muted">No events sent yet</div>'; }
+  else { sentEl.innerHTML = sent.map(renderEventRow).join(''); }
+}
+
+function renderEventRow(e){
+  var cls = e.severity === 'critical' ? 'ev-critical' : (e.sent_at ? 'ev-sent' : 'ev-pending');
+  var pl  = e.payload || {};
+  var summary = '';
+  if(e.event_type === 'qc_release'){
+    summary = 'Tested by '+esc(pl.tested_by||'')+ ' · pH '+(pl.ph||'—')+' · visc '+(pl.viscosity||'—');
+  } else if(e.event_type === 'qc_hold' || e.event_type === 'qc_reject'){
+    summary = esc(pl.hold_reason || pl.reject_reason || '');
+  } else if(e.event_type === 'compound_critical'){
+    summary = esc(pl.cmpd_status||'') + (pl.shortage ? ' · short ' + pl.shortage + ' lbs' : '');
+  } else if(e.event_type === 'downtime'){
+    summary = (pl.hours_running||'?') + ' hours running w/o update';
+  } else if(e.event_type === 'schedule_slip'){
+    summary = (pl.days_late||'?') + ' days past planned date';
+  } else if(e.event_type === 'fg_discrepancy'){
+    summary = (pl.variance_pct||'?') + '% variance · plan ' + (pl.origqty||'?') + ' vs actual ' + (pl.actqty||'?');
+  }
+
+  return '<div class="ev-row '+cls+'">' +
+    '<div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:200px">' +
+      '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">' +
+        eventBadge(e.event_type) +
+        sevBadge(e.severity) +
+        (e.batch_id ? '<span style="font-weight:700">'+esc(e.batch_id)+'</span>' : '') +
+        (e.item_id  ? '<span class="muted">· '+esc(e.item_id)+'</span>'  : '') +
+        (e.pdf_url  ? '<a class="btn btn-sm" href="'+esc(e.pdf_url)+'" target="_blank">📄 PDF</a>' : '') +
+      '</div>' +
+      (summary ? '<div class="muted" style="font-size:10px">'+summary+'</div>' : '') +
+      '<div class="muted" style="font-size:9px">' + fDT(e.created_at) + ' · from ' + esc(e.source||'?') +
+        (e.sent_at ? ' · sent ' + fDT(e.sent_at) : '') +
+        (e.send_attempts>0 && !e.sent_at ? ' · '+e.send_attempts+' attempt(s)' : '') +
+      '</div>' +
+    '</div>' +
+    (e.sent_at ? '' :
+      '<button class="btn btn-sm btn-pri" onclick="markSent('+e.id+')">Mark Sent</button> ' +
+      '<button class="btn btn-sm" onclick="deleteEvent('+e.id+')">Dismiss</button>'
+    ) +
+  '</div>';
+}
+
+function markSent(id){
+  fetch(SUPA_URL+'/rest/v1/hoc_events?id=eq.'+id, {
+    method:'PATCH',
+    headers: Object.assign({'Prefer':'return=minimal'}, HJ()),
+    body: JSON.stringify({sent_at: new Date().toISOString()})
+  }).then(function(){ loadEvents(); });
+}
+
+function deleteEvent(id){
+  if(!confirm('Dismiss this event? It will be removed from the queue.')) return;
+  fetch(SUPA_URL+'/rest/v1/hoc_events?id=eq.'+id, {method:'DELETE', headers:H()})
+    .then(function(){ loadEvents(); });
+}
+
+// ── Manual fallback send: compose email in default client ──────────
+function sendPendingNow(){
+  var pending = _EVENTS.filter(function(e){ return !e.sent_at; });
+  if(!pending.length){ alert('No pending events'); return; }
+
+  // Group by event type so each type uses its own config recipients
+  var byType = {};
+  pending.forEach(function(e){
+    (byType[e.event_type] = byType[e.event_type] || []).push(e);
+  });
+
+  var summary = [];
+  var allRecipients = {};
+  Object.keys(byType).forEach(function(type){
+    var cfg = getConfigFor(type);
+    if(cfg.recipients) cfg.recipients.split(/[,;\s]+/).forEach(function(r){ if(r.trim()) allRecipients[r.trim()] = true; });
+
+    summary.push('=== ' + type.toUpperCase() + ' (' + byType[type].length + ') ===');
+    byType[type].forEach(function(e){
+      summary.push('• ' + (e.batch_id||'(no batch)') + ' — ' + (e.severity||'info'));
+      var pl = e.payload || {};
+      if(pl.tested_by)    summary.push('  Tested by: '+pl.tested_by);
+      if(pl.hold_reason)  summary.push('  Hold reason: '+pl.hold_reason);
+      if(pl.reject_reason)summary.push('  Reject reason: '+pl.reject_reason);
+      if(e.pdf_url)       summary.push('  PDF: '+e.pdf_url);
+    });
+    summary.push('');
+  });
+
+  var to = Object.keys(allRecipients).join(';');
+  var subj = 'HOC-OES Event Digest — ' + pending.length + ' pending';
+  var body = summary.join('\n');
+  var url = 'mailto:' + encodeURIComponent(to) + '?subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(body);
+  if(url.length > 1800){
+    // mailto has a length limit; warn user
+    alert('Many events queued — your email client may truncate. Consider setting up Power Automate. Opening compose anyway.');
+  }
+  window.location.href = url;
+
+  // Optimistically mark all as sent (the user is responsible for clicking Send)
+  setTimeout(function(){
+    if(!confirm('Mark all ' + pending.length + ' pending events as sent? (Click Cancel if you did not actually send the email.)')) return;
+    var ids = pending.map(function(e){ return e.id; });
+    fetch(SUPA_URL+'/rest/v1/hoc_events?id=in.('+ids.join(',')+')', {
+      method:'PATCH',
+      headers: Object.assign({'Prefer':'return=minimal'}, HJ()),
+      body: JSON.stringify({sent_at: new Date().toISOString()})
+    }).then(function(){ loadEvents(); });
+  }, 1500);
+}
+
+// ── Config render + save ───────────────────────────────────────────
+function renderConfig(){
+  var typeLabels = {
+    'qc_release':       'QC Release (twice daily summary, PDFs attached)',
+    'qc_hold':          'QC Hold (immediate, individual)',
+    'qc_reject':        'QC Reject → R&D NOA (immediate, individual)',
+    'compound_critical':'Compound Critical/Overdue (batched)',
+    'downtime':         'Extended Downtime (immediate)',
+    'schedule_slip':    'Schedule Slip (batched)',
+    'fg_discrepancy':   'FG Reconciliation Variance (immediate)'
+  };
+  var el = document.getElementById('config-list');
+  if(!_CONFIG.length){ el.innerHTML = '<div class="empty">No event types configured. Run SETUP_supabase_v2.sql.</div>'; return; }
+  el.innerHTML = _CONFIG.map(function(c){
+    var label = typeLabels[c.event_type] || c.event_type;
+    return '<div class="config-card">' +
+      '<div class="cfg-head">' +
+        '<div><div class="cfg-type">'+esc(c.event_type)+'</div><div class="muted" style="font-size:9px">'+esc(label)+'</div></div>' +
+        '<div style="display:flex;gap:6px;align-items:center">' +
+          '<label style="font-size:9px;display:flex;gap:4px;align-items:center"><input type="checkbox" id="cfg-en-'+esc(c.event_type)+'" '+(c.enabled?'checked':'')+'> enabled</label>' +
+          '<button class="btn btn-sm btn-pri" onclick="saveConfig(\''+esc(c.event_type)+'\')">Save</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="row-2">' +
+        '<div class="field"><label class="lbl">Recipients (comma-separated)</label><input class="inp" id="cfg-to-'+esc(c.event_type)+'" value="'+esc(c.recipients||'')+'"></div>' +
+        '<div class="field"><label class="lbl">CC</label><input class="inp" id="cfg-cc-'+esc(c.event_type)+'" value="'+esc(c.cc_recipients||'')+'"></div>' +
+      '</div>' +
+      '<div class="row-2">' +
+        '<div class="field"><label class="lbl">Subject Template</label><input class="inp" id="cfg-subj-'+esc(c.event_type)+'" value="'+esc(c.subject_tpl||'')+'"></div>' +
+        '<div class="field"><label class="lbl">Schedule</label>' +
+          '<select class="sel" id="cfg-sch-'+esc(c.event_type)+'">' +
+            ['immediate','5pm+12am','11am+4pm','8am','5pm','12am','daily_5pm'].map(function(s){
+              return '<option '+(c.schedule===s?'selected':'')+'>'+s+'</option>';
+            }).join('') +
+          '</select>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function saveConfig(type){
+  var body = {
+    event_type:    type,
+    enabled:       document.getElementById('cfg-en-'+type).checked,
+    recipients:    document.getElementById('cfg-to-'+type).value,
+    cc_recipients: document.getElementById('cfg-cc-'+type).value,
+    subject_tpl:   document.getElementById('cfg-subj-'+type).value,
+    schedule:      document.getElementById('cfg-sch-'+type).value,
+    updated_at:    new Date().toISOString()
+  };
+  fetch(SUPA_URL+'/rest/v1/hoc_event_config', {
+    method:'POST',
+    headers: Object.assign({'Prefer':'resolution=merge-duplicates,return=minimal'}, HJ()),
+    body: JSON.stringify(body)
+  }).then(function(r){
+    if(r.ok) loadConfig(true);
+    else alert('Save failed: HTTP '+r.status);
+  });
+}
+
+// ── Audit ──────────────────────────────────────────────────────────
+function renderAudit(){
+  var t = document.getElementById('aud-type').value;
+  var st = document.getElementById('aud-status').value;
+  var rows = _EVENTS.filter(function(e){
+    if(t && e.event_type !== t) return false;
+    if(st === 'sent'    && !e.sent_at) return false;
+    if(st === 'pending' && (e.sent_at || e.send_attempts > 0)) return false;
+    if(st === 'failed'  && (e.sent_at || !(e.send_attempts > 0))) return false;
+    return true;
+  });
+  var body = document.getElementById('audit-body');
+  if(!rows.length){ body.innerHTML = '<tr><td colspan="8" class="empty">No events match filters</td></tr>'; return; }
+  body.innerHTML = rows.map(function(e){
+    return '<tr>'+
+      '<td>'+fDT(e.created_at)+'</td>'+
+      '<td>'+eventBadge(e.event_type)+'</td>'+
+      '<td>'+sevBadge(e.severity)+'</td>'+
+      '<td style="font-weight:700">'+esc(e.batch_id||'—')+'</td>'+
+      '<td class="muted">'+esc(e.source||'')+'</td>'+
+      '<td>'+(e.sent_at ? '<span class="muted">'+fDT(e.sent_at)+'</span>' : '<span class="badge b-amb">pending</span>')+'</td>'+
+      '<td>'+(e.send_attempts||0)+'</td>'+
+      '<td class="muted" style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+
+        esc(e.last_error||'')+
+        (e.pdf_url ? ' <a href="'+esc(e.pdf_url)+'" target="_blank">PDF</a>' : '')+
+      '</td>'+
+    '</tr>';
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// DETECTORS — scan schedule + floor data and emit events
+// ═══════════════════════════════════════════════════════════════════
+// Each detector:
+//   1. Pulls the latest schedule + floor state
+//   2. Identifies batches meeting the trigger condition
+//   3. Emits an event for any not already-emitted-and-pending
+//      (de-dupes by batch_id + event_type within the last 24h)
+
+function pullSchedule(){
+  return fetch(SUPA_URL+'/rest/v1/hoc_schedule?id=eq.1', {headers:H()})
+    .then(function(r){ return r.ok ? r.json() : []; })
+    .then(function(rows){
+      if(rows && rows.length && rows[0].data){
+        try { _UPLOAD = JSON.parse(rows[0].data); } catch(e){}
+      }
+    });
+}
+
+function pullFloor(){
+  return fetch(SUPA_URL+'/rest/v1/hoc_batches?select=*', {headers:H()})
+    .then(function(r){ return r.ok ? r.json() : []; })
+    .then(function(rows){
+      _FLOOR = {};
+      (rows||[]).forEach(function(r){
+        try { _FLOOR[r.batch_id] = typeof r.data === 'string' ? JSON.parse(r.data) : r.data; } catch(e){}
+      });
+    });
+}
+
+function recentlyEmitted(batchId, eventType, hours){
+  hours = hours || 24;
+  var cutoff = Date.now() - hours * 3600000;
+  return _EVENTS.some(function(e){
+    return e.batch_id === batchId &&
+           e.event_type === eventType &&
+           new Date(e.created_at).getTime() > cutoff;
+  });
+}
+
+function emitEvent(ev){
+  return fetch(SUPA_URL+'/rest/v1/hoc_events', {
+    method:'POST',
+    headers: Object.assign({'Prefer':'return=minimal'}, HJ()),
+    body: JSON.stringify(ev)
+  });
+}
+
+function detectCriticalCompounds(){
+  var batches = (_UPLOAD.batches || []).map(function(b){
+    var f = _FLOOR[b.batch] || {};
+    return Object.assign({}, b, f);
+  });
+  var crit = batches.filter(function(b){
+    if(b.status === 'COMPLETED') return false;
+    var c = String(b.cmpd || b.cmpd_status || '').toUpperCase();
+    return c.indexOf('CRITICAL') >= 0 || c.indexOf('OVERDUE') >= 0;
+  });
+  var emitted = 0;
+  crit.forEach(function(b){
+    if(recentlyEmitted(b.batch, 'compound_critical', 24)) return;
+    emitEvent({
+      event_type: 'compound_critical',
+      severity:   'critical',
+      batch_id:   b.batch,
+      item_id:    b.item || null,
+      source:     'detector',
+      payload: {
+        cmpd_status: b.cmpd || b.cmpd_status,
+        cmpd_due:    b.cmpddue,
+        shortage:    b.shortage,
+        description: b.desc,
+        date:        b.date,
+        line:        b.line
+      }
+    });
+    emitted++;
+  });
+  return emitted;
+}
+
+function detectDowntime(){
+  var cfg = getConfigFor('downtime');
+  var threshold = (cfg.threshold && cfg.threshold.hours) || 4;
+  var batches = (_UPLOAD.batches || []).map(function(b){
+    var f = _FLOOR[b.batch] || {};
+    return Object.assign({}, b, f);
+  });
+  var emitted = 0;
+  batches.forEach(function(b){
+    if(b.status !== 'RUNNING') return;
+    var since = b.last_update || b.run_started_at || b.date;
+    if(!since) return;
+    var hours = ageH(since);
+    if(hours < threshold) return;
+    if(recentlyEmitted(b.batch, 'downtime', 6)) return;
+    emitEvent({
+      event_type: 'downtime',
+      severity:   'warning',
+      batch_id:   b.batch,
+      item_id:    b.item || null,
+      source:     'detector',
+      payload: {
+        hours_running: Math.round(hours * 10) / 10,
+        description:   b.desc,
+        line:          b.line
+      }
+    });
+    emitted++;
+  });
+  return emitted;
+}
+
+function detectScheduleSlip(){
+  var cfg = getConfigFor('schedule_slip');
+  var daysLate = (cfg.threshold && cfg.threshold.days_late) || 1;
+  var today = new Date(); today.setHours(0,0,0,0);
+  var batches = (_UPLOAD.batches || []).map(function(b){
+    var f = _FLOOR[b.batch] || {};
+    return Object.assign({}, b, f);
+  });
+  var emitted = 0;
+  batches.forEach(function(b){
+    if(b.status === 'COMPLETED') return;
+    if(b.status === 'RUNNING') return;   // only flag NOT STARTED
+    if(!b.date) return;
+    var planned = new Date(b.date + 'T00:00:00');
+    var daysBehind = (today - planned) / 86400000;
+    if(daysBehind < daysLate) return;
+    if(recentlyEmitted(b.batch, 'schedule_slip', 24)) return;
+    emitEvent({
+      event_type: 'schedule_slip',
+      severity:   daysBehind > 3 ? 'critical' : 'warning',
+      batch_id:   b.batch,
+      item_id:    b.item || null,
+      source:     'detector',
+      payload: {
+        days_late:   Math.round(daysBehind),
+        planned_date:b.date,
+        description: b.desc,
+        line:        b.line
+      }
+    });
+    emitted++;
+  });
+  return emitted;
+}
+
+function detectFGDiscrepancy(){
+  var cfg = getConfigFor('fg_discrepancy');
+  var thr = (cfg.threshold && cfg.threshold.variance_pct) || 10;
+  var batches = (_UPLOAD.batches || []).map(function(b){
+    var f = _FLOOR[b.batch] || {};
+    return Object.assign({}, b, f);
+  });
+  var emitted = 0;
+  batches.forEach(function(b){
+    if(b.status !== 'COMPLETED') return;
+    if(!b.origqty || !b.actqty) return;
+    var variancePct = Math.abs(b.actqty - b.origqty) / b.origqty * 100;
+    if(variancePct < thr) return;
+    if(recentlyEmitted(b.batch, 'fg_discrepancy', 72)) return;
+    emitEvent({
+      event_type: 'fg_discrepancy',
+      severity:   variancePct > 20 ? 'critical' : 'warning',
+      batch_id:   b.batch,
+      item_id:    b.item || null,
+      source:     'detector',
+      payload: {
+        origqty:     b.origqty,
+        actqty:      b.actqty,
+        variance_pct:Math.round(variancePct * 10) / 10,
+        description: b.desc,
+        line:        b.line
+      }
+    });
+    emitted++;
+  });
+  return emitted;
+}
+
+function runDetectors(){
+  document.getElementById('detector-status').textContent = '⏳ Running detectors...';
+  return Promise.all([pullSchedule(), pullFloor(), loadConfig(), loadEvents()]).then(function(){
+    var c1 = detectCriticalCompounds();
+    var c2 = detectDowntime();
+    var c3 = detectScheduleSlip();
+    var c4 = detectFGDiscrepancy();
+    _DETECTOR_LAST = Date.now();
+    var total = c1 + c2 + c3 + c4;
+    document.getElementById('detector-status').textContent =
+      'Last run: ' + new Date(_DETECTOR_LAST).toLocaleTimeString() +
+      ' · emitted ' + total + ' new event(s) ' +
+      '(compound: '+c1+', downtime: '+c2+', slip: '+c3+', fg: '+c4+')';
+    setTimeout(loadEvents, 600);
+  });
+}
+
+// ── Init ────────────────────────────────────────────────────────────
+window.addEventListener('load', function(){
+  loadLocal();
+  loadConfig();
+  loadEvents().then(function(){
+    runDetectors();
+  });
+  setInterval(loadEvents, 15000);
+  setInterval(runDetectors, 60000);
+});
+</script>
+<script src="hoc_events.js"></script>
+</body>
+</html>

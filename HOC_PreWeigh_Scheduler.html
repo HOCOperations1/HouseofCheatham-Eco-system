@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HOC Pre-weigh Scheduler</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0B0E17;--bg2:#111520;--bg3:#161C28;
+  --border:#1E293B;--text:#DDE4F0;--text2:#8A97B4;--text3:#4A5570;
+  --blue:#3B82F6;--blue-l:rgba(59,130,246,.12);
+  --amber:#F59E0B;--amber-l:rgba(245,158,11,.12);
+  --red:#EF4444;--red-l:rgba(239,68,68,.12);
+  --green:#22C55E;--green-l:rgba(34,197,94,.08);
+  --purple:#8B5CF6;--purple-l:rgba(139,92,246,.1);
+  --teal:#10B981;--teal-l:rgba(16,185,129,.1);
+  --gray-l:#1E2535;
+  font-family:ui-monospace,"Cascadia Code","Fira Code",monospace;
+}
+body{background:var(--bg);color:var(--text);min-height:100vh;font-size:12px}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 14px;display:flex;align-items:stretch;position:sticky;top:0;z-index:100}
+.brand{display:flex;align-items:center;gap:8px;padding:9px 13px 9px 0;border-right:1px solid var(--border);margin-right:11px;flex-shrink:0}
+.logo{width:26px;height:26px;background:var(--purple);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
+.brand-name{font-weight:700;font-size:12px}.brand-sub{font-size:9px;color:var(--text3)}
+.nav{display:flex;flex:1;overflow-x:auto}
+.nb{padding:0 10px;background:none;border:none;border-bottom:2px solid transparent;color:var(--text2);cursor:pointer;font:inherit;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;transition:all .15s;white-space:nowrap}
+.nb:hover{color:var(--text)}.nb.active{color:var(--purple);border-bottom-color:var(--purple)}
+.badges{display:flex;gap:5px;align-items:center;padding:7px 0;margin-left:auto;flex-shrink:0}
+.badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:.04em}
+.b-red{background:var(--red-l);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.b-amb{background:var(--amber-l);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.b-grn{background:var(--green-l);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.b-pur{background:var(--purple-l);color:var(--purple);border:1px solid rgba(139,92,246,.3)}
+.content{padding:13px;max-width:1500px;margin:0 auto}
+.page{display:none}.page.active{display:block}
+.card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px}
+.card-title{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:6px;margin-bottom:10px}
+.kpi{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 11px}
+.kl{font-size:8px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.kv{font-size:21px;font-weight:700;line-height:1}.ks{font-size:9px;color:var(--text3);margin-top:3px}
+.tbl-wrap{border-radius:8px;border:1px solid var(--border);overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{padding:5px 8px;font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);text-align:left;border-bottom:1px solid var(--border);background:var(--bg2);white-space:nowrap}
+td{padding:5px 8px;border-bottom:1px solid rgba(30,41,59,.5);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.015)}
+.pill{display:inline-flex;font-size:8px;font-weight:700;padding:2px 6px;border-radius:3px;letter-spacing:.05em;white-space:nowrap}
+.p-od{background:var(--red-l);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.p-cr{background:rgba(239,68,68,.2);color:#ff6b6b;border:1px solid rgba(239,68,68,.4)}
+.p-urg{background:var(--amber-l);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.p-up{background:var(--blue-l);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.p-pl{background:var(--gray-l);color:var(--text3);border:1px solid var(--border)}
+.p-ok{background:var(--green-l);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.p-td{background:var(--purple-l);color:var(--purple);border:1px solid rgba(139,92,246,.3)}
+.filter-row{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
+.fb{padding:4px 9px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font:inherit;font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;transition:all .15s}
+.fb:hover{color:var(--text)}.fb.active{background:var(--purple);border-color:var(--purple);color:#fff}
+.detail{background:var(--bg3);border:1px solid var(--purple);border-radius:10px;padding:12px;margin-bottom:10px;display:none}
+.detail.open{display:block}
+.dg{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:8px 0;font-size:11px}
+.df label{font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);display:block;margin-bottom:2px}
+.df span{color:var(--text);font-weight:600}
+.su{margin-top:10px;padding:10px 12px;background:rgba(139,92,246,.06);border-radius:7px;border:1px solid rgba(139,92,246,.2)}
+.su-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
+.su-label{font-size:10px;color:var(--text2);white-space:nowrap}
+select,input[type=date],input[type=text]{background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:5px;padding:4px 8px;font:inherit;font-size:10px}
+select:focus,input:focus{outline:none;border-color:var(--purple)}
+.close-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:17px;line-height:1}
+.alert-strip{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:10px 12px;margin-bottom:10px}
+.at{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--red);margin-bottom:5px}
+.ag{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:6px}
+.ai{background:rgba(239,68,68,.08);border-radius:6px;padding:7px 9px;border:1px solid rgba(239,68,68,.15)}
+.saved-note{font-size:10px;color:var(--green);display:none}.saved-note.show{display:inline}
+.btn-save{padding:5px 12px;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.3);border-radius:5px;color:var(--purple);font:inherit;font-size:10px;font-weight:700;cursor:pointer}
+.btn-save:hover{background:rgba(139,92,246,.2)}
+.t3{color:var(--text3)}
+.asof{font-size:10px;color:var(--text3);margin-bottom:9px}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand">
+    <div class="logo">PW</div>
+    <div><div class="brand-name">Pre-weigh Scheduler</div><div class="brand-sub">HOC Inventory Dept · Est. 1924</div></div>
+  </div>
+  <nav class="nav">
+    <button class="nb active" onclick="showPage('cmd')">Command Center</button>
+    <button class="nb"        onclick="showPage('queue')">Full Queue</button>
+    <button class="nb"        onclick="showPage('completed')">Completed</button>
+    <button class="nb"        onclick="showPage('capacity')">Capacity</button>
+    <button class="nb"        onclick="showPage('chem')">Chemical Pulls</button>
+    <button class="nb"        onclick="showPage('export')">Export</button>
+  </nav>
+  <a href="index.html" style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text2);text-decoration:none;font-size:9px;font-weight:700;flex-shrink:0;white-space:nowrap" title="Back to HOC-OES Menu">← HOC-OES</a><a href="HOC_Inventory.html" style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;background:rgba(34,211,238,.12);border:1px solid rgba(34,211,238,.3);color:#22D3EE;text-decoration:none;font-size:9px;font-weight:700;flex-shrink:0;white-space:nowrap" title="Back to HOC-OES Menu">📦 Inventory</a>
+  <div class="badges" id="badges"></div>
+</div>
+<div class="content">
+
+<!-- COMMAND CENTER -->
+<div class="page active" id="page-cmd">
+  <div class="alert-strip"><div class="at">Pre-weigh Overdue — Compound Cannot Start Without These</div><div class="ag" id="alert-grid"></div></div>
+  <div class="asof" id="asof-bar"></div>
+  <div class="kpi-grid" id="kpis"></div>
+  <div class="card">
+    <div class="card-title">Pre-weigh Due — Next 5 Days (today column includes all overdue)</div>
+    <div id="day-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px"></div>
+  </div>
+  <div class="detail" id="detail">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-size:12px;font-weight:700;color:var(--purple)" id="detail-title">Batch Detail</div>
+      <button class="close-btn" onclick="closeDetail()">×</button>
+    </div>
+    <div class="dg" id="detail-grid"></div>
+    <div class="su">
+      <div style="font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--purple);margin-bottom:7px;padding-bottom:5px;border-bottom:1px solid var(--border)">Pre-weigh Status Update</div>
+      <div class="su-row">
+        <span class="su-label">Status:</span>
+        <select id="su-status" onchange="saveUpdate()">
+          <option value="">— select —</option>
+          <option>Not Started</option>
+          <option>In Progress</option>
+          <option>Complete</option>
+          <option>Short — Partial Batch Review</option>
+          <option>Blocked</option>
+        </select>
+        <span class="su-label">Operator:</span>
+        <select id="su-operator" onchange="saveUpdate()">
+          <option value="">— select —</option>
+          <option>Eli Coley</option>
+<option>Robert Peoples</option>
+        </select>
+        <span class="su-label">Start Date:</span>
+        <input type="date" id="su-start" onchange="saveUpdate()">
+        <span class="su-label">Complete Date:</span>
+        <input type="date" id="su-complete" onchange="saveUpdate()">
+      </div>
+      <div class="su-row">
+        <span class="su-label">Short Item:</span>
+        <input type="text" id="su-short-item" placeholder="Item #" style="width:90px" onchange="saveUpdate()">
+        <span class="su-label">Short Qty:</span>
+        <input type="text" id="su-short-qty" placeholder="lbs" style="width:70px" onchange="saveUpdate()">
+        <span class="su-label">Notes:</span>
+        <input type="text" id="su-notes" placeholder="Any issues, substitutes..." style="width:220px" onchange="saveUpdate()">
+        <button class="btn-save" onclick="saveUpdate()">Save</button>
+        <span class="saved-note" id="saved-note">✓ Saved</span>
+      </div>
+
+      <!-- ── PRE-WEIGH TIMESTAMPS ──────────────────────────────────────────────
+           Captures the actual minute pre-weigh starts and completes for THIS
+           batch. Used to measure real pull duration vs standard (PREBATCH_HRS)
+           — same kind of intelligence as the Compound Cycle Time Analysis we
+           built, but for the staging/pull step. Building this history is the
+           first step toward "Pre-Weigh Cycle Time Intelligence" later.
+      -->
+      <div class="su-row" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+        <span class="su-label" style="color:var(--purple);font-weight:700">⏱ Pull Timing</span>
+        <button class="btn-save" id="ts-start-btn"   onclick="stampPullTime('start')"   style="background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.3);color:var(--blue)">Stamp Start</button>
+        <span class="su-label">Started:</span>
+        <span id="ts-start-display"    style="font-size:10px;color:var(--text2);min-width:130px">—</span>
+        <button class="btn-save" id="ts-complete-btn" onclick="stampPullTime('complete')" style="background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);color:var(--green)">Stamp Complete</button>
+        <span class="su-label">Completed:</span>
+        <span id="ts-complete-display" style="font-size:10px;color:var(--text2);min-width:130px">—</span>
+        <span id="ts-duration" style="font-size:10px;font-weight:700;color:var(--purple);margin-left:8px">—</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FULL QUEUE -->
+<div class="page" id="page-queue">
+  <div class="filter-row" id="queue-filters"></div>
+  <div class="tbl-wrap"><table>
+    <thead><tr>
+      <th>PW Start By</th><th>MAIN Batch</th><th>Description</th>
+      <th>Formula</th><th>Line</th><th>PW Hrs</th>
+      <th>Cmpd Due</th><th>Compound Status</th><th>Urgency</th><th>My Status</th>
+    </tr></thead>
+    <tbody id="queue-tbody"></tbody>
+  </table></div>
+</div>
+
+<!-- COMPLETED PRE-WEIGH (dwell time tracking) -->
+<div class="page" id="page-completed">
+  <div class="kpi-grid" id="completed-kpis"></div>
+  <div class="card">
+    <div class="card-title">Pre-weighed Batches — Dwell Time
+      <span style="font-size:9px;color:var(--text3)">Batches that completed pre-weigh and are waiting for compound. Long dwell = material aging, may need re-weigh.</span>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr>
+        <th>MAIN Batch</th><th>Description</th><th>Line</th>
+        <th>PW Completed</th><th>Dwell Time</th><th>Status</th>
+      </tr></thead>
+      <tbody id="completed-tbody"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- CAPACITY -->
+<div class="page" id="page-capacity">
+  <div class="kpi-grid" id="cap-kpis"></div>
+  <div class="card">
+    <div class="card-title">18-Day Pre-weigh Capacity View
+      <span style="font-size:9px;color:var(--text3)">Capacity: 12 batches/day · 6 per operator × 2 · Mon–Fri 6:30am–3pm · Sat occasional</span>
+    </div>
+    <div id="cap-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px"></div>
+  </div>
+</div>
+
+<!-- CHEMICAL PULLS -->
+<div class="page" id="page-chem">
+  <div class="card">
+    <div class="card-title">Weekly Chemical Requirements — from Vicinity export
+      <span style="font-size:9px;color:var(--text3)">Refresh: export Chemical Pulls Req from Vicinity weekly and paste here</span>
+    </div>
+    <div class="filter-row">
+      <button class="fb active" onclick="setChemFilter('ALL')">All</button>
+      <button class="fb" onclick="setChemFilter('ACTIVE')">Active Demand</button>
+      <button class="fb" onclick="setChemFilter('ZERO')">Zero Demand</button>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr>
+        <th>Item #</th><th>Description</th><th>Total Required</th>
+        <th>2026-04-24</th><th>2026-04-25</th><th>2026-04-26</th><th>2026-04-27</th><th>2026-04-28</th><th>2026-04-29</th><th>2026-04-30</th>
+      </tr></thead>
+      <tbody id="chem-tbody"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- EXPORT -->
+<div class="page" id="page-export">
+  <div class="card">
+    <div class="card-title">Export Pre-weigh Status Updates → Paste into HOC_Compound_Tracker_FINAL.xlsx</div>
+    <p style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.7">
+      Status updates entered here feed the Compound Tracker. Download CSV → open Compound Tracker → COMPOUND_STATUS_FEED → update col P (PRE-BATCH IN PROGRESS or PRE-BATCH COMPLETE) matching on MAIN batch number in col C.
+    </p>
+    <button onclick="exportCSV()" style="padding:6px 12px;background:var(--purple-l);border:1px solid rgba(139,92,246,.3);border-radius:6px;color:var(--purple);font:inherit;font-size:10px;font-weight:700;cursor:pointer">⬇ Download prewgh_status_updates.csv</button>
+    <div style="margin-top:7px;font-size:10px;color:var(--text3)" id="export-count"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">How to update this app</div>
+    <div style="font-size:11px;color:var(--text2);line-height:1.85">
+      This app reads batch data baked in at generation time.<br>
+      To refresh: upload <strong style="color:var(--text)">HOC_Production_Tracker_FINAL.xlsx</strong> to Claude and say <strong style="color:var(--text)">"regenerate"</strong>. Claude outputs a new version of this file.<br>
+      Chemical Pulls data: re-export from Vicinity weekly and upload to Claude with <strong style="color:var(--text)">"update chemical pulls"</strong>.
+    </div>
+  </div>
+</div>
+
+</div>
+<script>
+// HOC-OES shared sync bridge
+var HOC_SYNC_KEY = 'hoc_sync_v1';
+function syncToShared(batchId, pwData) {
+  try {
+    var d = JSON.parse(localStorage.getItem(HOC_SYNC_KEY) || '{}');
+    if (!d[batchId]) d[batchId] = {};
+    d[batchId].pw = {
+      pw_status:     pwData.status || '',
+      tech1:         pwData.operator || '',
+      notes:         pwData.notes || '',
+      // Pull timing — mirrored so Compound Scheduler PB Status column reads from here
+      pw_start_ts:   pwData.pull_start_ts || '',
+      pw_complete_ts:pwData.pull_complete_ts || '',
+      pw_duration_hr:pwData.pull_duration_hr || null,
+      ts:            pwData.saved || new Date().toISOString()
+    };
+    localStorage.setItem(HOC_SYNC_KEY, JSON.stringify(d));
+  } catch(e) {}
+}
+
+// HOC-OES: shared sync key = 'hoc_sync_v1' (read via PWA shell)
+function _loadQueue(){
+  // Live loader: reads from Data Upload Hub (localStorage.hoc_oes_upload_v1)
+  // PW staging = cmpd_due - 6 days
+  try {
+    var raw = localStorage.getItem('hoc_upload_v1');
+    if(!raw) return [];
+    var up = JSON.parse(raw);
+    var src = (up && up.batches) ? up.batches : [];
+    var today = new Date(); today.setHours(0,0,0,0);
+
+    // Default staging hours by line (matches original hardcoded data pattern)
+    function defaultHrs(line){
+      if(line === 1) return 3.0;
+      if(line === 2) return 3.0;
+      if(line === 3) return 4.0;
+      if(line === 4) return 3.0;
+      if(line === 5) return 3.5;
+      if(line === 11) return 3.0;
+      return 3.0;
+    }
+
+    // Read shared sync layer so we can promote batches that compound verified
+    // and pushed into the pre-weigh queue (pw.pw_status === 'QUEUED').
+    var shared = {};
+    try { shared = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}'); } catch(e){}
+
+    return src
+      .filter(function(b){ return b.status !== 'COMPLETED'; })
+      .map(function(b){
+        var cmpddue = b.cmpddue || '';
+        // PW start = cmpd_due - 6 days
+        var pb_start = '';
+        var days_until = 999;
+        if(cmpddue) {
+          try {
+            var dd = new Date(cmpddue+'T12:00:00');
+            var pb = new Date(dd); pb.setDate(pb.getDate() - 6);
+            pb_start = pb.toISOString().slice(0,10);
+            days_until = Math.floor((pb - today) / 86400000);
+          } catch(e){}
+        }
+
+        // Urgency from days_until + compound status
+        var urgency = 'PLANNED';
+        var cmpd = String(b.cmpd || b.cmpd_status || '').toUpperCase();
+        if(b.status === 'RUNNING' || cmpd.indexOf('FILLING') >= 0) urgency = 'TODAY';
+        else if(days_until < 0) urgency = 'OVERDUE';
+        else if(days_until === 0) urgency = 'TODAY';
+        else if(days_until === 1) urgency = 'CRITICAL';
+        else if(days_until <= 2) urgency = 'URGENT';
+        else if(days_until <= 7) urgency = 'UPCOMING';
+
+        // QUEUED override: if compound verified and queued this batch, force it
+        // to the front. Pre-weigh sees this and knows compound is asking for it.
+        var pwState = ((shared[b.batch] || {}).pw) || {};
+        var pwStatus = String(pwState.pw_status || '').toUpperCase();
+        if(pwStatus === 'QUEUED'){
+          urgency = 'QUEUED';
+          // Bump pb_start to today so it lands in the Today column
+          var t = new Date(); t.setHours(0,0,0,0);
+          pb_start = t.toISOString().slice(0,10);
+        }
+
+        return {
+          main: b.batch,
+          desc: (b.desc || '').slice(0, 50),
+          date: b.date,
+          line: parseInt(b.line) || 0,
+          formula: parseInt(String(b.formula||b.item||'').replace(/[^0-9]/g,'').slice(0,4)) || 0,
+          status: b.status || 'NOT STARTED',
+          cmpddue: cmpddue,
+          cmpd: b.cmpd || b.cmpd_status || '',
+          pb_start: pb_start,
+          pb_hrs: defaultHrs(parseInt(b.line) || 0),
+          days_until: days_until,
+          urgency: urgency
+        };
+      })
+      .sort(function(a,b){
+        // Sort by PW start date, then by line
+        var ad = a.pb_start || '9999';
+        var bd = b.pb_start || '9999';
+        if(ad !== bd) return ad.localeCompare(bd);
+        return (a.line||0) - (b.line||0);
+      });
+  } catch(e) {
+    console.warn('QUEUE live load failed:', e);
+    return [];
+  }
+}
+let QUEUE = _loadQueue();
+function reloadQueue(){ QUEUE = _loadQueue(); }
+const CHEM_REQ = [{"sku":"8-10002","desc":"CustoBlend ACTI 245","total_req":35.28347,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":35.28347,"2026-04-30":0.0},{"sku":"8-10004","desc":"CustoBlend ACTI 1008","total_req":1.52615,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":1.52615,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-10006","desc":"Aloe Vera Gel","total_req":1364.00957,"2026-04-24":11.93107,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":662.06953,"2026-04-28":664.62881,"2026-04-29":22.89016,"2026-04-30":2.49},{"sku":"8-10007","desc":"Black Pepper","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-10009","desc":"Chickory Root Powder","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-10010","desc":"Cocoa Butter","total_req":6.02112,"2026-04-24":0.00707,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":5.99991,"2026-04-28":0.0,"2026-04-29":0.00707,"2026-04-30":0.00707},{"sku":"8-10012","desc":"Egg Powder","total_req":3.43224,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":1.14408,"2026-04-28":1.14408,"2026-04-29":0.0,"2026-04-30":1.14408},{"sku":"8-10016","desc":"Honey","total_req":22.79026,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":22.79026,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-10017","desc":"Hydrolyzed Collagen","total_req":1.1445,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":1.1445,"2026-04-30":0.0},{"sku":"8-10021","desc":"Panthenol","total_req":228.29686,"2026-04-24":56.68808,"2026-04-25":56.68808,"2026-04-26":0.0,"2026-04-27":56.31606,"2026-04-28":56.31606,"2026-04-29":1.1445,"2026-04-30":1.14408},{"sku":"8-10022","desc":"PEG-75 Lanolin","total_req":317.99925,"2026-04-24":105.99975,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":105.99975,"2026-04-30":105.99975},{"sku":"8-10023","desc":"Shea But","total_req":1594.26752,"2026-04-24":113.37617,"2026-04-25":113.37617,"2026-04-26":0.0,"2026-04-27":341.63873,"2026-04-28":512.55186,"2026-04-29":285.56271,"2026-04-30":227.76188},{"sku":"8-10024","desc":"Shebu WS","total_req":117.6385,"2026-04-24":0.00707,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.00572,"2026-04-28":0.0,"2026-04-29":117.61864,"2026-04-30":0.00707},{"sku":"8-10030","desc":"Oregano Flakes","total_req":9.30136,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":3.10045,"2026-04-28":3.10045,"2026-04-29":0.0,"2026-04-30":3.10046},{"sku":"8-10031","desc":"Cholesterol","total_req":3.43224,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":1.14408,"2026-04-28":1.14408,"2026-04-29":0.0,"2026-04-30":1.14408},{"sku":"8-10032","desc":"CustoBlend ACTI 2812","total_req":4.61418,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":1.18152,"2026-04-28":1.14408,"2026-04-29":1.1445,"2026-04-30":1.14408},{"sku":"8-10034","desc":"Cropeptide WPF","total_req":0.01425,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.01425,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-10037","desc":"Ginseng Extract","total_req":0.00847,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.00847,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-10038","desc":"Hydrosoy 2000 PE","total_req":0.05719,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0232,"2026-04-28":0.0,"2026-04-29":0.01133,"2026-04-30":0.02266},{"sku":"8-10041","desc":"Avocado Oil","total_req":260.18469,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":66.22035,"2026-04-28":136.7416,"2026-04-29":34.33524,"2026-04-30":22.8875},{"sku":"8-10044","desc":"Hydrolyzed Oat Protein","total_req":0.03399,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.01133,"2026-04-30":0.02266},{"sku":"8-10045","desc":"Hydrolyzed Keratin","total_req":68.62578,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.00577,"2026-04-28":11.39514,"2026-04-29":57.22487,"2026-04-30":0.0},{"sku":"8-10053","desc":"Quinoa Pro EX","total_req":2.63455,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.23122,"2026-04-28":0.0,"2026-04-29":1.25896,"2026-04-30":1.14437},{"sku":"8-10056","desc":"Mango Butter","total_req":172.92797,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":172.92797,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-10057","desc":"Slippery Elm Bark Extract","total_req":1.494,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":1.494},{"sku":"8-10058","desc":"Marsh Mallow Extract","total_req":907.00934,"2026-04-24":453.50467,"2026-04-25":453.50467,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-10079","desc":"CustoNatural HMP OF","total_req":588.05786,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":588.05786,"2026-04-30":0.0},{"sku":"8-10085","desc":"Rosemary leaf Extract in Safflower Oil","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-10087","desc":"Horsetail Extract In Safflower Oil","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-10095","desc":"Biotin","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-10106","desc":"N72088 - OS Botanical Extract","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-10107","desc":"N72089 - WS Botanical Extract","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-10112","desc":"N72368-OS Botanical Extract","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-10113","desc":"Cactus Extract N76213-WS","total_req":22.0688,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":11.0344,"2026-04-28":11.0344,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-10114","desc":"Desert Milk","total_req":220.68794,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":110.34397,"2026-04-28":110.34397,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-10116","desc":"Okra Extract 79N79140-WS","total_req":2.52,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":1.026,"2026-04-29":0.0,"2026-04-30":1.494},{"sku":"8-11001","desc":"Calcium Hydroxide","total_req":1059.99747,"2026-04-24":353.33249,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":353.33249,"2026-04-30":353.33249},{"sku":"8-11003","desc":"Sodium Chloride","total_req":1.539,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":1.539,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-12002","desc":"D&C Green #6","total_req":0.02289,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.02289,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-12006","desc":"D&C Red #33","total_req":0.13116,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.10026,"2026-04-28":0.0309,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-12008","desc":"D&C Yellow #11","total_req":0.22983,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.22983,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-12009","desc":"FD&C Blue #1","total_req":0.07692,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.01214,"2026-04-28":0.01214,"2026-04-29":0.01831,"2026-04-30":0.03433},{"sku":"8-12011","desc":"FD&C Red #40","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-12012","desc":"FD&C Yellow #5","total_req":0.14564,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.03,"2026-04-28":0.11564,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-12013","desc":"FD&C Yellow #6","total_req":0.06395,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.06395,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-12017","desc":"Phenol Red WS","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-12018","desc":"Butterscotch Shade R-SD","total_req":1.61316,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.53772,"2026-04-28":0.53772,"2026-04-29":0.0,"2026-04-30":0.53772},{"sku":"8-12023","desc":"D&C Violet #2","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-12025","desc":"Pylacert Dark Green Olive MX-702","total_req":0.29955,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.09985,"2026-04-30":0.1997},{"sku":"8-13018","desc":"Menthol","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-13029","desc":"Unisex Fragrance MOD2056992","total_req":152.61525,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":152.61525,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-13031","desc":"Melonberry  MOD 2051167","total_req":23.52231,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":23.52231,"2026-04-30":0.0},{"sku":"8-13035","desc":"Hair Mayo MOD-2047134","total_req":68.6447,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":22.88155,"2026-04-28":22.88155,"2026-04-29":0.0,"2026-04-30":22.8816},{"sku":"8-13046","desc":"Wacky Melon 2002BA02162","total_req":222.15669,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":193.54731,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":28.60938},{"sku":"8-13060","desc":"Tropical Whisper Lilial Mod CE-220142","total_req":373.08412,"2026-04-24":56.68808,"2026-04-25":56.68808,"2026-04-26":0.0,"2026-04-27":82.75798,"2026-04-28":89.17048,"2026-04-29":85.8373,"2026-04-30":1.9422},{"sku":"8-13064","desc":"Papaya & Green Mango 5319813","total_req":339.97317,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":113.32439,"2026-04-30":226.64878},{"sku":"8-13077","desc":"Exotic Coconut Rev.3 2016050457","total_req":170.927,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":170.927,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-13078","desc":"Honey Blossoms Rev. 3  2020120946","total_req":200.36543,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":84.72499,"2026-04-28":115.64044,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-13084","desc":"Island Honey Rev.1 2018090026","total_req":114.45079,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":114.45079,"2026-04-30":0.0},{"sku":"8-13086","desc":"Wacky Watermelon SANS DEP Fragrance  AL222115","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-13115","desc":"Strawberry Rev.2 (WS) - 2024010346","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-14001","desc":"Cetyl Alcohol","total_req":1634.95021,"2026-04-24":226.75234,"2026-04-25":226.75234,"2026-04-26":0.0,"2026-04-27":498.5718,"2026-04-28":454.00071,"2026-04-29":114.45027,"2026-04-30":114.42275},{"sku":"8-14002","desc":"Cosmowax P","total_req":2967.99288,"2026-04-24":989.33096,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":989.33096,"2026-04-30":989.33096},{"sku":"8-14006","desc":"Glyceryl Monostearate","total_req":227.90266,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":227.90266,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-14008","desc":"Incroquat Behenyl TMS","total_req":1942.91624,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":229.27791,"2026-04-28":798.11572,"2026-04-29":457.80211,"2026-04-30":457.7205},{"sku":"8-14009","desc":"Isopropyl Myristate","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-14012","desc":"PEG-150 Distearate","total_req":59.99912,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":59.99912,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-14013","desc":"Polysorbate 20","total_req":95.76694,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":10.26,"2026-04-29":70.56694,"2026-04-30":14.94},{"sku":"8-14014","desc":"Polysorbate 80","total_req":57.45671,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":57.45671,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-14017","desc":"Brij S2-SO","total_req":764.93961,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":254.97987,"2026-04-30":509.95974},{"sku":"8-14021","desc":"Lipomulse-165","total_req":14.99978,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":14.99978,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-14022","desc":"Steareth-20","total_req":764.93961,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":254.97987,"2026-04-30":509.95974},{"sku":"8-14025","desc":"Polychol-15","total_req":305.97585,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":101.99195,"2026-04-30":203.9839},{"sku":"8-14028","desc":"Cetearyl Alcohol","total_req":909.31,"2026-04-24":226.75234,"2026-04-25":226.75234,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":455.80532,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-14031","desc":"Jeechem GC-7","total_req":18.8784,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":18.8784,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-14038","desc":"Jeecol CS-20","total_req":113.95134,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":113.95134,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-14048","desc":"TEGO SMO V","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-14049","desc":"Endicare CT-100","total_req":772.40778,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":386.20389,"2026-04-28":386.20389,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-15002","desc":"Cocamidopropyl Betaine","total_req":56.43,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":56.43,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-15008","desc":"SCT-722","total_req":1203.36688,"2026-04-24":1193.10688,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":10.26,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-15010","desc":"SLES","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-15015","desc":"BioiTerge AS-40","total_req":92.34,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":92.34,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-15017","desc":"Stepan Mild GCC","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-16003","desc":"Silicone SWS 101-1000","total_req":344.35892,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":115.6117,"2026-04-28":228.74722,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-16005","desc":"Silicone TE-350 FG","total_req":352.83472,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":352.83472,"2026-04-30":0.0},{"sku":"8-16006","desc":"Silicone Fluid KF-56A","total_req":302.87048,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":81.06487,"2026-04-28":28.60193,"2026-04-29":73.94218,"2026-04-30":119.2615},{"sku":"8-16007","desc":"Fibrosil SC-C8L","total_req":286.27169,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":114.63895,"2026-04-28":57.20387,"2026-04-29":57.22487,"2026-04-30":57.204},{"sku":"8-16011","desc":"Dow Corning 193C","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-16012","desc":"Dow Corning 2-8566 Amino Fluid","total_req":56.97566,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":56.97566,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-16013","desc":"DC CB-3046 Fluid","total_req":57.82022,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":57.82022,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-17003","desc":"Carbopol 940","total_req":2.49,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":2.49},{"sku":"8-17008","desc":"Cosmedia CTC","total_req":1462.55612,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":731.97131,"2026-04-28":387.36081,"2026-04-29":0.0,"2026-04-30":343.224},{"sku":"8-17009","desc":"Cosmedia CTHE","total_req":2378.20413,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":669.30254,"2026-04-28":562.58431,"2026-04-29":679.68368,"2026-04-30":466.6336},{"sku":"8-17017","desc":"Luviskol K90 AT1 Lsg. 20%","total_req":24.9,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":24.9},{"sku":"8-17025","desc":"SP Versathix MBAL-LQ-(MH)","total_req":133.93119,"2026-04-24":119.31069,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":14.6205,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-17032","desc":"SP Oleocraft LP- 20 MBAL","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-17035","desc":"Custoguar 112","total_req":1.3851,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":1.3851,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-18001","desc":"Citric Acid","total_req":75.32347,"2026-04-24":2.26752,"2026-04-25":2.26752,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":70.78843,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-18003","desc":"EDTA 100","total_req":24.03069,"2026-04-24":17.59988,"2026-04-25":5.66881,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.513,"2026-04-29":0.0,"2026-04-30":0.249},{"sku":"8-18004","desc":"Glycerin","total_req":6222.34786,"2026-04-24":113.37617,"2026-04-25":113.37617,"2026-04-26":0.0,"2026-04-27":1959.33234,"2026-04-28":1700.3343,"2026-04-29":1039.13146,"2026-04-30":1296.79742},{"sku":"8-18005","desc":"Guanidine Carbonate","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-18006","desc":"Benzophenone-3","total_req":1.43642,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":1.43642,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-18008","desc":"Ritalac LA","total_req":9.40893,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":9.40893,"2026-04-30":0.0},{"sku":"8-18009","desc":"Petrolatum","total_req":3709.9911,"2026-04-24":1236.6637,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":1236.6637,"2026-04-30":1236.6637},{"sku":"8-18011","desc":"Propylene Glycol","total_req":2352.31407,"2026-04-24":105.99975,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":1456.1126,"2026-04-28":578.20222,"2026-04-29":105.99975,"2026-04-30":105.99975},{"sku":"8-18015","desc":"Uvinul MS-40","total_req":1.69986,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.56662,"2026-04-30":1.13324},{"sku":"8-18017","desc":"Versene Acid","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-18018","desc":"Varisoft 432 PPG","total_req":1312.31975,"2026-04-24":226.75234,"2026-04-25":226.75234,"2026-04-26":0.0,"2026-04-27":343.91686,"2026-04-28":171.61161,"2026-04-29":171.6746,"2026-04-30":171.612},{"sku":"8-18019","desc":"Polyquaternium 7","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-18020","desc":"Hydrogenated Vegetable Oil","total_req":957.92475,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":5.99991,"2026-04-28":0.0,"2026-04-29":317.30828,"2026-04-30":634.61656},{"sku":"8-18021","desc":"Hydrogenated Coconut Oil","total_req":509.95974,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":169.98658,"2026-04-30":339.97316},{"sku":"8-18022","desc":"Microcrystalline Wax","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-18024","desc":"AMP Ultra PC 3000","total_req":1.6434,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":1.6434},{"sku":"8-19001","desc":"Almond Oil","total_req":15.26153,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":15.26153,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-19003","desc":"Carrot Oil","total_req":12.96221,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":1.78481,"2026-04-28":9.40408,"2026-04-29":0.0,"2026-04-30":1.77332},{"sku":"8-19004","desc":"Castor Oil","total_req":732.22786,"2026-04-24":113.37617,"2026-04-25":113.37617,"2026-04-26":0.0,"2026-04-27":234.93523,"2026-04-28":258.84175,"2026-04-29":5.72254,"2026-04-30":5.976},{"sku":"8-19005","desc":"Coconut Oil","total_req":1064.25433,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":328.48891,"2026-04-28":621.32127,"2026-04-29":57.2254,"2026-04-30":57.21875},{"sku":"8-19006","desc":"Olive Oil","total_req":3707.71748,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":3147.68454,"2026-04-28":364.46039,"2026-04-29":125.90614,"2026-04-30":69.66641},{"sku":"8-19007","desc":"Peppermint Oil","total_req":5.72254,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":5.72254,"2026-04-30":0.0},{"sku":"8-19008","desc":"Sesame Seed Oil","total_req":15.26153,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":15.26153,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-19009","desc":"Soybean Oil","total_req":41788.53851,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":16635.67367,"2026-04-28":14953.66998,"2026-04-29":3399.73162,"2026-04-30":6799.46324},{"sku":"8-19011","desc":"Vitamin E Oil","total_req":67.60838,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":48.6853,"2026-04-28":16.40561,"2026-04-29":1.25895,"2026-04-30":1.25852},{"sku":"8-19012","desc":"Walnut Oil","total_req":15.26153,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":15.26153,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-19014","desc":"Jojoba Oil","total_req":54.92632,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":39.66479,"2026-04-28":15.26153,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-19015","desc":"Kiwi Oil","total_req":1.52615,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":1.52615,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-19017","desc":"Mineral Oil","total_req":529.99872,"2026-04-24":176.66624,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":176.66624,"2026-04-30":176.66624},{"sku":"8-19021","desc":"Lanolin Oil","total_req":317.94691,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":118.81071,"2026-04-28":28.60079,"2026-04-29":66.38571,"2026-04-30":104.1497},{"sku":"8-19022","desc":"Clove Oil","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-19023","desc":"Eucalyptus Oil","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-19025","desc":"CustoMate TN / RITAMOLLIENT TN","total_req":57.45671,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":57.45671,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-19026","desc":"Extra Virgin Olive Oil","total_req":4.96433,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":3.37725,"2026-04-28":0.58745,"2026-04-29":0.24931,"2026-04-30":0.75032},{"sku":"8-19027","desc":"Grapeseed Oil","total_req":190.46904,"2026-04-24":0.11931,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":33.62023,"2026-04-28":60.13303,"2026-04-29":96.59647,"2026-04-30":0.0},{"sku":"8-19028","desc":"Argan Oil","total_req":315.98744,"2026-04-24":11.33762,"2026-04-25":11.33762,"2026-04-26":0.0,"2026-04-27":47.92795,"2026-04-28":119.49569,"2026-04-29":62.94794,"2026-04-30":62.94062},{"sku":"8-19029","desc":"Shea Butter Oil","total_req":8.47827,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":8.47827,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-19030","desc":"Flaxseed Oil","total_req":618.48231,"2026-04-24":28.34404,"2026-04-25":28.34404,"2026-04-26":0.0,"2026-04-27":165.59518,"2026-04-28":344.69951,"2026-04-29":22.89016,"2026-04-30":28.60938},{"sku":"8-19034","desc":"Campo SP True Monoi Oil","total_req":2.49,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":2.49},{"sku":"8-19038","desc":"Tamanu Oil","total_req":11.44508,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":11.44508,"2026-04-30":0.0},{"sku":"8-19048","desc":"Vitamin E Acetate","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-20012","desc":"TBHQ","total_req":67.48908,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":18.99331,"2026-04-28":14.49845,"2026-04-29":11.33244,"2026-04-30":22.66488},{"sku":"8-20014","desc":"Esept KCG","total_req":5.74351,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":5.74351,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-20015","desc":"Euxyl PE 9010","total_req":1419.26592,"2026-04-24":102.03855,"2026-04-25":102.03855,"2026-04-26":0.0,"2026-04-27":239.54528,"2026-04-28":389.66442,"2026-04-29":195.65249,"2026-04-30":390.32663},{"sku":"8-20016","desc":"CustoCide BDHA","total_req":231.2234,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":231.2234,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-20018","desc":"Lincocide IP2","total_req":161.27304,"2026-04-24":53.68981,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":107.58323,"2026-04-30":0.0},{"sku":"8-22002","desc":"Hydrotriticum QM","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-22005","desc":"Mackernium SDC 85","total_req":93.30968,"2026-04-24":11.33762,"2026-04-25":11.33762,"2026-04-26":0.0,"2026-04-27":41.72433,"2026-04-28":28.91011,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-22008","desc":"Salcare SC 60","total_req":84.27783,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":27.66614,"2026-04-28":34.8673,"2026-04-29":10.87283,"2026-04-30":10.87156},{"sku":"8-22012","desc":"Merquat 100","total_req":211.9995,"2026-04-24":70.6665,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":70.6665,"2026-04-30":70.6665},{"sku":"8-22018","desc":"Keravis PE","total_req":11.39514,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":11.39514,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-22020","desc":"Hydrotriticum 2000 PE","total_req":57.22208,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":28.6127,"2026-04-30":28.60938},{"sku":"8-22021","desc":"TEGO Amid S 18","total_req":343.5431,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":343.5431,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-22034","desc":"Jeechem NDA-LC","total_req":245.90239,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":17.99973,"2026-04-28":227.90266,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-22036","desc":"Cola Moist 200","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-22041","desc":"N71875 Deoplex","total_req":0.0,"2026-04-24":0.0,"2026-04-25":0.0,"2026-04-26":0.0,"2026-04-27":0.0,"2026-04-28":0.0,"2026-04-29":0.0,"2026-04-30":0.0},{"sku":"8-24000","desc":"Water","total_req":203642.02126,"2026-04-24":18659.35912,"2026-04-25":8960.11857,"2026-04-26":0.0,"2026-04-27":53248.8515,"2026-04-28":45910.85167,"2026-04-29":40191.39985,"2026-04-30":36671.44055}];
+const CAPACITY = [{"date":"2026-05-08","day_name":"Fri","count":42,"cap":6,"is_sun":false,"is_sat":false,"signal":"CRITICAL","batches":["MAIN063515","MAIN063357","MAIN063366","MAIN063516","MAIN063462","MAIN063463"]},{"date":"2026-05-09","day_name":"Sat","count":5,"cap":6,"is_sun":false,"is_sat":true,"signal":"WEEKEND","batches":["MAIN063555","MAIN063305","MAIN063297","MAIN063508","MAIN063372"]},{"date":"2026-05-10","day_name":"Sun","count":5,"cap":0,"is_sun":true,"is_sat":false,"signal":"WEEKEND","batches":["MAIN063317","MAIN063341","MAIN063509","MAIN063306","MAIN063373"]},{"date":"2026-05-11","day_name":"Mon","count":0,"cap":6,"is_sun":false,"is_sat":false,"signal":"OK","batches":[]},{"date":"2026-05-12","day_name":"Tue","count":5,"cap":6,"is_sun":false,"is_sat":false,"signal":"OVERTIME","batches":["MAIN063364","MAIN063458","MAIN063342","MAIN063427","MAIN063307"]},{"date":"2026-05-13","day_name":"Wed","count":5,"cap":6,"is_sun":false,"is_sat":false,"signal":"OVERTIME","batches":["MAIN063358","MAIN063603","MAIN063470","MAIN063325","MAIN063345"]},{"date":"2026-05-14","day_name":"Thu","count":5,"cap":6,"is_sun":false,"is_sat":false,"signal":"OVERTIME","batches":["MAIN063204","MAIN063335","MAIN063518","MAIN063346","MAIN063347"]},{"date":"2026-05-15","day_name":"Fri","count":4,"cap":6,"is_sun":false,"is_sat":false,"signal":"OK","batches":["MAIN063416","MAIN063205","MAIN063289","MAIN063377"]},{"date":"2026-05-16","day_name":"Sat","count":4,"cap":6,"is_sun":false,"is_sat":true,"signal":"WEEKEND","batches":["MAIN063206","MAIN063290","MAIN063291","MAIN063214"]},{"date":"2026-05-17","day_name":"Sun","count":1,"cap":0,"is_sun":true,"is_sat":false,"signal":"WEEKEND","batches":["MAIN063395"]},{"date":"2026-05-18","day_name":"Mon","count":0,"cap":6,"is_sun":false,"is_sat":false,"signal":"OK","batches":[]},{"date":"2026-05-19","day_name":"Tue","count":0,"cap":6,"is_sun":false,"is_sat":false,"signal":"OK","batches":[]},{"date":"2026-05-20","day_name":"Wed","count":4,"cap":6,"is_sun":false,"is_sat":false,"signal":"OK","batches":["MAIN063417","MAIN063292","MAIN063293","MAIN063215"]},{"date":"2026-05-21","day_name":"Thu","count":4,"cap":6,"is_sun":false,"is_sat":false,"signal":"OK","batches":["MAIN063453","MAIN063348","MAIN063349","MAIN063506"]},{"date":"2026-05-22","day_name":"Fri","count":2,"cap":6,"is_sun":false,"is_sat":false,"signal":"OK","batches":["MAIN063350","MAIN063351"]},{"date":"2026-05-23","day_name":"Sat","count":3,"cap":6,"is_sun":false,"is_sat":true,"signal":"WEEKEND","batches":["MAIN063352","MAIN063336","MAIN063339"]},{"date":"2026-05-24","day_name":"Sun","count":4,"cap":0,"is_sun":true,"is_sat":false,"signal":"WEEKEND","batches":["MAIN063599","MAIN063471","MAIN063323","MAIN063598"]},{"date":"2026-05-25","day_name":"Mon","count":0,"cap":6,"is_sun":false,"is_sat":false,"signal":"OK","batches":[]}];
+const DATES    = ["2026-04-24","2026-04-25","2026-04-26","2026-04-27","2026-04-28","2026-04-29","2026-04-30"];
+const GENERATED = '2026-05-07 01:02';
+
+const TODAY = new Date(); TODAY.setHours(0,0,0,0);
+const todayStr = TODAY.toISOString().slice(0,10);
+
+let updates = {};
+try{updates=JSON.parse(localStorage.getItem('hoc_pw_v1')||'{}');}catch(e){}
+let queueFilter='ALL', chemFilter='ALL';
+let currentBatch = null;
+
+const N  = n=>typeof n==='number'?n.toLocaleString():(n||'—');
+const fS = s=>{if(!s)return'—';try{return new Date(s+'T12:00:00').toLocaleDateString('en-US',{month:'numeric',day:'numeric'});}catch{return s;}};
+function _excelToDate(serial){var n=Number(serial);if(isNaN(n)||n<1||n>200000)return null;return new Date(Math.round((n-25569)*86400*1000));}
+const fD = s=>{if(!s)return'—';try{if(typeof s==='number'||(typeof s==='string'&&/^\d{4,6}(\.\d+)?$/.test(s.trim()))){var ed=_excelToDate(s);if(ed&&!isNaN(ed.getTime()))return ed.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});}return new Date(s+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});}catch{return s;}};
+
+function urgBadge(u){
+  const map={
+    'OVERDUE':'p-od','TODAY':'p-td','CRITICAL':'p-cr',
+    'URGENT':'p-urg','UPCOMING':'p-up','PLANNED':'p-pl'
+  };
+  return`<span class="pill ${map[u]||'p-pl'}">${u}</span>`;
+}
+function myBadge(main){
+  const u=updates[main];
+  if(!u||!u.status)return'<span class="t3">—</span>';
+  const c=u.status==='Complete'?'p-ok':u.status==='In Progress'?'p-up':u.status.includes('Short')?'p-urg':'p-pl';
+  return`<span class="pill ${c}">${u.status.replace(' — Partial Batch Review','').replace('Not Started','NS')}</span>`;
+}
+function cmpdBadge(c){
+  if(!c)return'<span class="pill p-pl">NO STD</span>';
+  if(c.includes('OVERDUE')||c.includes('CRITICAL'))return`<span class="pill p-od">${c.replace('COMPOUND ','')}</span>`;
+  if(c.includes('AT RISK'))return'<span class="pill p-urg">AT RISK</span>';
+  if(c.includes('ON TRACK'))return'<span class="pill p-ok">ON TRACK</span>';
+  return`<span class="pill p-pl">${c.replace('COMPOUND ','')}</span>`;
+}
+
+function renderBadges(){
+  const od=QUEUE.filter(b=>b.urgency==='OVERDUE').length;
+  const cr=QUEUE.filter(b=>b.urgency==='CRITICAL'||b.urgency==='TODAY').length;
+  const urg=QUEUE.filter(b=>b.urgency==='URGENT').length;
+  const done=Object.values(updates).filter(u=>u.status==='Complete').length;
+  document.getElementById('badges').innerHTML=
+    `<span class="badge b-red">${od} OVERDUE</span>`+
+    `<span class="badge b-amb">${cr} CRITICAL/TODAY</span>`+
+    `<span class="badge b-pur">${urg} URGENT</span>`+
+    `<span class="badge b-grn">${done} COMPLETE</span>`;
+}
+
+function renderAlert(){
+  document.getElementById('asof-bar').textContent=`Generated: ${GENERATED} · Pre-weigh operators: Eli Coley · Robert Peoples · Capacity: 12 batches/day`;
+  const list=QUEUE.filter(b=>b.urgency==='OVERDUE').slice(0,6);
+  document.getElementById('alert-grid').innerHTML=list.map(b=>`
+    <div class="ai">
+      <div style="font-size:9px;font-weight:700;color:var(--red)">${b.main} · Line ${b.line}</div>
+      <div style="font-size:11px;color:var(--text);font-weight:500;margin:2px 0">${b.desc}</div>
+      <div style="font-size:9px;color:var(--text3)">PW due: ${fS(b.pb_start)} · ${b.pb_hrs}h staging${b.cmpd?' · '+b.cmpd.replace('COMPOUND ',''):''}</div>
+    </div>`).join('');
+}
+
+function renderKPIs(){
+  const od=QUEUE.filter(b=>b.urgency==='OVERDUE').length;
+  const cr=QUEUE.filter(b=>['CRITICAL','TODAY'].includes(b.urgency)).length;
+  const done=Object.values(updates).filter(u=>u.status==='Complete').length;
+  const shorts=Object.values(updates).filter(u=>u.status&&u.status.includes('Short')).length;
+  const total_hrs=QUEUE.filter(b=>b.urgency!=='PLANNED').reduce((s,b)=>s+b.pb_hrs,0);
+  document.getElementById('kpis').innerHTML=[
+    {l:'Total queue',v:QUEUE.length,s:'Batches needing pre-weigh',c:'var(--text)'},
+    {l:'Overdue',v:od,s:'Pre-weigh past due',c:'var(--red)'},
+    {l:'Critical / Today',v:cr,s:'Due now or tomorrow',c:'var(--amber)'},
+    {l:'Complete (session)',v:done,s:'Pre-weigh done',c:'var(--green)'},
+    {l:'Shortage flags',v:shorts,s:'Short material items',c:'var(--red)'},
+    {l:'Hrs this week',v:total_hrs.toFixed(0)+'h',s:'Non-planned batches',c:'var(--purple)'},
+  ].map(k=>`<div class="kpi"><div class="kl">${k.l}</div><div class="kv" style="color:${k.c}">${k.v}</div><div class="ks">${k.s}</div></div>`).join('');
+}
+
+function renderDays(){
+  const grid=document.getElementById('day-grid');
+  grid.innerHTML='';
+  // Pre-Weigh capacity = 6 batches/day. Anything above that should bleed forward
+  // to the next available day, so a backed-up Monday doesn't hide the fact that
+  // Tuesday-Friday are empty. We track which batches have been "placed" so no
+  // batch shows up in two columns.
+  const DAILY_CAP = 6;
+  const placedBatches = {};
+
+  // Pre-sort overdue/today batches into placement queue (oldest pb_start first)
+  const todayDS = TODAY.toISOString().slice(0,10);
+  const overdueQueue = QUEUE
+    .filter(b => b.pb_start && b.pb_start <= todayDS && !['COMPLETED'].includes(b.status))
+    .sort((a,b) => (a.pb_start||'').localeCompare(b.pb_start||''));
+
+  for(let d=0;d<5;d++){
+    const date=new Date(TODAY); date.setDate(TODAY.getDate()+d);
+    const ds=date.toISOString().slice(0,10);
+
+    // Batches naturally scheduled for THIS day (pb_start === ds)
+    const naturalToday = QUEUE.filter(b => {
+      if(placedBatches[b.main]) return false;
+      if(d === 0){
+        // Day 0 picks up overdue + today
+        return b.pb_start && b.pb_start <= ds;
+      }
+      return b.pb_start === ds;
+    });
+
+    // Apply daily cap — first 6 batches placed here, rest bleed to next day
+    const rows = naturalToday.slice(0, DAILY_CAP);
+    const overflow = naturalToday.length - rows.length;
+    rows.forEach(b => { placedBatches[b.main] = ds; });
+
+    // Anything that overflowed gets added to a queue we'll process next iteration
+    if(overflow > 0){
+      naturalToday.slice(DAILY_CAP).forEach(b => {
+        // Bump its pb_start forward so it lands in the next iteration's column
+        b._bumpedTo = ds;
+        // (we don't actually mutate pb_start, just leave it unplaced —
+        //  the next day's filter for ds will pick up earlier pb_starts)
+      });
+    }
+
+    const col=document.createElement('div');
+    col.style.cssText='background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px';
+    if(d===0) col.style.borderColor='var(--purple)';
+
+    // Capacity indicator
+    const capPct = Math.min(100, Math.round((rows.length / DAILY_CAP) * 100));
+    const capColor = rows.length >= DAILY_CAP ? 'var(--red)' : rows.length >= DAILY_CAP-1 ? 'var(--amber)' : 'var(--green)';
+
+    col.innerHTML=`
+      <div style="font-size:8px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em">${date.toLocaleDateString('en-US',{weekday:'short'})}${d===0?' · TODAY':''}</div>
+      <div style="font-size:13px;font-weight:700;margin:2px 0 4px">${fS(ds)}</div>
+      <div style="font-size:9px;color:${capColor};font-weight:700;margin-bottom:6px">${rows.length} / ${DAILY_CAP} capacity${overflow>0?' · +'+overflow+' deferred':''}</div>
+      <div style="background:rgba(255,255,255,.04);border-radius:3px;height:3px;margin-bottom:6px;overflow:hidden"><div style="background:${capColor};height:100%;width:${capPct}%"></div></div>
+      ${rows.length===0?'<div class="t3" style="font-size:10px">None due</div>':
+        rows.map(b=>`<div style="border-radius:4px;padding:5px 6px;margin-bottom:3px;cursor:pointer;border-left:3px solid ${b.urgency==='OVERDUE'?'var(--red)':b.urgency==='TODAY'||b.urgency==='CRITICAL'?'var(--amber)':'var(--blue)'}; background:${b.urgency==='OVERDUE'?'rgba(239,68,68,.08)':b.urgency==='TODAY'||b.urgency==='CRITICAL'?'rgba(245,158,11,.08)':'rgba(59,130,246,.06)'}" onclick="openDetail('${b.main}')">
+          <div style="font-size:9px;font-weight:700;color:var(--text2)">${b.main}</div>
+          <div style="font-size:10px;color:var(--text)">${b.desc.slice(0,22)}</div>
+          <div style="font-size:9px;color:var(--text3)">Ln ${b.line} · ${b.pb_hrs}h${updates[b.main]?' · '+myBadge(b.main):''}</div>
+        </div>`).join('')}`;
+    grid.appendChild(col);
+  }
+}
+
+function openDetail(main){
+  const b=QUEUE.find(x=>x.main===main); if(!b) return;
+  currentBatch=b;
+  const u=updates[main]||{};
+  document.getElementById('detail-title').textContent=`${b.main} · ${b.desc}`;
+  document.getElementById('detail-grid').innerHTML=[
+    ['MAIN Batch',b.main],['Line','Line '+b.line],
+    ['Formula',b.formula?'F.'+b.formula:'—'],
+    ['Filling Date',fD(b.date)],['Compound Due',fD(b.cmpddue)],
+    ['PW Start By',fD(b.pb_start)],['Days Until PW',b.days_until<0?'OVERDUE by '+Math.abs(b.days_until)+' days':b.days_until+' days'],
+    ['PW Hrs Required',b.pb_hrs+'h staging'],['Urgency',b.urgency],
+    ['Compound Status',b.cmpd||'—'],
+  ].map(([l,v])=>`<div class="df"><label>${l}</label><span>${v}</span></div>`).join('');
+  document.getElementById('su-status').value=u.status||'';
+  document.getElementById('su-operator').value=u.operator||'';
+  document.getElementById('su-start').value=u.start||'';
+  document.getElementById('su-complete').value=u.complete||'';
+  document.getElementById('su-short-item').value=u.short_item||'';
+  document.getElementById('su-short-qty').value=u.short_qty||'';
+  document.getElementById('su-notes').value=u.notes||'';
+  // Render pull-time timestamps if previously stamped
+  renderPullTiming(u);
+  document.getElementById('saved-note').classList.remove('show');
+  document.getElementById('detail').classList.add('open');
+  document.getElementById('detail').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function closeDetail(){document.getElementById('detail').classList.remove('open');currentBatch=null;}
+
+// ────────────────────────────────────────────────────────────────────────
+// PULL TIMING — captures wall-clock minutes for the actual pre-weigh pull
+// (start → complete). Stored under updates[batch].pull_start_ts / pull_complete_ts.
+// Also mirrored to shared sync so Compound Scheduler "PB Status" can read it.
+// ────────────────────────────────────────────────────────────────────────
+function stampPullTime(which){
+  if(!currentBatch){ alert('Open a batch first.'); return; }
+  var main = currentBatch.main;
+  if(!updates[main]) updates[main] = {};
+  var nowIso = new Date().toISOString();
+
+  if(which === 'start'){
+    if(updates[main].pull_start_ts){
+      if(!confirm('Start time already stamped at ' + new Date(updates[main].pull_start_ts).toLocaleString() + '. Overwrite?')) return;
+    }
+    updates[main].pull_start_ts = nowIso;
+    // Clear any prior complete if user is re-stamping
+    if(updates[main].pull_complete_ts && new Date(updates[main].pull_complete_ts) < new Date(nowIso)){
+      updates[main].pull_complete_ts = '';
+      updates[main].pull_duration_hr = null;
+    }
+  } else if(which === 'complete'){
+    if(!updates[main].pull_start_ts){
+      if(!confirm('No start time stamped. Stamp complete anyway? (Duration cannot be calculated.)')) return;
+    }
+    updates[main].pull_complete_ts = nowIso;
+    if(updates[main].pull_start_ts){
+      var ms = new Date(nowIso) - new Date(updates[main].pull_start_ts);
+      updates[main].pull_duration_hr = ms > 0 ? (ms / 3600000) : null;
+    }
+  }
+  updates[main].saved = nowIso;
+  try {
+    localStorage.setItem('hoc_pw_v1', JSON.stringify(updates));
+    syncToShared(main, updates[main]);
+  } catch(e){}
+  renderPullTiming(updates[main]);
+  renderQueue(); renderCompleted();
+}
+
+function renderPullTiming(u){
+  u = u || {};
+  var sEl = document.getElementById('ts-start-display');
+  var cEl = document.getElementById('ts-complete-display');
+  var dEl = document.getElementById('ts-duration');
+  if(!sEl || !cEl || !dEl) return;
+  function fmt(iso){
+    if(!iso) return '—';
+    try { return new Date(iso).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); }
+    catch(e){ return '—'; }
+  }
+  sEl.textContent = fmt(u.pull_start_ts);
+  cEl.textContent = fmt(u.pull_complete_ts);
+  // Duration display + vs std
+  if(u.pull_duration_hr != null){
+    var dur = u.pull_duration_hr;
+    var stdHrs = (currentBatch && currentBatch.pb_hrs) || 0;
+    var diff = stdHrs ? (dur - stdHrs) : null;
+    var diffStr = '';
+    var color = 'var(--purple)';
+    if(diff != null){
+      var diffNum = diff.toFixed(2);
+      var sign = diff >= 0 ? '+' : '';
+      diffStr = ' (' + sign + diffNum + 'h vs ' + stdHrs + 'h std)';
+      color = Math.abs(diff) <= 0.5 ? 'var(--green)' : Math.abs(diff) <= 1.5 ? 'var(--amber)' : 'var(--red)';
+    }
+    dEl.textContent = 'Duration: ' + dur.toFixed(2) + 'h' + diffStr;
+    dEl.style.color = color;
+  } else {
+    dEl.textContent = '—';
+    dEl.style.color = 'var(--purple)';
+  }
+}
+
+function saveUpdate(){
+  if(!currentBatch)return;
+  // Preserve existing pull timing fields — only update what's in the form
+  var prev = updates[currentBatch.main] || {};
+  updates[currentBatch.main]={
+    status:  document.getElementById('su-status').value,
+    operator:document.getElementById('su-operator').value,
+    start:   document.getElementById('su-start').value,
+    complete:document.getElementById('su-complete').value,
+    short_item:document.getElementById('su-short-item').value,
+    short_qty: document.getElementById('su-short-qty').value,
+    notes:   document.getElementById('su-notes').value,
+    pull_start_ts: prev.pull_start_ts || '',
+    pull_complete_ts: prev.pull_complete_ts || '',
+    pull_duration_hr: prev.pull_duration_hr || null,
+    saved:   new Date().toISOString(),
+  };
+  try{localStorage.setItem('hoc_pw_v1',JSON.stringify(updates));
+    syncToShared(currentBatch.main, updates[currentBatch.main]);;}catch(e){}
+  document.getElementById('saved-note').classList.add('show');
+  renderBadges(); renderKPIs(); renderQueue(); renderCompleted();
+}
+
+function renderCompleted(){
+  // Find batches with pw status === COMPLETED in the shared sync layer
+  var shared = {};
+  try { shared = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}'); } catch(e){}
+  var nowMs = Date.now();
+  var completed = Object.keys(shared)
+    .map(function(batchId){
+      var pw = (shared[batchId] || {}).pw || {};
+      var st = String(pw.pw_status || pw.status || '').toUpperCase();
+      // Treat any of these as "pre-weigh complete":
+      var isComplete = st === 'COMPLETED' || st === 'COMPLETE' || st === 'DONE' || st === 'PW DONE';
+      if(!isComplete) return null;
+      var ts = pw.ts ? new Date(pw.ts).getTime() : null;
+      var dwellMs = ts ? (nowMs - ts) : null;
+      // Find batch in QUEUE for description
+      var qb = QUEUE.find(function(q){ return q.main === batchId; }) || {};
+      return {
+        batch: batchId,
+        desc: qb.desc || '',
+        line: qb.line || 0,
+        pw_ts: ts,
+        dwell_ms: dwellMs,
+        status: qb.status || '',
+        cmpd: qb.cmpd || ''
+      };
+    })
+    .filter(function(x){ return x !== null; })
+    .sort(function(a,b){ return (b.dwell_ms||0) - (a.dwell_ms||0); });
+
+  // KPI strip
+  var fresh = completed.filter(function(b){ return b.dwell_ms !== null && b.dwell_ms < 24*3600*1000; }).length;
+  var aging = completed.filter(function(b){ return b.dwell_ms !== null && b.dwell_ms >= 24*3600*1000 && b.dwell_ms < 72*3600*1000; }).length;
+  var stale = completed.filter(function(b){ return b.dwell_ms !== null && b.dwell_ms >= 72*3600*1000; }).length;
+
+  var kpis = [
+    {l:'Pre-weighed (total)',v:completed.length,c:'var(--text)',s:'Awaiting compound'},
+    {l:'Fresh (< 24 hr)',    v:fresh,           c:'var(--green)',s:'OK to use'},
+    {l:'Aging (1-3 days)',   v:aging,           c:'var(--amber)',s:'Check soon'},
+    {l:'Stale (> 3 days)',   v:stale,           c:'var(--red)',  s:'May need re-weigh'},
+  ];
+  document.getElementById('completed-kpis').innerHTML = kpis.map(function(k){
+    return '<div class="kpi"><div class="kl">' + k.l + '</div><div class="kv" style="color:' + k.c + '">' + k.v + '</div><div class="ks">' + k.s + '</div></div>';
+  }).join('');
+
+  // Table
+  function fmtDwell(ms){
+    if(ms === null) return '—';
+    var h = Math.floor(ms/3600000);
+    if(h < 24) return h + ' hr';
+    var d = Math.floor(h/24);
+    var rh = h % 24;
+    return d + 'd ' + rh + 'h';
+  }
+  function fmtDate(ts){
+    if(!ts) return '—';
+    try { return new Date(ts).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); } catch(e){ return '—'; }
+  }
+  function dwellColor(ms){
+    if(ms === null) return 'var(--text2)';
+    if(ms < 24*3600*1000) return 'var(--green)';
+    if(ms < 72*3600*1000) return 'var(--amber)';
+    return 'var(--red)';
+  }
+
+  var tbody = document.getElementById('completed-tbody');
+  if(!completed.length){
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text3)">No pre-weighed batches awaiting compound. As batches get marked complete in pre-weigh, they will appear here with dwell time.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = completed.map(function(b){
+    return '<tr style="cursor:pointer" onclick="openDetail(\'' + b.batch + '\');showPage(\'cmd\')">' +
+      '<td><b>' + b.batch + '</b></td>' +
+      '<td>' + (b.desc || '—').slice(0,40) + '</td>' +
+      '<td>Ln ' + b.line + '</td>' +
+      '<td>' + fmtDate(b.pw_ts) + '</td>' +
+      '<td style="color:' + dwellColor(b.dwell_ms) + ';font-weight:700">' + fmtDwell(b.dwell_ms) + '</td>' +
+      '<td>' + (b.cmpd || b.status || '—') + '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+function renderQueue(){
+  const filters=['ALL','OVERDUE','CRITICAL','URGENT','UPCOMING','PLANNED','MY UPDATES','SHORTS'];
+  const counts={
+    'ALL':QUEUE.length,'OVERDUE':QUEUE.filter(b=>b.urgency==='OVERDUE').length,
+    'CRITICAL':QUEUE.filter(b=>['CRITICAL','TODAY'].includes(b.urgency)).length,
+    'URGENT':QUEUE.filter(b=>b.urgency==='URGENT').length,
+    'UPCOMING':QUEUE.filter(b=>b.urgency==='UPCOMING').length,
+    'PLANNED':QUEUE.filter(b=>b.urgency==='PLANNED').length,
+    'MY UPDATES':Object.keys(updates).length,
+    'SHORTS':Object.values(updates).filter(u=>u.status&&u.status.includes('Short')).length,
+  };
+  document.getElementById('queue-filters').innerHTML=filters.map(f=>
+    `<button class="fb${f===queueFilter?' active':''}" onclick="setQF('${f}')">${f} (${counts[f]})</button>`).join('');
+  let rows=QUEUE;
+  if(queueFilter==='MY UPDATES') rows=QUEUE.filter(b=>updates[b.main]);
+  else if(queueFilter==='SHORTS') rows=QUEUE.filter(b=>updates[b.main]&&updates[b.main].status&&updates[b.main].status.includes('Short'));
+  else if(queueFilter!=='ALL') rows=QUEUE.filter(b=>b.urgency===queueFilter||(queueFilter==='CRITICAL'&&b.urgency==='TODAY'));
+  document.getElementById('queue-tbody').innerHTML=rows.map(b=>`
+    <tr style="cursor:pointer" onclick="openDetail('${b.main}');showPage('cmd')">
+      <td style="font-weight:700;color:${b.urgency==='OVERDUE'?'var(--red)':b.urgency==='TODAY'||b.urgency==='CRITICAL'?'var(--amber)':'var(--purple)'};font-size:10px">${fS(b.pb_start)}</td>
+      <td style="font-size:10px;color:var(--text2)">${b.main}</td>
+      <td>${b.desc}</td>
+      <td style="text-align:center;color:var(--blue);font-weight:700">${b.formula?'F.'+b.formula:'—'}</td>
+      <td style="text-align:center">Line ${b.line}</td>
+      <td style="text-align:center;color:var(--purple);font-weight:700">${b.pb_hrs}h</td>
+      <td style="text-align:center;font-size:10px">${fS(b.cmpddue)}</td>
+      <td>${cmpdBadge(b.cmpd)}</td>
+      <td>${urgBadge(b.urgency)}</td>
+      <td>${myBadge(b.main)}</td>
+    </tr>`).join('');
+}
+function setQF(f){queueFilter=f;renderQueue();}
+
+function renderCapacity(){
+  const od=QUEUE.filter(b=>b.urgency==='OVERDUE').length;
+  const wk7=CAPACITY.slice(3,10).reduce((s,d)=>s+d.count,0);
+  const ot=CAPACITY.filter(d=>d.signal==='OVERTIME'||d.signal==='CRITICAL').length;
+  document.getElementById('cap-kpis').innerHTML=[
+    {l:'Overdue pre-weigh',v:od,s:'Past due today',c:'var(--red)'},
+    {l:'7-day queue',v:wk7,s:'Batches to pre-weigh this week',c:'var(--text)'},
+    {l:'Days needing overtime',v:ot,s:'Over 12 batch capacity',c:ot>0?'var(--red)':'var(--green)'},
+    {l:'Operators',v:2,s:'Eli Coley · Robert Peoples',c:'var(--text)'},
+    {l:'Daily capacity',v:12,s:'6 per operator · space limited',c:'var(--text)'},
+    {l:'Shift',v:'6:30am–3pm',s:'Mon–Fri · Sat occasional',c:'var(--text)'},
+  ].map(k=>`<div class="kpi"><div class="kl">${k.l}</div><div class="kv" style="color:${k.c}">${k.v}</div><div class="ks">${k.s}</div></div>`).join('');
+
+  document.getElementById('cap-grid').innerHTML=CAPACITY.map(d=>{
+    const pct=d.cap>0?Math.min(100,Math.round(d.count/d.cap*100)):0;
+    const vc=d.signal==='CRITICAL'?'var(--red)':d.signal==='OVERTIME'?'var(--amber)':d.signal==='LOADED'?'var(--amber)':d.count>0?'var(--purple)':'var(--text3)';
+    const bc=d.signal==='CRITICAL'?'var(--red)':d.signal==='OVERTIME'?'var(--amber)':d.date===todayStr?'var(--purple)':'var(--border)';
+    const isToday=d.date===todayStr;
+    return`<div style="background:var(--bg3);border:1px solid ${bc};border-radius:8px;padding:9px 10px;${d.is_sun?'opacity:.3':''}">
+      <div style="font-size:8px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em">${d.day_name}${isToday?' · TODAY':''}${d.is_sat?' · SAT':''}</div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:4px">${fS(d.date)}</div>
+      <div style="font-size:20px;font-weight:700;color:${vc};line-height:1">${d.is_sun?'—':d.count}</div>
+      <div style="font-size:9px;color:var(--text3);margin-bottom:5px">${d.is_sun?'No shift':('/ '+d.cap+' capacity')}</div>
+      ${d.cap>0?`<div style="height:4px;background:var(--gray-l);border-radius:2px;overflow:hidden"><div style="height:100%;width:${pct}%;background:${vc};border-radius:2px"></div></div>`:''}
+      ${d.signal==='OVERTIME'?'<div style="font-size:8px;font-weight:700;color:var(--amber);margin-top:4px">OVERTIME</div>':''}
+      ${d.signal==='CRITICAL'?'<div style="font-size:8px;font-weight:700;color:var(--red);margin-top:4px">CRITICAL</div>':''}
+      ${d.signal==='LOADED'?'<div style="font-size:8px;font-weight:700;color:var(--amber);margin-top:4px">HEAVY LOAD</div>':''}
+    </div>`;
+  }).join('');
+}
+
+function renderChem(){
+  let rows=CHEM_REQ;
+  if(chemFilter==='ACTIVE') rows=CHEM_REQ.filter(c=>c.total_req>0);
+  else if(chemFilter==='ZERO') rows=CHEM_REQ.filter(c=>c.total_req===0);
+  rows=rows.slice().sort((a,b)=>b.total_req-a.total_req);
+  document.getElementById('chem-tbody').innerHTML=rows.map((c,i)=>`
+    <tr style="background:${i%2?'rgba(255,255,255,.01)':'transparent'}">
+      <td style="font-size:10px;color:var(--text2);font-weight:700">${c.sku}</td>
+      <td>${c.desc}</td>
+      <td style="text-align:right;font-weight:700;color:${c.total_req>0?'var(--purple)':'var(--text3)'}">
+        ${c.total_req>0?c.total_req.toLocaleString(undefined,{maximumFractionDigits:2}):'—'}</td>
+      ${DATES.map(dt=>`<td style="text-align:right;font-size:10px;color:${(c[dt]||0)>0?'var(--text)':'var(--text3)'}">${(c[dt]||0)>0?c[dt].toLocaleString(undefined,{maximumFractionDigits:2}):'—'}</td>`).join('')}
+    </tr>`).join('');
+}
+function setChemFilter(f){chemFilter=f;
+  document.querySelectorAll('#page-chem .fb').forEach((b,i)=>b.classList.toggle('active',['ALL','ACTIVE','ZERO'][i]===f));
+  renderChem();
+}
+
+function exportCSV(){
+  const hdrs=['MAIN_Batch','PW_Status','Operator','PW_Start_Date','PW_Complete_Date',
+              'Short_Item','Short_Qty','Notes','Saved'];
+  const rows=Object.entries(updates).map(([main,u])=>[
+    main,u.status||'',u.operator||'',u.start||'',u.complete||'',
+    u.short_item||'',u.short_qty||'',u.notes||'',u.saved||'']);
+  if(!rows.length){alert('No updates to export yet.');return;}
+  const csv=[hdrs,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='prewgh_status_updates.csv'; a.click();
+  document.getElementById('export-count').textContent=`Exported ${rows.length} status updates.`;
+}
+
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  const map={cmd:0,queue:1,capacity:2,chem:3,export:4};
+  document.querySelectorAll('.nb')[map[id]].classList.add('active');
+}
+
+renderBadges();
+
+
+// ── Supabase: pull schedule for tablets without a local upload ─────────
+(function(){
+  var SUPA_URL = 'https://yemtpvrumqvbzrzpwnyy.supabase.co';
+  var SUPA_KEY = 'sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl';
+  function pullSchedule(){
+    try{
+      fetch(SUPA_URL+'/rest/v1/hoc_schedule?id=eq.1', {
+        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+      }).then(function(r){ return r.ok ? r.json() : []; })
+        .then(function(rows){
+          if(!rows || !rows.length || !rows[0].data) return;
+          var remote;
+          try { remote = JSON.parse(rows[0].data); } catch(e) { return; }
+          var local = {};
+          try { local = JSON.parse(localStorage.getItem('hoc_upload_v1')||'{}'); } catch(e){}
+          var remoteTs = new Date(remote._updated||0).getTime();
+          var localTs  = new Date((local && local._updated)||0).getTime();
+          if(remoteTs > localTs){
+            localStorage.setItem('hoc_upload_v1', JSON.stringify(remote));
+            try { reloadQueue(); } catch(e){}
+            try { if(typeof renderAll==="function") renderAll(); } catch(e){}
+            try { if(typeof renderKPIs==="function") { renderKPIs(); renderDays && renderDays(); renderQueue && renderQueue(); } } catch(e){}
+          }
+        }).catch(function(){});
+    }catch(e){}
+  }
+  pullSchedule();
+  setInterval(pullSchedule, 30000);
+})();
+
+// ── Auto-refresh: sync bus + upload watcher ──────────────────────────
+window.addEventListener('storage', function(e) {
+  if (e.key === 'hoc_sync_v1') {
+    try { renderAlert(); renderKPIs(); renderDays(); renderQueue(); renderCapacity(); renderChem(); } catch(err) {}
+  }
+  if (e.key === 'hoc_upload_v1') {
+    try { reloadQueue(); renderAlert(); renderKPIs(); renderDays(); renderQueue(); renderCapacity(); renderChem(); } catch(err) {}
+  }
+});
+setInterval(function() {
+  try { reloadQueue(); renderAlert(); renderKPIs(); renderDays(); renderQueue(); renderCapacity(); renderChem(); } catch(err) {}
+}, 30000);
+ renderAlert(); renderKPIs(); renderDays();
+renderQueue(); renderCapacity(); renderChem();
+</script>
+<script src="hoc_events.js"></script>
+</body>
+</html>

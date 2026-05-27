@@ -1,0 +1,1952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HOC Data Upload Hub</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0B0E17;--bg2:#111520;--bg3:#161C28;
+  --border:#1E293B;--text:#DDE4F0;--text2:#8899AA;--text3:#4A5570;
+  --green:#22C55E;--red:#EF4444;--amber:#F59E0B;--blue:#3B82F6;
+  --purple:#8B5CF6;--teal:#10B981;--gray-l:#1E293B;
+  --green-l:rgba(34,197,94,.1);--red-l:rgba(239,68,68,.1);
+  --amber-l:rgba(245,158,11,.1);--blue-l:rgba(59,130,246,.1);
+}
+body{font-family:ui-monospace,monospace;background:var(--bg);color:var(--text);font-size:11px;min-height:100vh}
+.topbar{display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.brand-name{font-size:13px;font-weight:700;color:var(--text)}
+.brand-sub{font-size:9px;color:var(--text3)}
+.logo{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.nav{display:flex;gap:2px;flex:1;overflow-x:auto}
+.nb{padding:5px 12px;border-radius:6px;font:inherit;font-size:10px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--text2);border-bottom:2px solid transparent;white-space:nowrap}
+.nb:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.nb.active{color:var(--blue);border-bottom-color:var(--blue)}
+.badges{display:flex;gap:4px;flex-wrap:wrap}
+.badge{font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.b-grn{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.25)}
+.b-red{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.25)}
+.b-amb{background:rgba(245,158,11,.12);color:var(--amber);border:1px solid rgba(245,158,11,.25)}
+.b-blu{background:rgba(59,130,246,.12);color:var(--blue);border:1px solid rgba(59,130,246,.25)}
+.b-pur{background:rgba(139,92,246,.12);color:var(--purple);border:1px solid rgba(139,92,246,.25)}
+.page{display:none}.page.active{display:block}
+.content{padding:14px 16px;max-width:1400px;margin:0 auto}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.card-title{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:12px}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.kl{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.kv{font-size:22px;font-weight:700;line-height:1;margin-bottom:2px}
+.ks{font-size:9px;color:var(--text3)}
+.sync-bar{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 12px;margin-bottom:10px;font-size:9px;color:var(--text3);display:flex;align-items:center;gap:8px}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:10px}
+th{text-align:left;padding:5px 8px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:5px 8px;border-bottom:1px solid rgba(30,41,59,.5);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+.t3{color:var(--text3)}
+.t2{color:var(--text2)}
+.btn{padding:5px 14px;border-radius:6px;font:inherit;font-size:10px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2)}
+.btn:hover{background:var(--bg2);color:var(--text)}
+.btn-grn{background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.3);color:var(--green)}
+.btn-blu{background:rgba(59,130,246,.1);border-color:rgba(59,130,246,.3);color:var(--blue)}
+.empty-state{text-align:center;padding:40px 20px;color:var(--text3)}
+.empty-icon{font-size:32px;margin-bottom:8px}
+.empty-title{font-size:13px;font-weight:700;color:var(--text2);margin-bottom:4px}
+.empty-sub{font-size:10px}
+input,select,textarea{font-family:ui-monospace,monospace;font-size:10px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:4px 8px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--blue)}
+.upd-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.upd-label{font-size:9px;font-weight:700;color:var(--text3);min-width:80px;text-transform:uppercase;letter-spacing:.06em}
+.saved-msg{font-size:9px;font-weight:700;color:var(--green);opacity:0;transition:opacity .3s}
+.saved-msg.show{opacity:1}
+
+.logo{background:linear-gradient(135deg,#F59E0B,#EF4444)}
+.nb.active{color:var(--amber);border-bottom-color:var(--amber)}
+.drop-zone{border:2px dashed var(--border);border-radius:12px;padding:30px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg3);margin-bottom:10px}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--blue);background:rgba(59,130,246,.06)}
+.drop-zone.loaded{border-color:var(--green);background:rgba(34,197,94,.06)}
+.drop-icon{font-size:28px;margin-bottom:8px}
+.drop-title{font-size:12px;font-weight:700;margin-bottom:4px}
+.drop-sub{font-size:9px;color:var(--text3)}
+.drop-status{font-size:10px;font-weight:700;margin-top:8px;min-height:16px}
+.zone-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.log-line{font-size:10px;padding:3px 0;border-bottom:1px solid var(--border);color:var(--text2)}
+.log-line.ok{color:var(--green)}
+.log-line.err{color:var(--red)}
+.log-line.info{color:var(--blue)}
+.big-btn{width:100%;padding:14px;border-radius:8px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;border:none;background:var(--blue);color:#fff;margin-bottom:8px}
+.big-btn:hover{background:#2563EB}
+.big-btn:disabled{opacity:.4;cursor:not-allowed}
+.clear-btn{width:100%;padding:8px;border-radius:6px;font:inherit;font-size:10px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text3)}
+.clear-btn:hover{border-color:var(--red);color:var(--red)}
+.status-bar{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:10px}
+.stat-row{display:flex;justify-content:space-between;align-items:center;font-size:10px;padding:3px 0}
+.stat-val{font-weight:700;color:var(--text)}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <a href="index.html" style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text2);text-decoration:none;font-size:9px;font-weight:700;flex-shrink:0">← HOC-OES</a>
+    <div class="logo">DU</div>
+    <div>
+      <div class="brand-name">Data Upload Hub</div>
+      <div class="brand-sub">Drop Excel files → all dashboards update instantly · No embedded data</div>
+    </div>
+  </div>
+  <nav class="nav">
+    <button class="nb active" onclick="P('upload')">Upload Data</button>
+    <button class="nb" onclick="P('status')">Current Data</button>
+    <button class="nb" onclick="P('log')">Upload Log</button>
+  </nav>
+</div>
+
+<!-- UPLOAD PAGE -->
+<div class="page active" id="page-upload"><div class="content">
+  <div class="sync-bar" id="sync-bar"></div>
+
+  <!-- ── VICINITY LIVE DATALINK ─────────────────────────────────────
+       New in v6.28: replaces manual XLSX uploads by polling Vicinity 4
+       OData endpoints directly. Falls back to file drops below when the
+       server is unreachable (off-network / VPN-down). Status indicator
+       shows connection health; "Pull Now" forces immediate refresh. -->
+  <div id="vic-datalink-pc-banner" style="display:none;margin-bottom:10px;padding:10px 14px;background:linear-gradient(135deg,rgba(34,197,94,.12),rgba(59,130,246,.08));border:1px solid rgba(34,197,94,.4);border-left:4px solid var(--green);border-radius:8px;font-size:11px;color:var(--text)">
+    <strong style="color:var(--green)">📡 DATALINK PC MODE</strong> ·
+    This PC is the designated Vicinity bridge — keep this browser tab open. Auto-poll active.
+    <span style="color:var(--text3);font-size:10px;margin-left:6px">All other tablets read this data via Supabase.</span>
+  </div>
+
+  <div class="card" style="margin-bottom:14px;border:1px solid rgba(34,197,94,.3);background:linear-gradient(135deg,rgba(34,197,94,.05),rgba(59,130,246,.04))">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <span>🔄 Live Vicinity Datalink <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3);font-size:9px;margin-left:6px">auto-pulls Production Schedule, Labor Standards, Patch OEE directly from Vicinity 4 OData</span></span>
+      <span id="vic-status-pill" style="font-size:9px;font-weight:700;padding:3px 10px;border-radius:10px;background:rgba(100,116,139,.15);color:var(--text3);border:1px solid rgba(100,116,139,.3)">⊙ Not tested</span>
+    </div>
+
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+      <div style="font-size:10px;color:var(--text2);flex:1;min-width:200px">
+        Server: <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:9px" id="vic-server-display">hoc-dts-svr-025:5555</code>
+        <span style="margin-left:10px;color:var(--text3)">Last pull: <span id="vic-last-pull">never</span></span>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="nb" onclick="vicProbe()" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);font-size:10px;font-weight:700">⚡ Test Connection</button>
+        <button class="nb" onclick="vicPullSchedule()" style="padding:6px 12px;border-radius:6px;background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.35);font-size:10px;font-weight:700">📊 Pull Schedule</button>
+        <button class="nb" onclick="vicPullLabor()" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);font-size:10px;font-weight:700">⏱ Pull Labor Std</button>
+        <button class="nb" onclick="vicPullOEE()" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);font-size:10px;font-weight:700">📈 Pull Patch OEE</button>
+        <button class="nb" onclick="vicPullAll()" style="padding:6px 12px;border-radius:6px;background:rgba(59,130,246,.15);color:var(--blue);border:1px solid rgba(59,130,246,.35);font-size:10px;font-weight:700">🔄 Pull All Tier 1</button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:10px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+      <label style="display:flex;align-items:center;gap:5px;cursor:pointer;color:var(--text2)">
+        <input type="checkbox" id="vic-autopoll" onchange="vicToggleAutoPoll()"> Auto-poll every 15 min
+      </label>
+      <button class="nb" onclick="vicShowEndpoints()" style="padding:4px 9px;border-radius:5px;border:1px solid var(--border);font-size:9px">View all 32 endpoints</button>
+      <button class="nb" onclick="vicConfigureServer()" style="padding:4px 9px;border-radius:5px;border:1px solid var(--border);font-size:9px;color:var(--text3)">⚙ Change server URL</button>
+      <span id="vic-status-msg" style="margin-left:auto;font-size:10px;color:var(--text3)"></span>
+    </div>
+
+    <div id="vic-endpoints-panel" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);max-height:280px;overflow-y:auto">
+      <table style="width:100%;font-size:10px">
+        <thead><tr>
+          <th style="text-align:left;padding:4px 6px;color:var(--text3);font-weight:700">Key</th>
+          <th style="text-align:left;padding:4px 6px;color:var(--text3);font-weight:700">Tier</th>
+          <th style="text-align:left;padding:4px 6px;color:var(--text3);font-weight:700">Purpose</th>
+          <th style="text-align:right;padding:4px 6px;color:var(--text3);font-weight:700">Records</th>
+          <th style="text-align:left;padding:4px 6px;color:var(--text3);font-weight:700">Last pull</th>
+          <th style="padding:4px 6px"></th>
+        </tr></thead>
+        <tbody id="vic-endpoints-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="zone-grid">
+    <!-- Production Tracker -->
+    <div>
+      <div style="font-size:10px;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em">📊 HOC Production Tracker</div>
+      <div class="drop-zone" id="zone-pt" onclick="document.getElementById('file-pt').click()" ondragover="dragOver(event,'pt')" ondragleave="dragLeave('pt')" ondrop="dropFile(event,'pt')">
+        <input type="file" id="file-pt" accept=".xlsx,.xls,.csv" style="display:none" onchange="loadFile(this.files[0],'pt')">
+        <div class="drop-icon">📋</div>
+        <div class="drop-title">HOC_Production_Tracker.xlsx</div>
+        <div class="drop-sub">CLEAN_ DATA · CAPACITY FORECAST · Goal Source Data · Dashboard</div>
+        <div class="drop-status" id="status-pt" style="color:var(--text3)">Drop file here or click to browse</div>
+      </div>
+    </div>
+
+    <!-- Planning Data -->
+    <div>
+      <div style="font-size:10px;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em">📦 Planning Data (Vicinity)</div>
+      <div class="drop-zone" id="zone-pd" onclick="document.getElementById('file-pd').click()" ondragover="dragOver(event,'pd')" ondragleave="dragLeave('pd')" ondrop="dropFile(event,'pd')">
+        <input type="file" id="file-pd" accept=".xlsx,.xls,.csv" style="display:none" onchange="loadFile(this.files[0],'pd')">
+        <div class="drop-icon">🏭</div>
+        <div class="drop-title">Planning_Data.xlsx</div>
+        <div class="drop-sub">Vicinity Interface · Component inventory · POs · MRP</div>
+        <div class="drop-status" id="status-pd" style="color:var(--text3)">Drop file here or click to browse</div>
+      </div>
+    </div>
+
+    <!-- Changeover Tracker -->
+    <div>
+      <div style="font-size:10px;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em">🔄 Changeover Tracker (Patch OEE)</div>
+      <div class="drop-zone" id="zone-co" onclick="document.getElementById('file-co').click()" ondragover="dragOver(event,'co')" ondragleave="dragLeave('co')" ondrop="dropFile(event,'co')">
+        <input type="file" id="file-co" accept=".xlsx,.xls,.csv" style="display:none" onchange="loadFile(this.files[0],'co')">
+        <div class="drop-icon">🔄</div>
+        <div class="drop-title">HOC_Changeover_Tracker.xlsx</div>
+        <div class="drop-sub">Monthly Data · YTD Summary (Main + Component) · Trend Scorecard</div>
+        <div class="drop-status" id="status-co" style="color:var(--text3)">Drop file here or click to browse</div>
+      </div>
+    </div>
+
+    <!-- Fill Labor Extract (Vicinity) -->
+    <div>
+      <div style="font-size:10px;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em">⏱ Fill Labor Extract (Vicinity)</div>
+      <div class="drop-zone" id="zone-lb" onclick="document.getElementById('file-lb').click()" ondragover="dragOver(event,'lb')" ondragleave="dragLeave('lb')" ondrop="dropFile(event,'lb')">
+        <input type="file" id="file-lb" accept=".xlsx,.xls,.csv" style="display:none" onchange="loadFile(this.files[0],'lb')">
+        <div class="drop-icon">⏱</div>
+        <div class="drop-title">Fill_Labor_Extract.xlsx</div>
+        <div class="drop-sub">Master labor standards by formula · Hours/LB compounding time · powers Compound forecast</div>
+        <div class="drop-status" id="status-lb" style="color:var(--text3)">Drop file here or click to browse</div>
+      </div>
+    </div>
+  </div>
+
+  <button class="big-btn" id="update-btn" onclick="updateAllDashboards()" disabled>
+    ⚡ Update All Dashboards
+  </button>
+  <button class="clear-btn" onclick="clearAllData()">🗑 Clear All Uploaded Data</button>
+
+  <!-- ── PASTE SCHEDULE ──────────────────────────────────────────── -->
+  <!--    Alternative to file drop: paste cells copied from Excel.
+          Auto-detects Production Tracker (batches) vs Planning Data
+          (Vicinity inventory) based on which column headers are present.
+          Supports a full select-all from the May/June/etc. tab including
+          the KPI rollup at the top — the parser scans for the header row. -->
+  <div class="card" style="margin-top:14px">
+    <div class="card-title">
+      📋 Paste Schedule from Clipboard
+      <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3);font-size:9px">Alternative to file drop — paste cells copied from web Excel</span>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-right:2px">target:</span>
+      <button class="nb" id="paste-target-auto" data-target="auto" style="background:rgba(59,130,246,.12);color:var(--blue);border:1px solid rgba(59,130,246,.25);padding:5px 10px;border-radius:6px">🤖 Auto-detect</button>
+      <button class="nb" id="paste-target-pt"  data-target="pt" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border)">📊 Production Schedule</button>
+      <button class="nb" id="paste-target-pd"  data-target="pd" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border)">🏭 Planning Data (Vicinity)</button>
+      <button class="nb" id="paste-target-att" data-target="att" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border)">📈 Case Attainment</button>
+    </div>
+    <textarea id="paste-box" placeholder="In Excel: Ctrl+A to select all on the current month tab, Ctrl+C to copy, then click here and Ctrl+V to paste.
+
+The parser will skip the KPI rollup at the top and find the batch table automatically.
+
+For Planning Data, paste from the 'Vicinity Interface' sheet — same idea, header row anywhere in the paste is fine.
+
+For Case Attainment, paste the entire MFG Plant attainment sheet — parser finds Plant total + per-line blocks + monthly trend automatically." style="width:100%;min-height:120px;padding:10px;font-family:ui-monospace,monospace;font-size:10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);resize:vertical;line-height:1.4"></textarea>
+    <div style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap">
+      <button class="nb" onclick="parsePaste()" style="background:var(--blue);color:#fff;padding:6px 14px;border-radius:6px;border:none;font-weight:700;font-size:10px">✓ Load Pasted Data</button>
+      <button class="nb" onclick="document.getElementById('paste-box').value=''" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);font-size:10px">Clear</button>
+      <span id="paste-status" style="font-size:9px;color:var(--text3);margin-left:6px"></span>
+    </div>
+  </div>
+
+  <div id="progress-area" style="margin-top:14px;display:none">
+    <div class="card">
+      <div class="card-title">Processing</div>
+      <div id="progress-lines"></div>
+    </div>
+  </div>
+</div></div>
+
+<!-- STATUS PAGE -->
+<div class="page" id="page-status"><div class="content">
+  <div class="card">
+    <div class="card-title">Current Data in Dashboards</div>
+    <div id="current-status">
+      <div class="empty-state">
+        <div class="empty-icon">📂</div>
+        <div class="empty-title">No data uploaded yet</div>
+        <div class="empty-sub">Upload your Production Tracker and Planning Data files above</div>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- LOG PAGE -->
+<div class="page" id="page-log"><div class="content">
+  <div class="card">
+    <div class="card-title">Upload Log <button class="btn" onclick="clearLog()" style="float:right;margin-top:-2px;font-size:9px">Clear Log</button></div>
+    <div id="log-lines" style="max-height:500px;overflow-y:auto">
+      <div class="t3" style="text-align:center;padding:20px">No uploads yet</div>
+    </div>
+  </div>
+</div></div>
+
+<script>
+
+var SYNC_KEY = 'hoc_sync_v1';
+var SUPA_URL = 'https://yemtpvrumqvbzrzpwnyy.supabase.co';
+var SUPA_KEY = 'sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl';
+
+function syncRead(){try{return JSON.parse(localStorage.getItem(SYNC_KEY)||'{}');}catch(e){return{};}}
+function syncWrite(data){
+  try{
+    var cur=syncRead();
+    var merged=Object.assign({},cur,data,{_ts:new Date().toISOString()});
+    localStorage.setItem(SYNC_KEY,JSON.stringify(merged));
+    supaWrite(merged);
+  }catch(e){}
+}
+function supaWrite(data){
+  try{
+    fetch(SUPA_URL+'/rest/v1/hoc_sync_bus',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Prefer':'resolution=merge-duplicates'},
+      body:JSON.stringify({id:1,data:JSON.stringify(data),updated_at:new Date().toISOString()})
+    }).catch(function(){});
+  }catch(e){}
+}
+function supaRead(cb){
+  try{
+    fetch(SUPA_URL+'/rest/v1/hoc_sync_bus?id=eq.1',{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    }).then(function(r){return r.json();}).then(function(d){
+      if(d&&d[0]&&d[0].data){
+        var parsed=JSON.parse(d[0].data);
+        var cur=syncRead();
+        var ts_remote=new Date(parsed._ts||0);
+        var ts_local=new Date(cur._ts||0);
+        if(ts_remote>ts_local){
+          localStorage.setItem(SYNC_KEY,JSON.stringify(parsed));
+          if(cb)cb(parsed);
+        }
+      }
+    }).catch(function(){});
+  }catch(e){}
+}
+function showPage(id,map){
+  Object.keys(map).forEach(function(k){
+    var el=document.getElementById('page-'+k);
+    if(el)el.classList.toggle('active',k===id);
+    var nb=document.querySelector('.nb[onclick*="\'' + k + '\'"]');
+    if(nb)nb.classList.toggle('active',k===id);
+  });
+}
+function renderSyncBar(el){
+  if(!el)return;
+  var d=syncRead();
+  var ts=d._ts?new Date(d._ts).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):'—';
+  el.innerHTML='<span class="sync-dot"></span>HOC-OES Sync Bus · Last update: '+ts+' · Cross-device sync: 15s';
+}
+function N(n){return typeof n==='number'?n.toLocaleString():(n||'—');}
+function fD(s){if(!s)return'—';try{return new Date(s+'T12:00:00').toLocaleDateString('en-US',{month:'numeric',day:'numeric'});}catch(e){return s;}}
+function pct(v){return typeof v==='number'?Math.round(v*10)/10+'%':'—';}
+
+
+var DATA_KEY = 'hoc_upload_v1';
+var LOG_KEY  = 'hoc_upload_log_v1';
+var PM = {upload:0,status:1,log:2};
+function P(id){ showPage(id,PM); if(id==='status')renderStatus(); if(id==='log')renderLog(); }
+
+// ═══════════════════════════════════════════════════════════════════
+// OPTION A — Supabase broadcast of parsed schedule payload
+// ═══════════════════════════════════════════════════════════════════
+// Pushes batches/goals/inventory to hoc_schedule table so every
+// tablet sees the schedule after ONE upload on ONE device.
+//
+// REQUIRED SUPABASE TABLE (run once in SQL editor):
+//   create table if not exists hoc_schedule (
+//     id integer primary key,
+//     data text,
+//     updated_at timestamptz
+//   );
+//   -- Allow anon insert/update/select for the pilot:
+//   alter table hoc_schedule enable row level security;
+//   create policy "anon all" on hoc_schedule for all
+//     using (true) with check (true);
+//
+function broadcastSchedule(payload){
+  try{
+    var body = {
+      id: 1,
+      data: JSON.stringify(payload),
+      updated_at: new Date().toISOString()
+    };
+    fetch(SUPA_URL+'/rest/v1/hoc_schedule', {
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'apikey':SUPA_KEY,
+        'Authorization':'Bearer '+SUPA_KEY,
+        'Prefer':'resolution=merge-duplicates,return=minimal'
+      },
+      body: JSON.stringify(body)
+    }).then(function(r){
+      if(r && r.ok){ log('ok', 'Broadcast to Supabase ✓ — all tablets will sync within 30s'); }
+      else { log('err', 'Broadcast HTTP ' + (r?r.status:'?') + ' — tablets must re-upload locally'); }
+    }).catch(function(err){
+      log('err', 'Broadcast failed: ' + err.message + ' — tablets must re-upload locally');
+    });
+  }catch(e){
+    log('err', 'Broadcast error: ' + e.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// OPTION B — Vicinity OData live-refresh (SCAFFOLD — disabled by default)
+// ═══════════════════════════════════════════════════════════════════
+// Pulls Vicinity inventory directly from the ERP OData feed,
+// eliminating the manual Planning_Data.xlsx export step.
+//
+// TO ENABLE:
+//   1. Verify tablets can reach hoc-dts-svr-025:5555 on the LAN
+//   2. Verify the endpoint returns JSON without a login prompt
+//   3. If CORS blocks the browser, ask IT to add this header on the
+//      Vicinity Web server response:
+//         Access-Control-Allow-Origin: *
+//      (or specific origin of where these HTML files are hosted)
+//   4. Flip OPTION_B_ENABLED to true below and reload.
+//
+var OPTION_B_ENABLED = false;
+var VICINITY_ODATA = 'http://hoc-dts-svr-025:5555/VicinityWeb/odata/HOCVIC/vv_Custom%20Views_Planning_MRP%20Detail?$format=json';
+
+function refreshFromVicinity(){
+  if(!OPTION_B_ENABLED){
+    progress('✗ Live refresh disabled. Set OPTION_B_ENABLED=true after confirming network + CORS.', 'err');
+    return;
+  }
+  var btn = document.getElementById('vic-refresh-btn');
+  if(btn){ btn.disabled = true; btn.textContent = '⏳ Pulling from Vicinity...'; }
+  document.getElementById('progress-area').style.display = 'block';
+  progress('Fetching live Vicinity feed...');
+
+  fetch(VICINITY_ODATA, {method:'GET', headers:{'Accept':'application/json'}})
+    .then(function(r){
+      if(!r.ok) throw new Error('HTTP '+r.status+' from Vicinity Web');
+      return r.json();
+    })
+    .then(function(json){
+      var rows = json.value || json.d && json.d.results || [];
+      progress('✓ Received ' + rows.length.toLocaleString() + ' rows from Vicinity', 'ok');
+      if(!rows.length) throw new Error('Empty payload — check feed URL');
+
+      // Run the same inventory-rollup logic the file path uses
+      var byComp = {};
+      rows.forEach(function(r){
+        var sku = String(r.ComponentId||'').trim();
+        if(!sku) return;
+        if(!byComp[sku]) byComp[sku] = {
+          sku:sku, desc:String(r.ComponentDescription||'').trim(),
+          type:String(r.ComponentType||'').trim(),
+          makebuy:String(r.MakeorBuy||'').trim(),
+          qoh:0, po_qty:0, prod_req:0
+        };
+        var qty = parseFloat(r.Quantity)||0;
+        var src = String(r.SourceType||'').trim();
+        if(src==='QOH') byComp[sku].qoh += qty;
+        else if(src==='Production'||src==='Planned Production') byComp[sku].prod_req += qty;
+        else if(src.indexOf('PO')>=0||src.indexOf('Purchase')>=0||src.indexOf('Order')>=0) byComp[sku].po_qty += qty;
+      });
+      var inventory = Object.values(byComp).map(function(c){
+        var net = c.qoh + c.po_qty - Math.abs(c.prod_req);
+        return Object.assign({}, c, {
+          net: Math.round(net*100)/100,
+          status: net<0?'LOW':'OK',
+          qoh: Math.round(c.qoh*100)/100,
+          po_qty: Math.round(c.po_qty*100)/100,
+          prod_req: Math.round(c.prod_req*100)/100
+        });
+      });
+
+      // Merge with whatever's already in localStorage (preserves batches/goals)
+      var existing = {};
+      try { existing = JSON.parse(localStorage.getItem(DATA_KEY)||'{}'); }catch(e){}
+      existing.inventory = inventory;
+      existing.inventory_ts = new Date().toISOString();
+      existing._updated = new Date().toISOString();
+      existing._source = 'vicinity_odata';
+      localStorage.setItem(DATA_KEY, JSON.stringify(existing));
+
+      var low = inventory.filter(function(i){return i.status==='LOW';});
+      progress('✓ Inventory: ' + inventory.length.toLocaleString() + ' SKUs · ' + low.length + ' LOW', 'ok');
+
+      // Broadcast to all tablets via Supabase
+      broadcastSchedule(existing);
+
+      progress('━━━ LIVE REFRESH COMPLETE ━━━', 'ok');
+      log('ok', 'Vicinity live refresh — ' + inventory.length + ' SKUs · ' + low.length + ' LOW');
+
+      if(btn){
+        btn.textContent = '✓ Live Refresh OK';
+        btn.style.background = 'var(--green)';
+        setTimeout(function(){
+          btn.textContent = '🔄 Refresh from Vicinity';
+          btn.style.background = '';
+          btn.disabled = false;
+        }, 3000);
+      }
+    })
+    .catch(function(err){
+      progress('✗ Vicinity refresh failed: ' + err.message, 'err');
+      log('err', 'Vicinity refresh: ' + err.message);
+      if(btn){ btn.textContent = '🔄 Refresh from Vicinity'; btn.disabled = false; }
+    });
+}
+// ═══════════════════════════════════════════════════════════════════
+
+// ── Drag/drop helpers ─────────────────────────────────────────────────
+function dragOver(e,zone){ e.preventDefault(); document.getElementById('zone-'+zone).classList.add('drag-over'); }
+function dragLeave(zone){ document.getElementById('zone-'+zone).classList.remove('drag-over'); }
+function dropFile(e,zone){ e.preventDefault(); dragLeave(zone); var f=e.dataTransfer.files[0]; if(f)loadFile(f,zone); }
+
+// ── Loaded file registry ──────────────────────────────────────────────
+var loaded = {pt:null, pd:null};
+
+function loadFile(file, zone) {
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var wb = XLSX.read(e.target.result, {type:'array', cellDates:true});
+      loaded[zone] = {wb: wb, name: file.name};
+      var el = document.getElementById('status-'+zone);
+      var zn = document.getElementById('zone-'+zone);
+      el.textContent = '✓ ' + file.name + ' loaded (' + wb.SheetNames.length + ' sheets)';
+      el.style.color = 'var(--green)';
+      zn.classList.add('loaded');
+      log('info', file.name + ' loaded — ' + wb.SheetNames.length + ' sheets');
+      checkReady();
+    } catch(err) {
+      document.getElementById('status-'+zone).textContent = '✗ Error reading file: ' + err.message;
+      document.getElementById('status-'+zone).style.color = 'var(--red)';
+      log('err', 'Error loading ' + file.name + ': ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PASTE FROM CLIPBOARD
+// ═══════════════════════════════════════════════════════════════════
+// Builds a synthetic SheetJS workbook from pasted text so the existing
+// file-drop parser handles it without modification. Supports:
+//   - Production Schedule paste (drop into loaded.pt)
+//   - Planning Data paste (drop into loaded.pd)
+//   - Auto-detect based on which header columns are present
+// Includes graceful handling when the user selects-all on a tab (so the
+// KPI rollup rows above the batch table land in the paste too).
+
+// Track which target the paste should go to
+var PASTE_TARGET = 'auto';
+
+function setPasteTarget(t){
+  PASTE_TARGET = t;
+  ['pt','pd','att','auto'].forEach(function(k){
+    var b = document.getElementById('paste-target-'+k);
+    if(!b) return;
+    if(k===t){
+      b.style.background    = 'rgba(59,130,246,.12)';
+      b.style.color         = 'var(--blue)';
+      b.style.border        = '1px solid rgba(59,130,246,.25)';
+    } else {
+      b.style.background = '';
+      b.style.color      = '';
+      b.style.border     = '1px solid var(--border)';
+    }
+  });
+}
+
+// Wire the picker buttons. Inline (not waiting for DOMContentLoaded) because
+// this script tag is at end of body, so all referenced DOM exists already.
+// Also retries on next tick for safety.
+function _wirePickers(){
+  ['pt','pd','att','auto'].forEach(function(k){
+    var b = document.getElementById('paste-target-'+k);
+    if(b && !b._wired){
+      b.addEventListener('click', function(){ setPasteTarget(k); });
+      b._wired = true;
+    }
+  });
+}
+_wirePickers();
+setTimeout(_wirePickers, 100);  // safety retry
+
+// Heuristic detector — figures out whether pasted rows look like a
+// schedule (has 'Batch' header + MAIN* values) or Vicinity inventory
+// (has 'ComponentId' and 'SourceType' headers).
+function detectPasteType(rows){
+  // Scan first 30 rows for header signatures
+  for(var ri=0; ri<Math.min(30, rows.length); ri++){
+    var row = rows[ri] || [];
+    var has = function(label){
+      for(var c=0; c<row.length; c++){
+        if(String(row[c]||'').trim() === label) return true;
+      }
+      return false;
+    };
+    var hasCI = function(needle){
+      var n = needle.toLowerCase();
+      for(var c=0; c<row.length; c++){
+        if(String(row[c]||'').trim().toLowerCase().indexOf(n) >= 0) return true;
+      }
+      return false;
+    };
+    if(has('Batch') && has('Date') && has('Line')) return 'pt';
+    if(has('ComponentId') && has('SourceType'))    return 'pd';
+    // Attainment detection — sheet has "Net Req" + "Cumulative Actual"
+    // columns somewhere AND "Plan" + "Actual" together. This is distinctive
+    // enough that no other paste source matches.
+    if(hasCI('net req') && hasCI('cumulative actual') && hasCI('attainment')) return 'att';
+    if(hasCI('House of Cheatham') || hasCI('MFG Plant')) return 'att';
+  }
+  return null;
+}
+
+function parsePaste(){
+  var raw = document.getElementById('paste-box').value;
+  var statusEl = document.getElementById('paste-status');
+  statusEl.style.color = 'var(--text3)';
+
+  if(!raw || !raw.trim()){
+    statusEl.textContent = 'Paste area is empty.';
+    statusEl.style.color = 'var(--amber)';
+    return;
+  }
+
+  // Split into rows. Web Excel copy uses \r\n on Windows, \n on Mac,
+  // and the very last line is often empty.
+  var lines = raw.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n');
+  while(lines.length && !lines[lines.length-1].trim()) lines.pop();
+
+  if(lines.length < 2){
+    statusEl.textContent = 'Need at least a header row plus one data row.';
+    statusEl.style.color = 'var(--amber)';
+    return;
+  }
+
+  // Excel copy uses tab between cells. CSV-style paste (commas) works too
+  // as a fallback only if tabs are absent.
+  var sep = lines[0].indexOf('\t') >= 0 ? '\t' : ',';
+  var rows = lines.map(function(ln){ return ln.split(sep); });
+
+  // Auto-detect or use the chosen target
+  var target = PASTE_TARGET;
+  if(target === 'auto'){
+    target = detectPasteType(rows);
+    if(!target){
+      statusEl.textContent = '✗ Could not auto-detect — pick Production Schedule or Planning Data above.';
+      statusEl.style.color = 'var(--red)';
+      return;
+    }
+  }
+
+  // Build a synthetic workbook so the file-drop parser handles it unchanged.
+  // For Production Schedule, name the sheet after the current month so the
+  // parser's monthly-master path picks it up automatically. The header-row
+  // detection inside the parser then finds the actual header line inside.
+  var sheetName;
+  if(target === 'pt'){
+    var monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    var d = new Date();
+    sheetName = monthNames[d.getMonth()] + ' ' + d.getFullYear();
+  } else if(target === 'att'){
+    // Attainment data is parsed inline — different path entirely
+    return parseAttainmentPaste(rows, statusEl);
+  } else {
+    sheetName = 'Vicinity Interface';
+  }
+
+  try {
+    var ws = XLSX.utils.aoa_to_sheet(rows);
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+
+    loaded[target] = {wb: wb, name: '(pasted) ' + sheetName};
+
+    // Update the matching drop-zone visually so the user sees they're loaded
+    var zn = document.getElementById('zone-'+target);
+    var stEl = document.getElementById('status-'+target);
+    if(zn && stEl){
+      zn.classList.add('loaded');
+      stEl.textContent = '✓ Pasted data loaded (' + rows.length.toLocaleString() + ' rows → ' + sheetName + ')';
+      stEl.style.color = 'var(--green)';
+    }
+
+    statusEl.style.color = 'var(--green)';
+    statusEl.textContent = '✓ Loaded ' + rows.length.toLocaleString() + ' rows as ' +
+                           (target==='pt'?'Production Schedule':'Planning Data') +
+                           '. Click "Update All Dashboards" to broadcast.';
+    log('info', 'Paste loaded: ' + rows.length + ' rows → ' + target + ' (' + sheetName + ')');
+    checkReady();
+  } catch(err){
+    statusEl.style.color = 'var(--red)';
+    statusEl.textContent = '✗ Parse failed: ' + err.message;
+    log('err', 'Paste parse: ' + err.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// ATTAINMENT PARSER
+// Handles the pasted "Case Attainment to Plan %" sheet.
+// Extracts:
+//   - Plant total (Net Req, Cumulative Actual, Wk1-5 plan/actual)
+//   - Per-line blocks (Line 1, 2, 3, 4, 5, 7, 11 + any others detected)
+//   - Monthly trend (2026 row + historical years)
+//   - Monthly goal % per row
+// Stores to localStorage.hoc_attainment_v1 and pushes to Supabase hoc_sync_bus.
+// Index reads this BEFORE falling back to batch-summed math.
+// ═══════════════════════════════════════════════════════════════════════
+function parseAttainmentPaste(rows, statusEl){
+  try {
+    // Helpers
+    var toNum = function(v){
+      if(v == null || v === '') return null;
+      var s = String(v).replace(/,/g,'').replace(/%/g,'').replace(/\$/g,'').trim();
+      if(s === '' || s === '-' || s === '—') return null;
+      var n = parseFloat(s);
+      return isNaN(n) ? null : n;
+    };
+    var isHeaderRow = function(r){
+      // A header row contains "Plan", "Actual", "Net Req" etc
+      var joined = r.map(function(c){ return String(c||''); }).join('|').toLowerCase();
+      return joined.indexOf('plan') >= 0 && joined.indexOf('actual') >= 0 && joined.indexOf('net req') >= 0;
+    };
+    var isWeekRow = function(r){
+      // Row that starts (after skipping empty cells) with "Wk N"
+      for(var i = 0; i < r.length; i++){
+        var v = String(r[i]||'').trim();
+        if(v) return /^wk\s*\d+/i.test(v);
+      }
+      return false;
+    };
+    var blockLabelInRow = function(r){
+      // Returns "Plant" or "Line N" if this row labels a block start
+      var joined = r.map(function(c){ return String(c||''); }).join(' ').toLowerCase();
+      if(joined.indexOf('house of cheatham') >= 0 || joined.indexOf('mfg plant') >= 0) return 'Plant';
+      var m = joined.match(/line\s+(\d+)/);
+      if(m) return 'Line ' + m[1];
+      return null;
+    };
+
+    // Walk rows. Two-block layout: blocks are stacked vertically AND in some
+    // sheets side-by-side. We handle both by tracking ALL header rows and
+    // attributing subsequent week rows to the most recent label seen on or
+    // just above the header.
+    var blocks = {};       // {Plant: {wks:[], net_req, cum_actual}, "Line 1": {...}, ...}
+    var pendingLabels = []; // labels seen in the row(s) immediately above a header row
+
+    // Identify column ranges per header row — supports side-by-side blocks.
+    // Strategy: scan each header row, group columns by occurrence of "Plan"
+    // markers. A block header has the column sequence:
+    //   Plan(label) Plan(value) Actual Cumulative_Plan Cumulative_Actual Net_Req
+    //   Attainment_Cumulative Attainment_Week Goal
+    var locateBlocksInHeader = function(headerRow){
+      var blockStarts = [];
+      for(var i = 0; i < headerRow.length; i++){
+        var v = String(headerRow[i]||'').trim().toLowerCase();
+        if(v === 'plan' && i+1 < headerRow.length){
+          var next = String(headerRow[i+1]||'').trim().toLowerCase();
+          if(next === 'plan'){
+            blockStarts.push(i); // this is the start of a block
+          }
+        }
+      }
+      return blockStarts;
+    };
+
+    var currentBlockMap = null;  // {col_start: blockLabel} for the most recent header
+    for(var r = 0; r < rows.length; r++){
+      var row = rows[r];
+
+      // Detect label-bearing rows (e.g. "House of Cheatham MFG Plant", "Line 1")
+      var label = blockLabelInRow(row);
+      if(label){
+        pendingLabels.push({label:label, row:r});
+        // Also check the FULL row for multiple line labels (side-by-side blocks)
+        // by scanning each cell for "Line N" individually
+        var cellByCell = [];
+        for(var ci = 0; ci < row.length; ci++){
+          var cv = String(row[ci]||'').trim();
+          if(/^Line\s+\d+$/i.test(cv)){
+            cellByCell.push({label: cv.replace(/\s+/g,' ').replace(/^line/i,'Line'), col: ci});
+          } else if(/house of cheatham/i.test(cv)){
+            cellByCell.push({label:'Plant', col: ci});
+          }
+        }
+        if(cellByCell.length > 1){
+          // Multi-label row — replace pending with these positioned labels
+          pendingLabels = cellByCell.map(function(x){
+            return {label: x.label, row: r, col: x.col};
+          });
+        }
+        continue;
+      }
+
+      // Header row: capture block start columns + assign labels by position
+      if(isHeaderRow(row)){
+        currentHeaderStarts = locateBlocksInHeader(row);
+        currentBlockMap = {};
+        // Snap pending labels to header start columns by left-to-right or column proximity
+        var labelsHere = pendingLabels.filter(function(p){ return r - p.row <= 3; });
+        // Sort labels by column (if column known) or by row order
+        labelsHere.sort(function(a,b){
+          if(a.col != null && b.col != null) return a.col - b.col;
+          return a.row - b.row;
+        });
+        // Map labels to header start columns: nearest-column match
+        for(var b = 0; b < currentHeaderStarts.length; b++){
+          var startCol = currentHeaderStarts[b];
+          // Find the pending label whose col is closest to (and <=) this start col
+          var bestLabel = null;
+          var bestDist = Infinity;
+          for(var li = 0; li < labelsHere.length; li++){
+            var pl = labelsHere[li];
+            if(pl.col == null){
+              // No column info — fall back to ordering
+              if(li === b){ bestLabel = pl.label; bestDist = 0; }
+            } else {
+              var dist = Math.abs(pl.col - startCol);
+              if(dist < bestDist){ bestDist = dist; bestLabel = pl.label; }
+            }
+          }
+          var lbl = bestLabel || ('Block ' + (b+1));
+          currentBlockMap[startCol] = lbl;
+          if(!blocks[lbl]) blocks[lbl] = {wks:[]};
+        }
+        pendingLabels = [];
+        continue;
+      }
+
+      // Week data row: pull values from each block's column range
+      if(isWeekRow(row) && currentHeaderStarts && currentBlockMap){
+        for(var b = 0; b < currentHeaderStarts.length; b++){
+          var start = currentHeaderStarts[b];
+          var lblForCol = currentBlockMap[start];
+          if(!lblForCol) continue;
+          // Columns relative to start:
+          //   0: "Wk N" label, 1: Plan, 2: Actual, 3: Cum Plan,
+          //   4: Cum Actual, 5: Net Req, 6: Attain-Cum%, 7: Attain-Wk%, 8: Goal%
+          var wkLabel = String(row[start] || '').trim();
+          var plan    = toNum(row[start+1]);
+          var actual  = toNum(row[start+2]);
+          var cumPlan = toNum(row[start+3]);
+          var cumAct  = toNum(row[start+4]);
+          var netReq  = toNum(row[start+5]);
+          var attCum  = toNum(row[start+6]);
+          var attWk   = toNum(row[start+7]);
+          var goal    = toNum(row[start+8]);
+          if(plan == null && actual == null && cumAct == null) continue;
+          blocks[lblForCol].wks.push({
+            week: wkLabel,
+            plan: plan, actual: actual,
+            cum_plan: cumPlan, cum_actual: cumAct,
+            net_req: netReq,
+            attainment_cum_pct: attCum,
+            attainment_week_pct: attWk,
+            goal_pct: goal
+          });
+          if(netReq != null) blocks[lblForCol].net_req = netReq;
+          if(cumAct != null) blocks[lblForCol].cum_actual = cumAct;
+          if(cumPlan != null) blocks[lblForCol].cum_plan = cumPlan;
+        }
+      }
+    }
+
+    // Extract monthly trend table (Year + 12 month columns)
+    // Look for a row starting with "Year" or for year rows (2024, 2025, 2026)
+    var monthlyTrend = {};
+    for(var r2 = 0; r2 < rows.length; r2++){
+      var row2 = rows[r2];
+      // Find first non-empty cell
+      var firstNonEmpty = null;
+      for(var j = 0; j < row2.length; j++){
+        var v = String(row2[j]||'').trim();
+        if(v){ firstNonEmpty = {val:v, idx:j}; break; }
+      }
+      if(!firstNonEmpty) continue;
+      // Year row: numeric 4-digit starting 19/20
+      var yrMatch = firstNonEmpty.val.match(/^(20\d{2})$/);
+      if(yrMatch){
+        var yr = yrMatch[1];
+        var months = [];
+        // Pull next 12 cells as monthly attainment %
+        for(var k = 1; k <= 12; k++){
+          months.push(toNum(row2[firstNonEmpty.idx + k]));
+        }
+        monthlyTrend[yr] = months;
+      }
+      // Also catch "Jan-26" style rows (vertical orientation)
+      var monMatch = firstNonEmpty.val.match(/^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-(\d{2})$/i);
+      if(monMatch){
+        var mAbbr = monMatch[1];
+        var yr2 = '20' + monMatch[2];
+        var mIdx = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].indexOf(mAbbr.toLowerCase());
+        // Value in next cell after Jan-26 = attainment, then = goal
+        var attainVal = toNum(row2[firstNonEmpty.idx + 1]);
+        var goalVal   = toNum(row2[firstNonEmpty.idx + 2]);
+        if(!monthlyTrend[yr2]) monthlyTrend[yr2] = new Array(12).fill(null);
+        if(attainVal != null) monthlyTrend[yr2][mIdx] = attainVal;
+        // Also store the goal in a sibling key
+        if(goalVal != null){
+          if(!monthlyTrend[yr2+'_goal']) monthlyTrend[yr2+'_goal'] = new Array(12).fill(null);
+          monthlyTrend[yr2+'_goal'][mIdx] = goalVal;
+        }
+      }
+    }
+
+    // Validate we found at least one block
+    var blockCount = Object.keys(blocks).filter(function(k){ return blocks[k].wks.length > 0; }).length;
+    var headerRowCount = 0;
+    var weekRowCount = 0;
+    var labelCount = 0;
+    for(var di = 0; di < rows.length; di++){
+      if(isHeaderRow(rows[di])) headerRowCount++;
+      if(isWeekRow(rows[di]))   weekRowCount++;
+      if(blockLabelInRow(rows[di])) labelCount++;
+    }
+    if(blockCount === 0){
+      statusEl.style.color = 'var(--red)';
+      statusEl.textContent = '✗ No attainment blocks found. Diagnostic: ' +
+        rows.length + ' rows · ' +
+        labelCount + ' label rows ("Plant" / "Line N") · ' +
+        headerRowCount + ' header rows (Plan/Actual/Net Req) · ' +
+        weekRowCount + ' week rows (Wk N). ' +
+        (labelCount === 0 ? 'No labels found — re-copy with the Line/Plant labels included.' :
+         headerRowCount === 0 ? 'No header rows found — the columns "Plan / Actual / Net Req" did not appear.' :
+         weekRowCount === 0  ? 'No week rows found — looking for rows starting with "Wk 1", "Wk 2", etc.' :
+         'Labels and headers found but blocks could not be reconciled — labels may be too far from headers (>3 rows).');
+      log('err', 'Attainment paste: no blocks parsed · rows='+rows.length+' labels='+labelCount+' headers='+headerRowCount+' weeks='+weekRowCount);
+      return;
+    }
+
+    // Persist
+    var d = new Date();
+    var monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var attainment = {
+      _updated: new Date().toISOString(),
+      _month_label: monthNames[d.getMonth()] + ' ' + d.getFullYear(),
+      _month_index: d.getMonth(),
+      _year: d.getFullYear(),
+      plant: blocks['Plant'] || null,
+      lines: {},
+      monthly_trend: monthlyTrend
+    };
+    Object.keys(blocks).forEach(function(k){
+      if(k === 'Plant') return;
+      var match = k.match(/^Line\s+(\d+)$/);
+      if(match) attainment.lines[match[1]] = blocks[k];
+    });
+
+    localStorage.setItem('hoc_attainment_v1', JSON.stringify(attainment));
+
+    // Also push to shared sync bus so other tablets pick it up
+    try {
+      fetch('https://yemtpvrumqvbzrzpwnyy.supabase.co/rest/v1/hoc_sync_bus?id=eq.1&select=payload', {
+        headers: {'apikey':'sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl', Authorization:'Bearer sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl'}
+      })
+      .then(function(r){ return r.ok ? r.json() : []; })
+      .then(function(arr){
+        var payload = (arr[0] && arr[0].payload) || {};
+        payload.attainment = attainment;
+        return fetch('https://yemtpvrumqvbzrzpwnyy.supabase.co/rest/v1/hoc_sync_bus?id=eq.1', {
+          method:'PATCH',
+          headers:{'apikey':'sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl', Authorization:'Bearer sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl', 'Content-Type':'application/json', 'Prefer':'return=minimal'},
+          body: JSON.stringify({updated_at: new Date().toISOString(), payload: payload})
+        });
+      })
+      .catch(function(){});
+    } catch(e){}
+
+    var plantSummary = '';
+    if(attainment.plant){
+      plantSummary = ' · Plant: ' + (attainment.plant.cum_actual||0).toLocaleString() + ' / ' + (attainment.plant.net_req||0).toLocaleString();
+    }
+    var lineCount = Object.keys(attainment.lines).length;
+    statusEl.style.color = 'var(--green)';
+    statusEl.textContent = '✓ Attainment loaded · ' + lineCount + ' lines' + plantSummary + '. All dashboards refresh automatically.';
+    log('info', 'Attainment paste: Plant + ' + lineCount + ' lines + ' + Object.keys(monthlyTrend).length + ' monthly trend years');
+  } catch(err){
+    statusEl.style.color = 'var(--red)';
+    statusEl.textContent = '✗ Attainment parse failed: ' + err.message;
+    log('err', 'Attainment paste error: ' + err.message);
+  }
+}
+// ═══════════════════════════════════════════════════════════════════
+
+function checkReady() {
+  document.getElementById('update-btn').disabled = !(loaded.pt || loaded.pd || loaded.co || loaded.lb);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// AUTO-DETECT CHANGEOVER ENGINE
+// Runs right after every upload so dashboards downstream see predicted
+// changeovers without needing the Changeover Dashboard to be open.
+// ═══════════════════════════════════════════════════════════════════════
+function _parseItemCodeForCO(b){
+  var item = String(b.item || '').trim();
+  var formula = b.formula != null ? String(b.formula).trim() : '';
+  var m = item.match(/^[\dA-Z]+-([A-Z0-9]+)-(\d+)-(\d+)/i);
+  if(m) return { formula: m[1], size: m[2], pack: m[3], raw: item };
+  return { formula: formula || item, size: '', pack: '', raw: item };
+}
+
+function _classifyCOType(prev, curr){
+  var p = _parseItemCodeForCO(prev);
+  var c = _parseItemCodeForCO(curr);
+  if(p.formula === c.formula && p.size === c.size && p.pack === c.pack){
+    return { co_type:'10', target_min: 10, reason:'label_lot_change' };
+  }
+  if(p.formula === c.formula){
+    return { co_type:'60', target_min: 60, reason:'size_change' };
+  }
+  return { co_type:'90', target_min: 90, reason:'product_change' };
+}
+
+function runAutoDetectChangeovers(batches){
+  if(!batches || !batches.length) return [];
+  // Preserve inferred actuals from existing auto-detect data
+  var existing = {};
+  try {
+    var prior = JSON.parse(localStorage.getItem('hoc_changeovers_auto_v1')||'[]');
+    prior.forEach(function(co){ existing[co.id] = co; });
+  } catch(e){}
+
+  var byLine = {};
+  batches.forEach(function(b){
+    if(!b.line || !b.date) return;
+    var ln = parseInt(b.line);
+    if(!byLine[ln]) byLine[ln] = [];
+    byLine[ln].push(b);
+  });
+  var out = [];
+  Object.keys(byLine).forEach(function(line){
+    var lb = byLine[line].sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+    for(var i=1; i<lb.length; i++){
+      var prev = lb[i-1], curr = lb[i];
+      var cls = _classifyCOType(prev, curr);
+      if(cls.reason === 'label_lot_change') continue;
+      var id = 'auto_L'+line+'_'+(prev.batch||'?')+'_to_'+(curr.batch||'?');
+      // If we already had this auto CO with inferred data, preserve it
+      var ex = existing[id] || {};
+      out.push({
+        id: id,
+        source: 'auto_schedule',
+        line: parseInt(line),
+        from: prev.desc || prev.item || prev.batch,
+        to: curr.desc || curr.item || curr.batch,
+        from_batch: prev.batch,
+        to_batch: curr.batch,
+        from_item: prev.item || prev.formula,
+        to_item: curr.item || curr.formula,
+        scheduled_date: curr.date,
+        co_type: cls.co_type,
+        target_min: cls.target_min,
+        reason: cls.reason,
+        inferred_started_at: ex.inferred_started_at || null,
+        inferred_completed_at: ex.inferred_completed_at || null,
+        inferred_actual_min: ex.inferred_actual_min || null,
+        inferred_status: ex.inferred_status || 'scheduled'
+      });
+    }
+  });
+  return out;
+}
+
+// ── Main data extraction ──────────────────────────────────────────────
+function updateAllDashboards() {
+  var btn = document.getElementById('update-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Processing...';
+  document.getElementById('progress-area').style.display = 'block';
+  document.getElementById('progress-lines').innerHTML = '';
+
+  setTimeout(function() {
+    try {
+      var result = {};
+      var ts = new Date().toISOString();
+
+      // ── Parse Production Tracker ──────────────────────────────────
+      if(loaded.pt) {
+        progress('Reading Production Tracker...');
+        var wb = loaded.pt.wb;
+
+        // ── Sheet & header-row detection ─────────────────────────────
+        // Supports two formats:
+        //   (a) Legacy: sheet named 'CLEAN_ DATA' (or 'CLEAN_DATA'),
+        //       headers on row 1.
+        //   (b) Monthly master: sheet named like 'May 2026', 'June 2026'...
+        //       Headers on row 12, KPI rollup in rows 1-6.
+        var cleanSheet = null;
+        var headerRow = 1;   // 1-based row index where the header lives
+        var sheetUsed = '';
+
+        // Try legacy first for backward compatibility
+        if(wb.Sheets['CLEAN_ DATA']) { cleanSheet = wb.Sheets['CLEAN_ DATA']; sheetUsed = 'CLEAN_ DATA'; headerRow = 1; }
+        else if(wb.Sheets['CLEAN_DATA']) { cleanSheet = wb.Sheets['CLEAN_DATA']; sheetUsed = 'CLEAN_DATA'; headerRow = 1; }
+
+        // Then try current month (e.g. 'May 2026', 'June 2026'), then prior month
+        if(!cleanSheet) {
+          var monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+          var now = new Date();
+          var candidates = [];
+          for(var off = 0; off >= -2; off--) {
+            var m = new Date(now.getFullYear(), now.getMonth()+off, 1);
+            var name = monthNames[m.getMonth()] + ' ' + m.getFullYear();
+            candidates.push(name);
+            candidates.push(' ' + name);          // ' May 2024' style
+            candidates.push(name + ' ');          // 'June 2025 ' style
+          }
+          for(var i=0;i<candidates.length;i++){
+            if(wb.Sheets[candidates[i]]){
+              cleanSheet = wb.Sheets[candidates[i]];
+              sheetUsed = candidates[i];
+              break;
+            }
+          }
+        }
+
+        // Last resort: scan all sheets for one whose first ~20 rows
+        // contain a 'Batch' header cell with MAIN* values below it.
+        if(!cleanSheet) {
+          var allNames = wb.SheetNames || Object.keys(wb.Sheets);
+          for(var si=0; si<allNames.length; si++){
+            var sn = allNames[si];
+            var sh = wb.Sheets[sn];
+            if(!sh) continue;
+            var scan = XLSX.utils.sheet_to_json(sh, {header:1, defval:'', range:0});
+            for(var ri=0; ri<Math.min(20, scan.length); ri++){
+              var row = scan[ri]||[];
+              for(var ci=0; ci<row.length; ci++){
+                if(String(row[ci]).trim()==='Batch'){
+                  // verify the next row has a MAIN* value at same column
+                  var next = scan[ri+1]||[];
+                  if(next[ci] && String(next[ci]).trim().indexOf('MAIN')===0){
+                    cleanSheet = sh; sheetUsed = sn; headerRow = ri+1; break;
+                  }
+                }
+              }
+              if(cleanSheet) break;
+            }
+            if(cleanSheet) break;
+          }
+        }
+
+        // For the monthly-master format, find the header row inside the sheet.
+        if(cleanSheet && headerRow===1 && sheetUsed && sheetUsed.indexOf('20')>=0) {
+          var scan2 = XLSX.utils.sheet_to_json(cleanSheet, {header:1, defval:'', range:0});
+          for(var ri2=0; ri2<Math.min(20, scan2.length); ri2++){
+            var row2 = scan2[ri2]||[];
+            if(row2.indexOf('Batch')>=0 && row2.indexOf('Date')>=0){ headerRow = ri2+1; break; }
+          }
+        }
+
+        if(cleanSheet) {
+          // Read using detected header row.
+          var rows;
+          if(headerRow === 1){
+            rows = XLSX.utils.sheet_to_json(cleanSheet, {defval:''});
+          } else {
+            // Read headers from headerRow, then everything below
+            var raw = XLSX.utils.sheet_to_json(cleanSheet, {header:1, defval:'', range:0});
+            var hdr = (raw[headerRow-1]||[]).map(function(h){ return String(h||'').trim(); });
+            rows = [];
+            for(var r=headerRow; r<raw.length; r++){
+              var obj = {};
+              for(var c=0; c<hdr.length; c++){
+                if(hdr[c]) obj[hdr[c]] = raw[r][c];
+              }
+              rows.push(obj);
+            }
+          }
+          var batches = [];
+          rows.forEach(function(r) {
+            var batch = String(r['Batch']||r['BATCH']||'').trim();
+            if(!batch.startsWith('MAIN')) return;
+            var dateVal = r['Date']||r['DATE']||'';
+            var dateStr = '';
+            if(dateVal instanceof Date) {
+              dateStr = dateVal.toISOString().slice(0,10);
+            } else if(typeof dateVal === 'number') {
+              var _d=new Date(Math.round((dateVal-25569)*86400*1000));
+              dateStr=_d.toISOString().slice(0,10);
+            } else if(dateVal && String(dateVal).length>=6) {
+              var _ds=String(dateVal).replace(/^'+|'+$/g,'').trim();
+              if(_ds.length===10&&_ds[4]==='-'){dateStr=_ds;}
+              else if(/^[0-9]{1,2}\//.test(_ds)){
+                var _p=_ds.split('/');
+                dateStr=_p[2].slice(0,4)+'-'+_p[0].padStart(2,'0')+'-'+_p[1].padStart(2,'0');
+              } else {dateStr=_ds.slice(0,10);}
+            }
+            var origqty = parseFloat(r['Orginial Qty- DO  NOT CHANGE']||r['Original Qty']||r['ORIGQTY']||0)||0;
+            var actqty  = parseFloat(r['Actual Qty']||r['ACTQTY']||0)||0;
+            var casepk  = parseInt(r['Case PK']||r['CASEPK']||12)||12;
+
+            // Status: prefer explicit Reason Code (monthly master), then legacy Clean Status,
+            // then derive from completion percentage.
+            var statusRaw = String(
+              r['Reason Code']||r['Clean Status']||r['STATUS']||''
+            ).trim().toUpperCase();
+            // Trim trailing spaces (the monthly master has 'NOT STARTED ')
+            statusRaw = statusRaw.replace(/\s+$/, '');
+            var status = statusRaw;
+            if(!['COMPLETED','RUNNING','NOT STARTED'].includes(status)) {
+              var pc = origqty>0 ? actqty/origqty : 0;
+              status = pc>=0.85?'COMPLETED':pc>0?'RUNNING':'NOT STARTED';
+            }
+
+            // NEW: capture production-loss reason fields from monthly master
+            var reason_code = String(r['Reason Code']||'').trim();
+            var reason_desc = String(r['Reason Description']||'').trim();
+            var purchasing_eta = (function(v){
+              if(!v) return '';
+              if(v instanceof Date) return v.toISOString().slice(0,10);
+              if(typeof v === 'number'){ var _d=new Date(Math.round((v-25569)*86400*1000)); return _d.toISOString().slice(0,10); }
+              return String(v).trim();
+            })(r['Purchasing ETA ']||r['Purchasing ETA']);
+
+            batches.push({
+              batch:   batch,
+              date:    dateStr,
+              batch_date: dateStr,
+              line:    parseInt(String(r['Line']||r['LINE']||0))||0,
+              item:    String(r['Item']||r['ITEM']||'').trim(),
+              desc:    String(r['Description']||r['DESC']||'').trim().slice(0,80),
+              origqty: origqty,
+              actqty:  actqty,
+              casepk:  casepk,
+              planea:  origqty*casepk,
+              actualea:actqty*casepk,
+              minutes: parseFloat(r['Minutes']||r['STD MIN']||0)||0,
+              status:  status,
+              pct_comp:origqty>0?Math.min(100,Math.round(actqty/origqty*100)):0,
+              yield_pct:origqty>0?Math.round(actqty/origqty*1000)/10:0,
+              cmpd:    String(r['Compound_Status']||'').trim(),
+              cmpd_status: String(r['Compound_Status']||'').trim(),
+              risk:    String(r['Production_Risk_Flag']||'').trim(),
+              cmpddue: (function(v){var s=String(v||'').replace(/^'+|'+$/g,'').trim();if(s.length===10&&s[4]==='-')return s;if(/^[0-9]{1,2}\/[0-9]{1,2}\/[0-9]{4}$/.test(s)){var p=s.split('/');return p[2]+'-'+p[0].padStart(2,'0')+'-'+p[1].padStart(2,'0');}return s;})(r['Compound_Due_By']),
+              shortage:parseFloat(r['Formula_Shortage']||0)||0,
+              std_hc:  parseFloat(r['Std Headcount']||6)||6,
+              std_speed:parseFloat(r['Std Speed']||50)||50,
+              plan_labor:parseFloat(r['Planned Labor Hrs']||0)||0,
+              fg_status:status,
+              var_pct: 0,
+              case_var:actqty-origqty,
+              rem_min: 0,
+              cum_min: 0,
+              std_min: parseFloat(r['Minutes']||0)||0,
+              lbs:     origqty,
+              formula: String(r['Item']||'').trim(),
+              fname:   String(r['Description']||'').trim().slice(0,80),
+              // NEW fields from monthly master:
+              reason_code:    reason_code,
+              reason_desc:    reason_desc,
+              product_type:   String(r['Product Type']||'').trim(),
+              purchasing_eta: purchasing_eta,
+            });
+          });
+          result.batches = batches;
+          result.batches_ts = ts;
+          result.batches_source_sheet = sheetUsed;
+          progress('✓ ' + sheetUsed + ': ' + batches.length + ' batches', 'ok');
+        }
+
+        // ── KPI fallback: if no Goal Source Data sheet, derive from
+        //    the monthly master's rows 1-6 rollup.
+        if(!wb.Sheets['Goal Source Data'] && cleanSheet) {
+          var rawAll = XLSX.utils.sheet_to_json(cleanSheet, {header:1, defval:'', range:0});
+          // Row 3 = Scheduled, Row 4 = Completed (1-based; 0-indexed: 2 and 3)
+          var sched = rawAll[2]||[];
+          var done  = rawAll[3]||[];
+          // Column 4 (0-indexed 3) is Total # of Planned Cases
+          // Column 7 (0-indexed 6) is Total # of Completed Cases
+          var planCases = parseFloat(sched[3])||0;
+          var doneCases = parseFloat(done[6])||0;
+          if(planCases > 0 || doneCases > 0){
+            result.goals = result.goals || {may_actual:0, may_goal:0, may_bal:0, oee_act:0, oee_goal:60, att_act:0, att_goal:90, oee_by_line:{}, att_by_line:{}};
+            result.goals.may_actual = Math.round(doneCases);
+            result.goals.may_goal   = Math.round(planCases);
+            result.goals.may_bal    = Math.round(planCases - doneCases);
+            result.goals_ts = ts;
+            result.goals_source = 'monthly_master_rollup';
+            progress('✓ KPIs (from monthly rollup): actual=' + result.goals.may_actual.toLocaleString() + ' goal=' + result.goals.may_goal.toLocaleString(), 'ok');
+          }
+        }
+
+        // 2. Goal Source Data → goals (legacy format)
+        var goalSheet = wb.Sheets['Goal Source Data'];
+        if(goalSheet) {
+          var grows = XLSX.utils.sheet_to_json(goalSheet, {header:1, defval:''});
+          var goals = {may_actual:0, may_goal:0, may_bal:0, oee_act:0, oee_goal:60, att_act:0, att_goal:90, oee_by_line:{}, att_by_line:{}};
+          var in_monthly = false;
+          var matchedMayRow = -1;  // track for diagnostic logging
+          grows.forEach(function(row, ri) {
+            if(!row || !row.length) return;
+            // Build a combined-cells string for tolerant section-header detection.
+            // Merged Excel cells sometimes put text in unexpected columns.
+            var allCells = row.slice(0, 4).map(function(c){ return String(c||''); }).join(' ').toUpperCase();
+            // Section header detection — must mention both MONTHLY and CASE
+            if(allCells.indexOf('MONTHLY') >= 0 && allCells.indexOf('CASE') >= 0 && allCells.indexOf('GOAL') >= 0) {
+              in_monthly = true;
+              return;
+            }
+            if(!row[0]) return;
+            var label = String(row[0]).trim();
+            // Tolerant May matching: "May", "May 2026", "May-26", "May ", etc.
+            // Lowercase + startsWith handles all real-world Excel variants.
+            var labelLower = label.toLowerCase();
+            if(in_monthly && (labelLower === 'may' || labelLower.indexOf('may ') === 0 || labelLower.indexOf('may-') === 0 || labelLower.indexOf('may2') === 0)) {
+              var ma = parseInt(parseFloat(row[1]||0))||0;
+              var mg = parseInt(parseFloat(row[2]||0))||0;
+              var mb = parseInt(parseFloat(row[3]||0))||0;
+              // Sanity check: HOC monthly cases will always be in the tens of thousands.
+              if(ma >= 1000 || mg >= 1000) {
+                goals.may_actual = ma;
+                goals.may_goal   = mg;
+                goals.may_bal    = mb;
+                matchedMayRow = ri + 1;
+              } else {
+                progress('⚠ Goal Source Data row "' + label + '" (#'+(ri+1)+') has tiny values (actual=' + ma + ', goal=' + mg + '). Skipping — likely wrong file uploaded.', 'warn');
+              }
+            }
+            // OEE by line — only when in monthly section, so line numbers don't
+            // get parsed from other places
+            var lineNum = parseInt(label);
+            if(!isNaN(lineNum) && lineNum>0 && lineNum<15) {
+              if(row[1]) goals.oee_by_line[lineNum] = Math.round(parseFloat(row[1]||0)*1000)/10;
+              if(row[4]) goals.att_by_line[lineNum] = Math.round(parseFloat(row[4]||0)*1000)/10;
+            }
+          });
+          // Only overwrite result.goals if parsing succeeded — otherwise preserve
+          // whatever Path A (monthly_master_rollup) may have already written.
+          if(goals.may_actual > 0 || goals.may_goal > 0 || Object.keys(goals.oee_by_line).length > 0){
+            result.goals = goals;
+            result.goals_ts = ts;
+            if(matchedMayRow > 0){
+              progress('✓ Goals: actual=' + goals.may_actual.toLocaleString() + ' goal=' + goals.may_goal.toLocaleString() + ' (from row ' + matchedMayRow + ')', 'ok');
+            } else {
+              progress('⚠ Goal Source Data: section found but no May row matched. Check Excel for label format.', 'warn');
+            }
+          } else {
+            progress('⚠ Goal Source Data: parsed but no May rollup found. Section header detection may have failed.', 'warn');
+          }
+        }
+
+        // 3. Production Goals Dashboard → OEE/Attainment
+        var pgdSheet = wb.Sheets['Production Goals Dashboard'];
+        if(pgdSheet && result.goals) {
+          var pgrows = XLSX.utils.sheet_to_json(pgdSheet, {header:1, defval:''});
+          pgrows.forEach(function(row) {
+            var label = String(row[0]||'').trim();
+            if(label==='May') {
+              if(row[1]) result.goals.oee_act  = Math.round(parseFloat(row[1]||0)*1000)/10;
+              if(row[6]) result.goals.att_act  = Math.round(parseFloat(row[6]||0)*1000)/10;
+            }
+            if(label==='Remaining Days' && row[7]) result.goals.remaining_days = parseInt(row[7])||17;
+          });
+        }
+
+        // 4. Dashboard sheet → capacity metrics
+        var dashSheet = wb.Sheets['Dashboard'];
+        if(dashSheet) {
+          var drows = XLSX.utils.sheet_to_json(dashSheet, {header:1, defval:''});
+          var capacity = {};
+          drows.forEach(function(row) {
+            var label = String(row[0]||'').trim();
+            if(label==='Low Yield Batches') capacity.low_yield = parseInt(row[1])||0;
+            if(label==='Overfill Batches')  capacity.overfill  = parseInt(row[1])||0;
+            if(label==='Total Remaining Hours') capacity.rem_hrs = parseFloat(row[1])||0;
+            if(label==='Total Available Hours') capacity.avail_hrs = parseFloat(row[1])||0;
+          });
+          result.capacity = capacity;
+          progress('✓ Capacity metrics loaded', 'ok');
+        }
+      }
+
+      // ── Parse Changeover Tracker ──────────────────────────────────
+      if(loaded.co) {
+        progress('Reading Changeover Tracker (Patch OEE)...');
+        var wbCO = loaded.co.wb;
+        var changeover = { monthly: {}, ytd_main: [], ytd_component: [], months: [] };
+
+        // === Monthly Data sheet === (Line × CO Type grid by month)
+        var mSheet = wbCO.Sheets['Monthly Data'];
+        if(mSheet) {
+          var mrows = XLSX.utils.sheet_to_json(mSheet, {header:1, defval:''});
+          // Header row has months; rows are "Line N (Filler)" then CO[10/60/90] then TOTAL
+          var monthHeaders = [];
+          var currentLine = null;
+          for(var i=0; i<mrows.length; i++) {
+            var row = mrows[i];
+            if(!row || !row[0]) continue;
+            var c0 = String(row[0]).trim();
+            // Detect header row
+            if(c0 === 'Line / CO Type') {
+              // Extract month names from cols 1..5
+              for(var c=1; c<=5; c++) {
+                if(row[c]) monthHeaders.push(String(row[c]).trim());
+              }
+              continue;
+            }
+            // Detect line row e.g. "Line 1 (Filler)"
+            var lineMatch = c0.match(/^Line\s+(\d+)/i);
+            if(lineMatch && c0.indexOf('CO [') < 0) {
+              currentLine = parseInt(lineMatch[1]);
+              changeover.monthly[currentLine] = changeover.monthly[currentLine] || {co10:{}, co60:{}, co90:{}, total:{}};
+              continue;
+            }
+            if(!currentLine) continue;
+            // CO type rows
+            var typeKey = null;
+            if(c0.indexOf('10 min') >= 0 || c0.indexOf('CO [10') >= 0) typeKey = 'co10';
+            else if(c0.indexOf('60 min') >= 0 || c0.indexOf('CO [60') >= 0) typeKey = 'co60';
+            else if(c0.indexOf('90 min') >= 0 || c0.indexOf('CO [90') >= 0) typeKey = 'co90';
+            else if(c0.toUpperCase() === 'TOTAL') typeKey = 'total';
+            if(!typeKey) continue;
+            // Read values cols 1..5
+            for(var c=1; c<=5 && c-1 < monthHeaders.length; c++) {
+              var v = row[c];
+              if(v === '' || v == null) continue;
+              var num = parseFloat(String(v).replace('%',''));
+              if(!isNaN(num)) {
+                changeover.monthly[currentLine][typeKey][monthHeaders[c-1]] = num;
+              }
+            }
+          }
+          changeover.months = monthHeaders;
+        }
+
+        // === YTD Summary — Main Lines ===
+        function parseYTDSheet(sheet) {
+          if(!sheet) return [];
+          var rows = XLSX.utils.sheet_to_json(sheet, {header:1, defval:''});
+          var out = [];
+          for(var i=0; i<rows.length; i++) {
+            var r = rows[i];
+            if(!r || !r[0]) continue;
+            var c0 = String(r[0]).trim();
+            var lm = c0.match(/^Line\s+(\d+)/i);
+            if(!lm) continue;
+            // Skip header row that says "Line"
+            if(c0 === 'Line') continue;
+            function pnum(v){ if(v===''||v==null||v==='—')return null; var s=String(v).replace('%','').trim(); var n=parseFloat(s); return isNaN(n)?null:n; }
+            out.push({
+              line: parseInt(lm[1]),
+              oee: pnum(r[1]),
+              co10_events: pnum(r[2]),
+              co10_loss: pnum(r[3]),
+              co60_events: pnum(r[4]),
+              co60_loss: pnum(r[5]),
+              co90_events: pnum(r[6]),
+              co90_loss: pnum(r[7]),
+              total_loss: pnum(r[8]),
+              status: r[9] ? String(r[9]).trim() : ''
+            });
+          }
+          return out;
+        }
+        changeover.ytd_main      = parseYTDSheet(wbCO.Sheets['YTD Summary — Main Lines']);
+        changeover.ytd_component = parseYTDSheet(wbCO.Sheets['YTD Summary — Component']);
+
+        // === Trend Scorecard (verdicts per line) ===
+        var tSheet = wbCO.Sheets['Trend Scorecard'];
+        if(tSheet) {
+          var trows = XLSX.utils.sheet_to_json(tSheet, {header:1, defval:''});
+          var verdicts = {};
+          for(var i=0; i<trows.length; i++) {
+            var r = trows[i];
+            if(!r || !r[0]) continue;
+            var lm = String(r[0]).match(/^Line\s+(\d+)/i);
+            if(!lm) continue;
+            verdicts[parseInt(lm[1])] = {
+              jan_apr_change: r[6] || '',
+              trajectory: r[7] || '',
+              verdict: r[8] || ''
+            };
+          }
+          changeover.verdicts = verdicts;
+        }
+
+        result.changeover = changeover;
+        result.changeover_ts = ts;
+        var nMain = changeover.ytd_main.length;
+        var nComp = changeover.ytd_component.length;
+        var nMonths = changeover.months.length;
+        progress('✓ Changeover: ' + nMain + ' main + ' + nComp + ' component lines · ' + nMonths + ' months loaded', 'ok');
+
+        // Also broadcast to Supabase via a dedicated key for cross-tablet sync
+        try {
+          localStorage.setItem('hoc_changeover_data_v1', JSON.stringify(changeover));
+        } catch(e){}
+      }
+
+      // ── Parse Fill Labor Extract (Vicinity master table) ────────────
+      if(loaded.lb) {
+        progress('Reading Fill Labor Extract...');
+        var wbLB = loaded.lb.wb;
+        // Single-sheet workbook with Formula ID, Version Number, Description,
+        // Unit Procedure, Labor ID, Labor Time, Time Type columns
+        var lbSheet = wbLB.Sheets[wbLB.SheetNames[0]];
+        var lbRows = XLSX.utils.sheet_to_json(lbSheet, {defval:''});
+        // Build a formula → {comp_time, fill_time, time_type, description} map.
+        // If a formula has multiple version rows, keep the highest version number's value.
+        var laborMap = {};
+        var stats = {totalRows:0, compLabor:0, compFillLabor:0, formulas:0};
+        lbRows.forEach(function(r){
+          stats.totalRows++;
+          var f = String(r['Formula ID']||r['FormulaID']||r['Formula']||'').trim();
+          if(!f) return;
+          var laborId = String(r['Labor ID']||'').trim().toUpperCase();
+          var time = parseFloat(r['Labor Time']||0)||0;
+          var timeType = String(r['Time Type']||'').trim();
+          var version = parseInt(r['Version Number']||0)||0;
+          var desc = String(r['Description']||'').trim();
+          if(time <= 0) return;
+          if(!laborMap[f]) laborMap[f] = {formula:f, description:desc, version:-1, comp_time:null, fill_time:null, comp_time_type:'', fill_time_type:''};
+          var entry = laborMap[f];
+          // Keep latest version's data
+          if(version >= entry.version){
+            entry.version = version;
+            if(desc) entry.description = desc;
+            if(laborId === 'COMP LABOR'){
+              entry.comp_time = time;
+              entry.comp_time_type = timeType;
+              stats.compLabor++;
+            } else if(laborId === 'COMP FILL LABOR' || laborId === 'FILL LABOR'){
+              entry.fill_time = time;
+              entry.fill_time_type = timeType;
+              stats.compFillLabor++;
+            }
+          }
+        });
+        stats.formulas = Object.keys(laborMap).length;
+        result.labor_standards = laborMap;
+        result.labor_standards_ts = ts;
+        result.labor_standards_stats = stats;
+        progress('✓ Labor: ' + stats.formulas + ' formulas · ' + stats.compLabor + ' compound + ' + stats.compFillLabor + ' fill records', 'ok');
+
+        // Broadcast for cross-tablet sync via a dedicated key
+        try {
+          localStorage.setItem('hoc_labor_standards_v1', JSON.stringify({
+            standards: laborMap, stats: stats, _updated: ts
+          }));
+        } catch(e){}
+      }
+
+      // ── Parse Planning Data ───────────────────────────────────────
+      if(loaded.pd) {
+        progress('Reading Planning Data (Vicinity)...');
+        var wb2 = loaded.pd.wb;
+        var vicSheet = wb2.Sheets['Vicinity Interface'] || wb2.Sheets['Vicinity Interface Mirror'];
+        if(vicSheet) {
+          var vrows = XLSX.utils.sheet_to_json(vicSheet, {defval:''});
+          var byComp = {};
+          vrows.forEach(function(r) {
+            var sku = String(r['ComponentId']||'').trim();
+            if(!sku) return;
+            if(!byComp[sku]) byComp[sku] = {sku:sku, descr:String(r['ComponentDescription']||'').trim().slice(0,60), qoh:0, prod_req:0, po_qty:0};
+            var qty = parseFloat(r['Quantity']||0)||0;
+            var src = String(r['SourceType']||'').trim();
+            if(src==='QOH') byComp[sku].qoh += qty;
+            else if(src==='Production'||src==='Planned Production') byComp[sku].prod_req += qty;
+            else if(src.includes('PO')||src.includes('Purchase')||src.includes('Order')) byComp[sku].po_qty += qty;
+          });
+          var inventory = Object.values(byComp).map(function(c) {
+            var net = c.qoh + c.po_qty - Math.abs(c.prod_req);
+            return Object.assign({}, c, {
+              net: Math.round(net*100)/100,
+              status: net < 0 ? 'LOW' : 'OK',
+              qoh: Math.round(c.qoh*100)/100,
+              po_qty: Math.round(c.po_qty*100)/100,
+              prod_req: Math.round(c.prod_req*100)/100
+            });
+          });
+          result.inventory = inventory;
+          result.inventory_ts = ts;
+          var low = inventory.filter(function(i){return i.status==='LOW';});
+          progress('✓ Vicinity: ' + inventory.length.toLocaleString() + ' SKUs · ' + low.length + ' LOW', 'ok');
+        }
+      }
+
+      // ── Write to localStorage ─────────────────────────────────────
+      result._updated = ts;
+      localStorage.setItem(DATA_KEY, JSON.stringify(result));
+
+      // ── Broadcast parsed payload to Supabase (Option A fix) ───────
+      // All other dashboards poll hoc_schedule on load and every 30s.
+      // One upload here → all tablets see the same schedule.
+      broadcastSchedule(result);
+
+      // ── Run Auto-Detect Engine on the new schedule ────────────────
+      // Builds hoc_changeovers_auto_v1 so Leadership/PS/Schedule see
+      // changeover predictions immediately, without needing anyone
+      // to open the Changeover Dashboard.
+      try {
+        var autoDetected = runAutoDetectChangeovers(result.batches || []);
+        localStorage.setItem('hoc_changeovers_auto_v1', JSON.stringify(autoDetected));
+        if(autoDetected.length){
+          progress('✓ Auto-detected ' + autoDetected.length + ' changeovers from schedule', 'ok');
+        }
+      } catch(adErr){
+        log('warn', 'Auto-detect skipped: ' + adErr.message);
+      }
+
+      // ── Summary ───────────────────────────────────────────────────
+      var batches = result.batches||[];
+      var comp=batches.filter(function(b){return b.status==='COMPLETED';}).length;
+      var run=batches.filter(function(b){return b.status==='RUNNING';}).length;
+      var ns=batches.filter(function(b){return b.status==='NOT STARTED';}).length;
+      var goals = result.goals||{};
+      progress('', 'ok');
+      progress('━━━ UPDATE COMPLETE ━━━', 'ok');
+      progress('Batches loaded: ' + batches.length + ' (C:'+comp+' R:'+run+' NS:'+ns+')', 'ok');
+      if(goals.may_actual) progress('May Cases: ' + goals.may_actual.toLocaleString() + ' actual / ' + goals.may_goal.toLocaleString() + ' goal', 'ok');
+      if(result.inventory) progress('Inventory: ' + result.inventory.length.toLocaleString() + ' SKUs · ' + result.inventory.filter(function(i){return i.status==='LOW';}).length + ' LOW', 'ok');
+      progress('All dashboards on every device will update within 30s ✓', 'ok');
+
+      log('ok', 'Upload complete — ' + batches.length + ' batches · ' + (result.inventory||[]).length + ' inventory items');
+
+      btn.textContent = '✓ All Dashboards Updated';
+      btn.style.background = 'var(--green)';
+      setTimeout(function(){
+        btn.textContent = '⚡ Update All Dashboards';
+        btn.style.background = '';
+        btn.disabled = false;
+      }, 3000);
+
+    } catch(err) {
+      progress('✗ Error: ' + err.message, 'err');
+      log('err', 'Upload failed: ' + err.message);
+      btn.textContent = '⚡ Update All Dashboards';
+      btn.disabled = false;
+    }
+  }, 50);
+}
+
+function progress(msg, type) {
+  if(!msg) { document.getElementById('progress-lines').innerHTML += '<br>'; return; }
+  var el = document.createElement('div');
+  el.className = 'log-line ' + (type||'');
+  el.textContent = new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',second:'2-digit'}) + ' ' + msg;
+  document.getElementById('progress-lines').appendChild(el);
+  el.scrollIntoView();
+}
+
+// ── Current Status ────────────────────────────────────────────────────
+function renderStatus() {
+  var stored = {};
+  try { stored = JSON.parse(localStorage.getItem(DATA_KEY)||'{}'); } catch(e){}
+  var el = document.getElementById('current-status');
+  if(!stored._updated) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">📂</div><div class="empty-title">No data uploaded yet</div></div>';
+    return;
+  }
+  var batches = stored.batches||[];
+  var goals = stored.goals||{};
+  var inv = stored.inventory||[];
+  var comp=batches.filter(function(b){return b.status==='COMPLETED';}).length;
+  var run=batches.filter(function(b){return b.status==='RUNNING';}).length;
+  var ns=batches.filter(function(b){return b.status==='NOT STARTED';}).length;
+  var low=inv.filter(function(i){return i.status==='LOW';}).length;
+  el.innerHTML = [
+    ['Last Updated',   new Date(stored._updated).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})],
+    ['Total Batches',  batches.length],
+    ['COMPLETED',      comp],
+    ['RUNNING',        run],
+    ['NOT STARTED',    ns],
+    ['May Actual Cases', (goals.may_actual||0).toLocaleString()],
+    ['May Goal Cases',   (goals.may_goal||0).toLocaleString()],
+    ['Case Balance',     (goals.may_bal||0).toLocaleString()],
+    ['OEE Actual',       (goals.oee_act||0)+'%'],
+    ['Attainment',       (goals.att_act||0)+'%'],
+    ['Total SKUs',     inv.length.toLocaleString()],
+    ['LOW Inventory',  low],
+  ].map(function(r){
+    return '<div class="stat-row"><span class="t3">'+r[0]+'</span><span class="stat-val">'+r[1]+'</span></div>';
+  }).join('');
+}
+
+// ── Log ───────────────────────────────────────────────────────────────
+function log(type, msg) {
+  var logs = [];
+  try { logs = JSON.parse(localStorage.getItem(LOG_KEY)||'[]'); } catch(e){}
+  logs.unshift({ts:new Date().toISOString(), type:type, msg:msg});
+  if(logs.length>100) logs=logs.slice(0,100);
+  localStorage.setItem(LOG_KEY, JSON.stringify(logs));
+}
+function renderLog() {
+  var logs = [];
+  try { logs = JSON.parse(localStorage.getItem(LOG_KEY)||'[]'); } catch(e){}
+  var el = document.getElementById('log-lines');
+  if(!logs.length) { el.innerHTML='<div class="t3" style="text-align:center;padding:20px">No uploads yet</div>'; return; }
+  el.innerHTML = logs.map(function(l){
+    var t = new Date(l.ts).toLocaleString('en-US',{month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit',second:'2-digit'});
+    return '<div class="log-line '+l.type+'">'+t+' — '+l.msg+'</div>';
+  }).join('');
+}
+function clearLog() {
+  localStorage.removeItem(LOG_KEY);
+  renderLog();
+}
+function clearAllData() {
+  if(!confirm('Clear all uploaded data from all dashboards?')) return;
+  localStorage.removeItem(DATA_KEY);
+  localStorage.removeItem(LOG_KEY);
+  loaded = {pt:null,pd:null};
+  document.getElementById('status-pt').textContent='Drop file here or click to browse';
+  document.getElementById('status-pd').textContent='Drop file here or click to browse';
+  document.getElementById('status-pt').style.color='var(--text3)';
+  document.getElementById('status-pd').style.color='var(--text3)';
+  document.getElementById('zone-pt').classList.remove('loaded');
+  document.getElementById('zone-pd').classList.remove('loaded');
+  document.getElementById('update-btn').disabled=true;
+  document.getElementById('progress-area').style.display='none';
+  alert('All data cleared. Dashboards will show empty state until next upload.');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────
+renderSyncBar(document.getElementById('sync-bar'));
+setInterval(function(){ renderSyncBar(document.getElementById('sync-bar')); }, 15000);
+
+// ── Vicinity Datalink UI handlers ─────────────────────────────────────
+// These delegate to the VicinityDatalink module loaded below. They update
+// the status pill, the "last pull" timestamp, and post messages to the log.
+function vicSetStatus(state, msg){
+  var pill = document.getElementById('vic-status-pill');
+  var msgEl = document.getElementById('vic-status-msg');
+  if(!pill) return;
+  var map = {
+    ok:    {bg:'rgba(34,197,94,.15)',  fg:'var(--green)', bd:'rgba(34,197,94,.4)',  icon:'● '},
+    bad:   {bg:'rgba(239,68,68,.15)',  fg:'var(--red)',   bd:'rgba(239,68,68,.4)',  icon:'✗ '},
+    busy:  {bg:'rgba(245,158,11,.15)', fg:'var(--amber)', bd:'rgba(245,158,11,.4)', icon:'⟳ '},
+    idle:  {bg:'rgba(100,116,139,.15)',fg:'var(--text3)', bd:'rgba(100,116,139,.3)',icon:'⊙ '}
+  };
+  var s = map[state] || map.idle;
+  pill.style.background = s.bg;
+  pill.style.color = s.fg;
+  pill.style.border = '1px solid ' + s.bd;
+  pill.textContent = s.icon + (msg || state);
+  if(msgEl) msgEl.textContent = msg || '';
+}
+
+function vicRefreshTimestamp(){
+  var el = document.getElementById('vic-last-pull');
+  if(!el) return;
+  try {
+    var meta = window.VicinityDatalink && window.VicinityDatalink.loadMeta();
+    if(!meta) return el.textContent = 'never';
+    // Find most recent success across all endpoints
+    var latest = null;
+    Object.keys(meta).forEach(function(k){
+      var t = meta[k] && meta[k].success_at;
+      if(t && (!latest || t > latest)) latest = t;
+    });
+    if(!latest) return el.textContent = 'never';
+    var d = new Date(latest);
+    var minsAgo = Math.round((Date.now() - d.getTime()) / 60000);
+    el.textContent = minsAgo < 1 ? 'just now' :
+                     minsAgo < 60 ? minsAgo + ' min ago' :
+                     Math.round(minsAgo/60) + ' hr ago';
+    el.title = d.toLocaleString();
+  } catch(e){}
+}
+setInterval(vicRefreshTimestamp, 30000);
+
+async function vicProbe(){
+  if(!window.VicinityDatalink){ vicSetStatus('bad','datalink module not loaded'); return; }
+  vicSetStatus('busy','testing…');
+  var r = await window.VicinityDatalink.probe();
+  if(r.ok){
+    vicSetStatus('ok', 'Connected · ' + r.latency_ms + ' ms');
+    log('info', 'Vicinity probe OK · ' + r.latency_ms + ' ms');
+  } else {
+    vicSetStatus('bad', 'Unreachable · ' + r.error);
+    log('err', 'Vicinity probe failed: ' + r.error);
+  }
+  vicRefreshTimestamp();
+}
+
+async function vicPullSchedule(){
+  if(!window.VicinityDatalink) return;
+  vicSetStatus('busy','pulling Production Schedule…');
+  try {
+    var r = await window.VicinityDatalink.pullProductionSchedule();
+    vicSetStatus('ok', r.records.length + ' batches pulled');
+    log('info', '✓ Vicinity Production Schedule: ' + r.records.length + ' records → hoc_upload_v1');
+    // Mark Production Tracker drop-zone as live-sourced
+    var zone = document.getElementById('zone-pt');
+    var status = document.getElementById('status-pt');
+    if(zone) zone.classList.add('loaded');
+    if(status){ status.textContent = '✓ Live · Vicinity · ' + r.records.length + ' batches'; status.style.color = 'var(--green)'; }
+    if(typeof checkReady === 'function') checkReady();
+  } catch(err){
+    vicSetStatus('bad', 'pull failed · ' + (err.message || err));
+    log('err', 'Vicinity Production Schedule pull: ' + (err.message || err));
+  }
+  vicRefreshTimestamp();
+}
+
+async function vicPullLabor(){
+  if(!window.VicinityDatalink) return;
+  vicSetStatus('busy','pulling Component Std Runtime…');
+  try {
+    var r = await window.VicinityDatalink.pullLaborStandards();
+    var formulaCount = r.saved && r.saved.stats ? r.saved.stats.formulas : 0;
+    vicSetStatus('ok', formulaCount + ' formulas (labor std)');
+    log('info', '✓ Vicinity Labor Std: ' + r.records.length + ' rows, ' + formulaCount + ' formulas → hoc_labor_standards_v1');
+    var zone = document.getElementById('zone-lb');
+    var status = document.getElementById('status-lb');
+    if(zone) zone.classList.add('loaded');
+    if(status){ status.textContent = '✓ Live · Vicinity · ' + formulaCount + ' formulas'; status.style.color = 'var(--green)'; }
+  } catch(err){
+    vicSetStatus('bad', 'labor pull failed · ' + (err.message || err));
+    log('err', 'Vicinity Labor Std pull: ' + (err.message || err));
+  }
+  vicRefreshTimestamp();
+}
+
+async function vicPullOEE(){
+  if(!window.VicinityDatalink) return;
+  vicSetStatus('busy','pulling Patch OEE…');
+  try {
+    var r = await window.VicinityDatalink.pullPatchOEE();
+    vicSetStatus('ok', r.records.length + ' OEE records');
+    log('info', '✓ Vicinity Patch OEE: ' + r.records.length + ' records → hoc_patch_oee_v1');
+  } catch(err){
+    vicSetStatus('bad', 'OEE pull failed · ' + (err.message || err));
+    log('err', 'Vicinity Patch OEE pull: ' + (err.message || err));
+  }
+  vicRefreshTimestamp();
+}
+
+async function vicPullAll(){
+  vicSetStatus('busy','pulling Tier 1 endpoints…');
+  await vicPullSchedule();
+  await vicPullLabor();
+  await vicPullOEE();
+  vicSetStatus('ok','Tier 1 pull complete');
+}
+
+function vicToggleAutoPoll(){
+  if(!window.VicinityDatalink) return;
+  var on = document.getElementById('vic-autopoll').checked;
+  if(on){
+    window.VicinityDatalink.startAutoPoll(15*60*1000);
+    log('info','Vicinity auto-poll started (15 min interval)');
+    vicSetStatus('busy','auto-poll on');
+  } else {
+    window.VicinityDatalink.stopAutoPoll();
+    log('info','Vicinity auto-poll stopped');
+    vicSetStatus('idle','auto-poll off');
+  }
+}
+
+function vicShowEndpoints(){
+  var panel = document.getElementById('vic-endpoints-panel');
+  if(!panel) return;
+  if(panel.style.display === 'none'){
+    panel.style.display = 'block';
+    vicRenderEndpoints();
+  } else {
+    panel.style.display = 'none';
+  }
+}
+
+function vicRenderEndpoints(){
+  if(!window.VicinityDatalink) return;
+  var tbody = document.getElementById('vic-endpoints-tbody');
+  if(!tbody) return;
+  var meta = window.VicinityDatalink.loadMeta();
+  var rows = Object.entries(window.VicinityDatalink.VIEWS).map(function(entry){
+    var k = entry[0], v = entry[1];
+    var m = meta[k] || {};
+    var last = m.success_at ? new Date(m.success_at).toLocaleString() : '—';
+    var rec = (m.record_count != null) ? m.record_count : '—';
+    var tierColor = v.tier === 1 ? 'var(--green)' : v.tier === 2 ? 'var(--blue)' : v.tier === 3 ? 'var(--amber)' : 'var(--text3)';
+    return '<tr><td style="padding:3px 6px;font-family:ui-monospace,monospace;font-size:9px;color:var(--text)">'+k+'</td>'+
+      '<td style="padding:3px 6px"><span style="color:'+tierColor+';font-weight:700">T'+v.tier+'</span></td>'+
+      '<td style="padding:3px 6px;color:var(--text2);font-size:9px">'+v.purpose+'</td>'+
+      '<td style="padding:3px 6px;text-align:right;font-family:ui-monospace,monospace">'+rec+'</td>'+
+      '<td style="padding:3px 6px;font-size:9px;color:var(--text3)">'+last+'</td>'+
+      '<td style="padding:3px 6px;text-align:right"><button class="nb" onclick="vicPullOne(\''+k+'\')" style="padding:2px 8px;border-radius:4px;border:1px solid var(--border);font-size:9px">Pull</button></td></tr>';
+  }).join('');
+  tbody.innerHTML = rows;
+}
+
+async function vicPullOne(key){
+  if(!window.VicinityDatalink) return;
+  vicSetStatus('busy','pulling '+key+'…');
+  try {
+    var r = await window.VicinityDatalink.pull(key, {top:5000, timeout:15000});
+    vicSetStatus('ok', key+' · '+r.records.length+' records');
+    log('info','✓ Vicinity '+key+': '+r.records.length+' records');
+    vicRenderEndpoints();
+  } catch(err){
+    vicSetStatus('bad', key+' failed · '+(err.message||err));
+    log('err','Vicinity '+key+' pull: '+(err.message||err));
+  }
+  vicRefreshTimestamp();
+}
+
+function vicConfigureServer(){
+  if(!window.VicinityDatalink) return;
+  var current = window.VicinityDatalink.getBaseUrl();
+  var next = prompt('Vicinity OData base URL:', current);
+  if(next == null) return;
+  next = String(next).trim();
+  if(!next){
+    // empty → reset to default
+    try { localStorage.removeItem('hoc_vicinity_base_url'); } catch(e){}
+    document.getElementById('vic-server-display').textContent = window.VicinityDatalink.getBaseUrl().replace(/^https?:\/\//,'').replace(/\/VicinityWeb.*$/,'');
+    log('info','Vicinity server URL reset to default');
+    return;
+  }
+  window.VicinityDatalink.setBaseUrl(next);
+  document.getElementById('vic-server-display').textContent = next.replace(/^https?:\/\//,'').replace(/\/VicinityWeb.*$/,'');
+  log('info','Vicinity server URL set to ' + next);
+}
+
+// Initial status + auto-probe on load (silent — only updates pill)
+setTimeout(function(){
+  if(window.VicinityDatalink){
+    vicRefreshTimestamp();
+    // Try a silent probe to set initial pill state
+    window.VicinityDatalink.probe().then(function(r){
+      if(r.ok) vicSetStatus('ok', 'Connected · ' + r.latency_ms + ' ms');
+      else    vicSetStatus('idle', 'click Test Connection');
+
+      // ── Auto-enable auto-poll when this browser IS the datalink PC ──
+      // Detection: we're loaded from localhost / 127.0.0.1 / file://
+      // (the dedicated PC pattern) AND the connection just succeeded.
+      // Saves the operator from clicking the checkbox after every restart.
+      try {
+        var isLocalDatalink = /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(window.location.hostname)
+                           || window.location.protocol === 'file:';
+        if(isLocalDatalink){
+          // Show the banner regardless of probe result so the operator
+          // can see they're on the right machine
+          var banner = document.getElementById('vic-datalink-pc-banner');
+          if(banner) banner.style.display = 'block';
+        }
+        if(r.ok && isLocalDatalink){
+          var cb = document.getElementById('vic-autopoll');
+          if(cb && !cb.checked){
+            cb.checked = true;
+            vicToggleAutoPoll();
+            log('info','Auto-poll auto-enabled (running on localhost — designated datalink PC)');
+          }
+        }
+      } catch(e){}
+    });
+  }
+}, 500);
+
+</script>
+<script src="vicinity_datalink.js"></script>
+<script src="hoc_events.js"></script>
+</body>
+</html>

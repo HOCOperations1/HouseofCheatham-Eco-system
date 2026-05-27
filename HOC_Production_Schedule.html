@@ -1,0 +1,395 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HOC Production Schedule</title><style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0B0E17;--bg2:#111520;--bg3:#161C28;
+  --border:#1E293B;--text:#DDE4F0;--text2:#8899AA;--text3:#4A5570;
+  --green:#22C55E;--red:#EF4444;--amber:#F59E0B;--blue:#3B82F6;
+  --purple:#8B5CF6;--teal:#10B981;--gray-l:#1E293B;
+  --green-l:rgba(34,197,94,.1);--red-l:rgba(239,68,68,.1);
+  --amber-l:rgba(245,158,11,.1);--blue-l:rgba(59,130,246,.1);
+}
+body{font-family:ui-monospace,monospace;background:var(--bg);color:var(--text);font-size:11px;min-height:100vh}
+.topbar{display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.brand-name{font-size:13px;font-weight:700;color:var(--text)}
+.brand-sub{font-size:9px;color:var(--text3)}
+.logo{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.nav{display:flex;gap:2px;flex:1;overflow-x:auto}
+.nb{padding:5px 12px;border-radius:6px;font:inherit;font-size:10px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--text2);border-bottom:2px solid transparent;white-space:nowrap}
+.nb:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.nb.active{color:var(--blue);border-bottom-color:var(--blue)}
+.badges{display:flex;gap:4px;flex-wrap:wrap}
+.badge{font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.b-grn{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.25)}
+.b-red{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.25)}
+.b-amb{background:rgba(245,158,11,.12);color:var(--amber);border:1px solid rgba(245,158,11,.25)}
+.b-blu{background:rgba(59,130,246,.12);color:var(--blue);border:1px solid rgba(59,130,246,.25)}
+.b-pur{background:rgba(139,92,246,.12);color:var(--purple);border:1px solid rgba(139,92,246,.25)}
+.page{display:none}.page.active{display:block}
+.content{padding:14px 16px;max-width:1400px;margin:0 auto}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.card-title{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:12px}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.kl{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.kv{font-size:22px;font-weight:700;line-height:1;margin-bottom:2px}
+.ks{font-size:9px;color:var(--text3)}
+.sync-bar{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 12px;margin-bottom:10px;font-size:9px;color:var(--text3);display:flex;align-items:center;gap:8px}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:10px}
+th{text-align:left;padding:5px 8px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:5px 8px;border-bottom:1px solid rgba(30,41,59,.5);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+.t3{color:var(--text3)}
+.t2{color:var(--text2)}
+.btn{padding:5px 14px;border-radius:6px;font:inherit;font-size:10px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2)}
+.btn:hover{background:var(--bg2);color:var(--text)}
+.btn-grn{background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.3);color:var(--green)}
+.btn-blu{background:rgba(59,130,246,.1);border-color:rgba(59,130,246,.3);color:var(--blue)}
+.empty-state{text-align:center;padding:40px 20px;color:var(--text3)}
+.empty-icon{font-size:32px;margin-bottom:8px}
+.empty-title{font-size:13px;font-weight:700;color:var(--text2);margin-bottom:4px}
+.empty-sub{font-size:10px}
+input,select,textarea{font-family:ui-monospace,monospace;font-size:10px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:4px 8px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--blue)}
+.upd-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.upd-label{font-size:9px;font-weight:700;color:var(--text3);min-width:80px;text-transform:uppercase;letter-spacing:.06em}
+.saved-msg{font-size:9px;font-weight:700;color:var(--green);opacity:0;transition:opacity .3s}
+.saved-msg.show{opacity:1}
+.logo{background:linear-gradient(135deg,#3B82F6,#8B5CF6)}.nb.active{color:var(--blue);border-bottom-color:var(--blue)}</style></head><body><div class="topbar"><div class="brand"><a href="index.html" style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text2);text-decoration:none;font-size:9px;font-weight:700;flex-shrink:0">← HOC-OES</a><div class="logo">PS</div><div><div class="brand-name">Production Schedule</div><div class="brand-sub" id="brand-sub">Full schedule · All lines · All periods</div></div></div><nav class="nav" id="period-tabs"></nav><div class="badges" id="badges"></div></div><div class="content"><div class="sync-bar" id="sync-bar"></div>
+<div class="empty-state" id="empty-ps">
+  <div class="empty-icon">📅</div>
+  <div class="empty-title">No schedule data loaded</div>
+  <div class="empty-sub">Go to <a href="HOC_Data_Upload_Hub.html" style="color:var(--blue)">Data Upload Hub</a> and upload your Production Tracker to populate this dashboard</div>
+  <div style="margin-top:16px">
+    <button onclick="manualRefresh()" style="padding:8px 20px;border-radius:6px;font-family:ui-monospace,monospace;font-size:11px;font-weight:700;cursor:pointer;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);color:#3B82F6">
+      🔄 Refresh Data
+    </button>
+  </div>
+  <div id="debug-info" style="margin-top:12px;font-size:9px;color:var(--text3);max-width:400px;text-align:left;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px"></div>
+</div>
+<div id="main-ps" style="display:none"><div class="kpi-grid" id="ps-kpis"></div><div class="card"><div class="card-title">Production Schedule <span id="ps-count" style="font-weight:400;text-transform:none;letter-spacing:0;font-size:10px;color:var(--text3)"></span></div><div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap"><input type="text" placeholder="Search batch, item, description..." onkeyup="setSearch(this.value)" style="flex:1;min-width:200px;padding:5px 10px"><select onchange="setStatus(this.value)" style="padding:5px 8px"><option value="ALL">All Status</option><option value="COMPLETED">Completed</option><option value="RUNNING">Running</option><option value="NOT STARTED">Not Started</option></select><select onchange="setLine(this.value)" style="padding:5px 8px"><option value="ALL">All Lines</option><option value="1">Line 1</option><option value="2">Line 2</option><option value="3">Line 3</option><option value="4">Line 4</option><option value="5">Line 5</option><option value="11">Line 11</option></select></div><div class="tbl-wrap"><table><thead><tr><th>Date</th><th>Ln</th><th>Batch</th><th>Item</th><th>Description</th><th>Plan Cases</th><th>Actual Cases</th><th>Yield%</th><th>QC</th><th>Status</th></tr></thead><tbody id="ps-tbody"></tbody></table></div></div></div></div><script>
+// ── v6.33 LB-3/LB-4: unified status helper ──────────────────────────
+// Single source of truth for "what's the live status of this batch?"
+// Reads BOTH floor sources (hoc_sync_v1 prod.status from Roll Call AND
+// hoc_floor_v1 from PreWeigh/Coordinator/QC). Production Supervisor used
+// to be the only screen that read hoc_sync_v1; every other KPI screen
+// read raw b.status. Result: 4 different counts for the same KPI.
+// This helper ends that mismatch — every screen now sees the same status.
+function _getEffectiveStatus633(b){
+  if(!b || !b.batch) return (b && b.status) || 'NOT STARTED';
+  try {
+    var sync = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+    var entry = sync[b.batch];
+    if(entry && entry.prod && entry.prod.status){
+      return String(entry.prod.status).toUpperCase();
+    }
+  } catch(e){}
+  try {
+    var floor = JSON.parse(localStorage.getItem('hoc_floor_v1') || '{}');
+    var f = floor[b.batch];
+    if(f && f.status){
+      return String(f.status).toUpperCase();
+    }
+  } catch(e){}
+  return String(b.status || 'NOT STARTED').toUpperCase();
+}
+
+
+var SYNC_KEY = 'hoc_sync_v1';
+var SUPA_URL = 'https://yemtpvrumqvbzrzpwnyy.supabase.co';
+var SUPA_KEY = 'sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl';
+
+function syncRead(){try{return JSON.parse(localStorage.getItem(SYNC_KEY)||'{}');}catch(e){return{};}}
+function syncWrite(data){
+  try{
+    var cur=syncRead();
+    var merged=Object.assign({},cur,data,{_ts:new Date().toISOString()});
+    localStorage.setItem(SYNC_KEY,JSON.stringify(merged));
+    supaWrite(merged);
+  }catch(e){}
+}
+function supaWrite(data){
+  try{
+    fetch(SUPA_URL+'/rest/v1/hoc_sync_bus',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Prefer':'resolution=merge-duplicates'},
+      body:JSON.stringify({id:1,data:JSON.stringify(data),updated_at:new Date().toISOString()})
+    }).catch(function(){});
+  }catch(e){}
+}
+function supaRead(cb){
+  try{
+    fetch(SUPA_URL+'/rest/v1/hoc_sync_bus?id=eq.1',{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    }).then(function(r){return r.json();}).then(function(d){
+      if(d&&d[0]&&d[0].data){
+        var parsed=JSON.parse(d[0].data);
+        var cur=syncRead();
+        var ts_remote=new Date(parsed._ts||0);
+        var ts_local=new Date(cur._ts||0);
+        if(ts_remote>ts_local){
+          localStorage.setItem(SYNC_KEY,JSON.stringify(parsed));
+          if(cb)cb(parsed);
+        }
+      }
+    }).catch(function(){});
+  }catch(e){}
+}
+function showPage(id,map){
+  Object.keys(map).forEach(function(k){
+    var el=document.getElementById('page-'+k);
+    if(el)el.classList.toggle('active',k===id);
+    var nb=document.querySelector('.nb[onclick*="\'' + k + '\'"]');
+    if(nb)nb.classList.toggle('active',k===id);
+  });
+}
+function renderSyncBar(el){
+  if(!el)return;
+  var d=syncRead();
+  var ts=d._ts?new Date(d._ts).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):'—';
+  el.innerHTML='<span class="sync-dot"></span>HOC-OES Sync Bus · Last update: '+ts+' · Cross-device sync: 15s';
+}
+function N(n){return typeof n==='number'?n.toLocaleString():(n||'—');}
+function fD(s){if(!s)return'—';try{return new Date(s+'T12:00:00').toLocaleDateString('en-US',{month:'numeric',day:'numeric'});}catch(e){return s;}}
+function pct(v){return typeof v==='number'?Math.round(v*10)/10+'%':'—';}
+
+
+var _DATA = {};
+var _FLOOR = {};   // floor updates keyed by batch_id (includes qc_status)
+function loadUploadedData(){
+  try{ var r=localStorage.getItem('hoc_upload_v1'); if(r){_DATA=JSON.parse(r);return true;} }catch(e){}
+  try{ var f=localStorage.getItem('hoc_floor_v1'); if(f){_FLOOR=JSON.parse(f);} }catch(e){}
+  return !!(_DATA.batches && _DATA.batches.length);
+}
+
+// Current month as 'YYYY-MM' — used to filter batches without hardcoding the month.
+function currentMonthPrefix(){
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+
+// ── Pull schedule from Supabase if remote is newer than local ─────────
+// Lets a single Data Upload Hub upload propagate to every tablet.
+// Mirrors the poller in Compound Coordinator / Production Coordinator.
+var SUPA_KEY_PS = 'sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl';
+function pullScheduleFromSupabase(cb){
+  try{
+    fetch(SUPA_URL+'/rest/v1/hoc_schedule?id=eq.1', {
+      headers:{'apikey':SUPA_KEY_PS,'Authorization':'Bearer '+SUPA_KEY_PS}
+    }).then(function(r){ return r.ok ? r.json() : []; })
+      .then(function(rows){
+        if(!rows || !rows.length || !rows[0].data) return;
+        var remote;
+        try { remote = JSON.parse(rows[0].data); } catch(e) { return; }
+        var remoteTs = new Date(remote._updated||0).getTime();
+        var localTs  = new Date((_DATA&&_DATA._updated)||0).getTime();
+        if(remoteTs > localTs){
+          _DATA = remote;
+          localStorage.setItem('hoc_upload_v1', JSON.stringify(remote));
+          if(cb) cb();
+        }
+      }).catch(function(){});
+  }catch(e){}
+}
+
+// Pull floor updates (status changes, qc_status from Quality Lab, etc)
+function pullFloorFromSupabase(cb){
+  try{
+    fetch(SUPA_URL+'/rest/v1/hoc_batches?select=*', {
+      headers:{'apikey':SUPA_KEY_PS,'Authorization':'Bearer '+SUPA_KEY_PS}
+    }).then(function(r){ return r.ok ? r.json() : []; })
+      .then(function(rows){
+        if(!Array.isArray(rows)) return;
+        var fl = {};
+        rows.forEach(function(r){
+          try { fl[r.batch_id] = typeof r.data === 'string' ? JSON.parse(r.data) : r.data; }
+          catch(e){}
+        });
+        _FLOOR = fl;
+        localStorage.setItem('hoc_floor_v1', JSON.stringify(_FLOOR));
+        if(cb) cb();
+      }).catch(function(){});
+  }catch(e){}
+}
+
+function mergeFloor(b){
+  var f = _FLOOR[b.batch] || {};
+  return Object.assign({}, b, {
+    status:    f.status || b.status || 'NOT STARTED',
+    actqty:    f.actqty != null ? f.actqty : b.actqty,
+    qc_status: f.qc_status || ''
+  });
+}
+function getBatches(){ var p=currentMonthPrefix(); return (_DATA.batches||[]).filter(function(b){return b.date&&b.date.startsWith(p);}).map(mergeFloor); }
+function getAllBatches(){ return (_DATA.batches||[]).map(mergeFloor); }
+function getGoals(){ return _DATA.goals||{}; }
+function hasData(){ return !!(_DATA.batches&&_DATA.batches.length); }
+
+function getStatus(b){
+  var s=String(b.status||'').toUpperCase().trim();
+  if(s==='COMPLETED')return'COMPLETED';
+  if(s==='RUNNING')return'RUNNING';
+  return'NOT STARTED';
+}
+function statusBadge(s){
+  var map={'COMPLETED':['var(--green)','COMPLETED'],'RUNNING':['var(--amber)','RUNNING'],'NOT STARTED':['var(--text3)','NOT STARTED']};
+  var m=map[getStatus({status:s})]||['var(--text3)',s||'—'];
+  return'<span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;background:'+m[0]+'22;color:'+m[0]+';border:1px solid '+m[0]+'44">'+m[1]+'</span>';
+}
+function cmpdbadge(s){
+  if(!s||s==='—')return'<span class="t3">—</span>';
+  var c=s.includes('OVERDUE')||s.includes('CRITICAL')?'var(--red)':s.includes('AT RISK')?'var(--amber)':s.includes('COMPLETE')?'var(--green)':'var(--text3)';
+  return'<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:'+c+'22;color:'+c+';border:1px solid '+c+'44">'+s+'</span>';
+}
+function qcBadge(s){
+  if(!s) return '<span class="t3">—</span>';
+  var c = s==='RELEASED'?'var(--green)':s==='HOLD'?'var(--amber)':s==='REJECTED'?'var(--red)':'var(--text3)';
+  return '<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:'+c+'22;color:'+c+';border:1px solid '+c+'44">'+s+'</span>';
+}
+
+
+var PM={all:0,line:1};
+function P(id){showPage(id,PM);renderAll();}
+var SEARCH_VAL='';
+var STATUS_FILTER='ALL';
+var LINE_FILTER='ALL';
+
+function renderAll(){
+  renderSyncBar(document.getElementById('sync-bar'));
+  if(!hasData()){
+    document.getElementById('empty-ps').style.display='block';
+    document.getElementById('main-ps').style.display='none';
+    return;
+  }
+  document.getElementById('empty-ps').style.display='none';
+  document.getElementById('main-ps').style.display='block';
+  renderKPIs();
+  renderTable();
+  renderPeriodTabs();
+}
+
+function renderKPIs(){
+  var batches=getAllBatches();
+  var monthPrefix = currentMonthPrefix();
+  var monthName = new Date().toLocaleDateString('en-US',{month:'short'});
+  var thisMonth=batches.filter(function(b){return b.date&&b.date.startsWith(monthPrefix);});
+  var comp=thisMonth.filter(function(b){return _getEffectiveStatus633(b)==='COMPLETED';}).length;
+  var run=thisMonth.filter(function(b){return _getEffectiveStatus633(b)==='RUNNING';}).length;
+  var ns=thisMonth.filter(function(b){return _getEffectiveStatus633(b)==='NOT STARTED';}).length;
+  var lines=[...new Set(batches.map(function(b){return b.line;}))].filter(Boolean).length;
+  document.getElementById('ps-kpis').innerHTML=[
+    {l:monthName+' Batches',v:thisMonth.length,s:'Current month',c:'var(--text)', href:'HOC_FG_Reconciliation.html'},
+    {l:'Total Batches',v:batches.length,s:'All periods',c:'var(--text2)', href:'HOC_FG_Reconciliation.html'},
+    {l:'Completed',v:comp,s:monthName,c:'var(--green)', href:'HOC_FG_Reconciliation.html'},
+    {l:'Running',v:run,s:'Active now',c:run?'var(--amber)':'var(--text3)', href:'HOC_Production_Supervisor.html'},
+    {l:'Not Started',v:ns,s:'Scheduled ahead',c:'var(--text)', href:'HOC_Compound_Coordinator.html'},
+    {l:'Lines',v:lines,s:'Production lines',c:'var(--blue)', href:'HOC_Production_Supervisor.html'},
+  ].map(function(k){
+    return '<div class="kpi" onclick="window.location.href=\''+k.href+'\'" title="Click to investigate" style="cursor:pointer;transition:transform .1s,border-color .1s;border:1px solid transparent" onmouseover="this.style.transform=\'translateY(-2px)\';this.style.borderColor=\'rgba(255,255,255,.12)\'" onmouseout="this.style.transform=\'translateY(0)\';this.style.borderColor=\'transparent\'"><div class="kl">'+k.l+'</div><div class="kv" style="color:'+k.c+'">'+k.v+'</div><div class="ks">'+k.s+'</div></div>';
+  }).join('');
+}
+
+function renderPeriodTabs(){
+  var batches=getAllBatches();
+  var months={};
+  batches.forEach(function(b){
+    var m=b.date?b.date.slice(0,7):'';
+    if(m)months[m]=(months[m]||0)+1;
+  });
+  var el=document.getElementById('period-tabs');
+  if(!el)return;
+  el.innerHTML='<button class="nb active" onclick="filterPeriod(\'ALL\')">All Periods</button>'+
+    Object.keys(months).sort().map(function(m){
+      var d=new Date(m+'-15');
+      var label=d.toLocaleDateString('en-US',{month:'short',year:'numeric'});
+      return '<button class="nb" onclick="filterPeriod(\''+m+'\')">'+label+' ('+months[m]+')</button>';
+    }).join('');
+}
+
+var PERIOD_FILTER='ALL';
+function filterPeriod(p){
+  PERIOD_FILTER=p;
+  document.querySelectorAll('#period-tabs .nb').forEach(function(b){
+    b.classList.toggle('active', b.textContent.includes(p==='ALL'?'All':p));
+  });
+  renderTable();
+}
+
+function renderTable(){
+  var batches=getAllBatches();
+  if(PERIOD_FILTER!=='ALL') batches=batches.filter(function(b){return b.date&&b.date.startsWith(PERIOD_FILTER);});
+  if(STATUS_FILTER!=='ALL') batches=batches.filter(function(b){return b.status===STATUS_FILTER;});
+  if(LINE_FILTER!=='ALL') batches=batches.filter(function(b){return String(b.line)===LINE_FILTER;});
+  if(SEARCH_VAL) {
+    var sv=SEARCH_VAL.toLowerCase();
+    batches=batches.filter(function(b){
+      return b.batch.toLowerCase().includes(sv)||b.desc.toLowerCase().includes(sv)||b.item.toLowerCase().includes(sv);
+    });
+  }
+  document.getElementById('ps-count').textContent=batches.length+' batches';
+  var el=document.getElementById('ps-tbody');
+  if(!el)return;
+  if(!batches.length){
+    el.innerHTML='<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--text3)">No batches match current filters</td></tr>';
+    return;
+  }
+  el.innerHTML=batches.map(function(b){
+    var yc=b.yield_pct>=100?'var(--green)':b.yield_pct>=90?'var(--amber)':'var(--red)';
+    // Smart routing based on batch state
+    var href = 'HOC_Compound_Coordinator.html';
+    if(b.status==='RUNNING') href = 'HOC_Production_Supervisor.html';
+    else if(b.status==='COMPLETED') href = 'HOC_FG_Reconciliation.html';
+    var hrefShort = href.replace('HOC_','').replace('.html','').replace(/_/g,' ');
+    return '<tr onclick="window.location.href=\''+href+'\'" style="cursor:pointer" title="Open '+b.batch+' in '+hrefShort+'">'+
+      '<td>'+fD(b.date)+'</td>'+
+      '<td><span style="font-weight:700;color:var(--blue)">L'+b.line+'</span></td>'+
+      '<td style="font-weight:700;font-size:10px">'+b.batch+'</td>'+
+      '<td class="t3">'+b.item+'</td>'+
+      '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+b.desc+'">'+b.desc+'</td>'+
+      '<td style="text-align:right">'+N(b.origqty)+'</td>'+
+      '<td style="text-align:right">'+N(b.actqty)+'</td>'+
+      '<td style="text-align:right;font-weight:700;color:'+yc+'">'+
+        (b.yield_pct>0?b.yield_pct+'%':'—')+'</td>'+
+      '<td>'+qcBadge(b.qc_status)+'</td>'+
+      '<td>'+statusBadge(b.status)+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+function setSearch(v){SEARCH_VAL=v;renderTable();}
+function setStatus(v){STATUS_FILTER=v;renderTable();}
+function setLine(v){LINE_FILTER=v;renderTable();}
+
+function manualRefresh(){
+  var ok = loadUploadedData();
+  var stored = {};
+  try{ stored = JSON.parse(localStorage.getItem('hoc_upload_v1')||'{}'); }catch(e){}
+  var dbg = document.getElementById('debug-info');
+  if(dbg){
+    var info = [];
+    info.push('localStorage key: hoc_upload_v1');
+    info.push('Data found: ' + (ok?'YES':'NO'));
+    if(stored._updated) info.push('Last upload: ' + new Date(stored._updated).toLocaleString());
+    if(stored.batches) info.push('Batches: ' + stored.batches.length);
+    else info.push('Batches: none');
+    dbg.innerHTML = info.join('<br>');
+  }
+  renderAll();
+}
+window.addEventListener("load",function(){
+  loadUploadedData();
+  renderAll();
+  // Pull schedule from Supabase on first load so tablets without a
+  // local upload still see the schedule.
+  pullScheduleFromSupabase(function(){ loadUploadedData(); renderAll(); });
+  pullFloorFromSupabase(function(){ renderAll(); });
+  manualRefresh();
+});
+window.addEventListener("storage",function(e){if(e.key==="hoc_upload_v1"||e.key==="hoc_floor_v1"){loadUploadedData();renderAll();}});
+setInterval(function(){loadUploadedData();renderAll();},15000);
+setInterval(function(){pullScheduleFromSupabase(function(){loadUploadedData();renderAll();});pullFloorFromSupabase(renderAll);},30000);
+</script><script src="hoc_events.js"></script>
+</body></html>

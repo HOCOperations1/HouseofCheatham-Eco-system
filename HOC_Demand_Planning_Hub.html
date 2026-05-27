@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HOC Demand & Planning Hub</title>
+<style>
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0B0E17;--bg2:#111520;--bg3:#161C28;
+  --border:#1E293B;--text:#DDE4F0;--text2:#8899AA;--text3:#4A5570;
+  --green:#22C55E;--red:#EF4444;--amber:#F59E0B;--blue:#3B82F6;
+  --purple:#8B5CF6;--teal:#10B981;--gray-l:#1E293B;
+  --green-l:rgba(34,197,94,.1);--red-l:rgba(239,68,68,.1);
+  --amber-l:rgba(245,158,11,.1);--blue-l:rgba(59,130,246,.1);
+}
+body{font-family:ui-monospace,monospace;background:var(--bg);color:var(--text);font-size:11px;min-height:100vh}
+.topbar{display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.brand-name{font-size:13px;font-weight:700;color:var(--text)}
+.brand-sub{font-size:9px;color:var(--text3)}
+.logo{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.nav{display:flex;gap:2px;flex:1;overflow-x:auto}
+.nb{padding:5px 12px;border-radius:6px;font:inherit;font-size:10px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--text2);border-bottom:2px solid transparent;white-space:nowrap}
+.nb:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.nb.active{color:var(--blue);border-bottom-color:var(--blue)}
+.badges{display:flex;gap:4px;flex-wrap:wrap}
+.badge{font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.b-grn{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.25)}
+.b-red{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.25)}
+.b-amb{background:rgba(245,158,11,.12);color:var(--amber);border:1px solid rgba(245,158,11,.25)}
+.b-blu{background:rgba(59,130,246,.12);color:var(--blue);border:1px solid rgba(59,130,246,.25)}
+.b-pur{background:rgba(139,92,246,.12);color:var(--purple);border:1px solid rgba(139,92,246,.25)}
+.page{display:none}.page.active{display:block}
+.content{padding:14px 16px;max-width:1400px;margin:0 auto}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.card-title{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:12px}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.kl{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.kv{font-size:22px;font-weight:700;line-height:1;margin-bottom:2px}
+.ks{font-size:9px;color:var(--text3)}
+.sync-bar{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 12px;margin-bottom:10px;font-size:9px;color:var(--text3);display:flex;align-items:center;gap:8px}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:10px}
+th{text-align:left;padding:5px 8px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:5px 8px;border-bottom:1px solid rgba(30,41,59,.5);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+.t3{color:var(--text3)}
+.t2{color:var(--text2)}
+.btn{padding:5px 14px;border-radius:6px;font:inherit;font-size:10px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2)}
+.btn:hover{background:var(--bg2);color:var(--text)}
+.btn-grn{background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.3);color:var(--green)}
+.btn-blu{background:rgba(59,130,246,.1);border-color:rgba(59,130,246,.3);color:var(--blue)}
+.empty-state{text-align:center;padding:40px 20px;color:var(--text3)}
+.empty-icon{font-size:32px;margin-bottom:8px}
+.empty-title{font-size:13px;font-weight:700;color:var(--text2);margin-bottom:4px}
+.empty-sub{font-size:10px}
+input,select,textarea{font-family:ui-monospace,monospace;font-size:10px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:4px 8px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--blue)}
+.upd-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.upd-label{font-size:9px;font-weight:700;color:var(--text3);min-width:80px;text-transform:uppercase;letter-spacing:.06em}
+.saved-msg{font-size:9px;font-weight:700;color:var(--green);opacity:0;transition:opacity .3s}
+.saved-msg.show{opacity:1}
+
+.logo{background:linear-gradient(135deg,#8B5CF6,#6D28D9)}
+
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center}
+.modal.open{display:flex}
+.modal-box{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;width:90%;max-width:480px;max-height:80vh;overflow-y:auto}
+.modal-title{font-size:13px;font-weight:700;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+.form-row{margin-bottom:10px}
+.form-label{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:4px;display:block}
+.form-control{width:100%;padding:6px 10px;font-family:ui-monospace,monospace;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);outline:none}
+.form-control:focus{border-color:var(--blue)}
+.save-btn{width:100%;padding:10px;border-radius:6px;font-family:ui-monospace,monospace;font-size:11px;font-weight:700;cursor:pointer;border:none;background:var(--blue);color:#fff;margin-top:8px}
+.save-btn:hover{background:#2563EB}
+.upd-tag{font-size:8px;padding:2px 6px;border-radius:4px;background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.2);margin-left:4px}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand">
+    <a href="index.html" style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text2);text-decoration:none;font-size:9px;font-weight:700;flex-shrink:0">← HOC-OES</a><a href="HOC_Inventory.html" style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;background:rgba(34,211,238,.12);border:1px solid rgba(34,211,238,.3);color:#22D3EE;text-decoration:none;font-size:9px;font-weight:700;flex-shrink:0">📦 Inventory</a>
+    <div class="logo">DP</div>
+    <div>
+      <div class="brand-name">Demand & Planning Hub</div>
+      <div class="brand-sub" id="brand-sub">May 2026</div>
+    </div>
+  </div>
+  <nav class="nav"><button class="nb active" onclick="P('cmd')">Dashboard</button><button class="nb" onclick="P('data')">Detail</button></nav>
+  <div class="badges" id="badges"></div>
+</div>
+<div class="page active" id="page-cmd"><div class="content"><div class="sync-bar" id="sync-bar"></div>
+<div class="empty-state" id="empty-main" style="display:none">
+  <div class="empty-icon">📂</div>
+  <div class="empty-title">No schedule loaded</div>
+  <div class="empty-sub">Go to <a href="HOC_Data_Upload_Hub.html" style="color:var(--blue)">Data Upload Hub</a> and upload your Production Tracker first</div>
+</div>
+<div id="main-content"><div class="kpi-grid" id="kpi-grid"></div></div></div></div><div class="page" id="page-data"><div class="content"><div id="detail-content"></div></div></div>
+<script>
+// ── v6.33 LB-3/LB-4: unified status helper ──────────────────────────
+// Single source of truth for "what's the live status of this batch?"
+// Reads BOTH floor sources (hoc_sync_v1 prod.status from Roll Call AND
+// hoc_floor_v1 from PreWeigh/Coordinator/QC). Production Supervisor used
+// to be the only screen that read hoc_sync_v1; every other KPI screen
+// read raw b.status. Result: 4 different counts for the same KPI.
+// This helper ends that mismatch — every screen now sees the same status.
+function _getEffectiveStatus633(b){
+  if(!b || !b.batch) return (b && b.status) || 'NOT STARTED';
+  try {
+    var sync = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+    var entry = sync[b.batch];
+    if(entry && entry.prod && entry.prod.status){
+      return String(entry.prod.status).toUpperCase();
+    }
+  } catch(e){}
+  try {
+    var floor = JSON.parse(localStorage.getItem('hoc_floor_v1') || '{}');
+    var f = floor[b.batch];
+    if(f && f.status){
+      return String(f.status).toUpperCase();
+    }
+  } catch(e){}
+  return String(b.status || 'NOT STARTED').toUpperCase();
+}
+
+
+var SYNC_KEY = 'hoc_sync_v1';
+var SUPA_URL = 'https://yemtpvrumqvbzrzpwnyy.supabase.co';
+var SUPA_KEY = 'sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl';
+
+function syncRead(){try{return JSON.parse(localStorage.getItem(SYNC_KEY)||'{}');}catch(e){return{};}}
+function syncWrite(data){
+  try{
+    var cur=syncRead();
+    var merged=Object.assign({},cur,data,{_ts:new Date().toISOString()});
+    localStorage.setItem(SYNC_KEY,JSON.stringify(merged));
+    supaWrite(merged);
+  }catch(e){}
+}
+function supaWrite(data){
+  try{
+    fetch(SUPA_URL+'/rest/v1/hoc_sync_bus',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Prefer':'resolution=merge-duplicates'},
+      body:JSON.stringify({id:1,data:JSON.stringify(data),updated_at:new Date().toISOString()})
+    }).catch(function(){});
+  }catch(e){}
+}
+function supaRead(cb){
+  try{
+    fetch(SUPA_URL+'/rest/v1/hoc_sync_bus?id=eq.1',{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    }).then(function(r){return r.json();}).then(function(d){
+      if(d&&d[0]&&d[0].data){
+        var parsed=JSON.parse(d[0].data);
+        var cur=syncRead();
+        var ts_remote=new Date(parsed._ts||0);
+        var ts_local=new Date(cur._ts||0);
+        if(ts_remote>ts_local){
+          localStorage.setItem(SYNC_KEY,JSON.stringify(parsed));
+          if(cb)cb(parsed);
+        }
+      }
+    }).catch(function(){});
+  }catch(e){}
+}
+function showPage(id,map){
+  Object.keys(map).forEach(function(k){
+    var el=document.getElementById('page-'+k);
+    if(el)el.classList.toggle('active',k===id);
+    var nb=document.querySelector('.nb[onclick*="\'' + k + '\'"]');
+    if(nb)nb.classList.toggle('active',k===id);
+  });
+}
+function renderSyncBar(el){
+  if(!el)return;
+  var d=syncRead();
+  var ts=d._ts?new Date(d._ts).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):'—';
+  el.innerHTML='<span class="sync-dot"></span>HOC-OES Sync Bus · Last update: '+ts+' · Cross-device sync: 15s';
+}
+function N(n){return typeof n==='number'?n.toLocaleString():(n||'—');}
+function fD(s){if(!s)return'—';try{return new Date(s+'T12:00:00').toLocaleDateString('en-US',{month:'numeric',day:'numeric'});}catch(e){return s;}}
+function pct(v){return typeof v==='number'?Math.round(v*10)/10+'%':'—';}
+
+
+var _UPLOAD = {};   // from Data Upload Hub (read-only schedule)
+var _FLOOR  = {};   // floor team updates (writable per batch)
+
+var SUPA_URL = 'https://yemtpvrumqvbzrzpwnyy.supabase.co';
+var SUPA_KEY = 'sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl';
+var FLOOR_KEY  = 'hoc_floor_v1';
+var UPLOAD_KEY = 'hoc_upload_v1';
+
+function loadAll(){
+  try{ var u=localStorage.getItem(UPLOAD_KEY); if(u)_UPLOAD=JSON.parse(u); }catch(e){}
+  try{ var f=localStorage.getItem(FLOOR_KEY);  if(f)_FLOOR=JSON.parse(f);  }catch(e){}
+}
+
+// ── Pull schedule from Supabase if remote is newer than local ─────────
+// Lets a single Data Upload Hub upload propagate to every tablet.
+function pullScheduleFromSupabase(cb){
+  try{
+    fetch(SUPA_URL+'/rest/v1/hoc_schedule?id=eq.1', {
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    }).then(function(r){ return r.ok ? r.json() : []; })
+      .then(function(rows){
+        if(!rows || !rows.length || !rows[0].data) return;
+        var remote;
+        try { remote = JSON.parse(rows[0].data); } catch(e) { return; }
+        var remoteTs = new Date(remote._updated||0).getTime();
+        var localTs  = new Date((_UPLOAD&&_UPLOAD._updated)||0).getTime();
+        if(remoteTs > localTs){
+          _UPLOAD = remote;
+          localStorage.setItem(UPLOAD_KEY, JSON.stringify(remote));
+          if(cb) cb();
+        }
+      }).catch(function(){});
+  }catch(e){}
+}
+
+// Get schedule batches merged with floor updates
+function getBatches(monthFilter){
+  var batches = (_UPLOAD.batches||[]);
+  if(monthFilter) batches = batches.filter(function(b){ return b.date && b.date.startsWith(monthFilter); });
+  return batches.map(function(b){
+    var floor = _FLOOR[b.batch] || {};
+    return Object.assign({}, b, {
+      status:   floor.status   || b.status   || 'NOT STARTED',
+      actqty:   floor.actqty  != null ? floor.actqty  : b.actqty,
+      cmpd:     floor.cmpd     || b.cmpd     || '',
+      cmpd_status: floor.cmpd || b.cmpd     || '',
+      cmpddue:  floor.cmpddue  || b.cmpddue  || '',
+      shortage: floor.shortage != null ? floor.shortage : b.shortage,
+      notes:    floor.notes    || '',
+      pw_done:  floor.pw_done  || false,
+      fg_released: floor.fg_released || false,
+      qc_status:   floor.qc_status   || '',
+      floor_updated: floor._ts || ''
+    });
+  });
+}
+
+function getAllBatches(){ return getBatches(null); }
+// v6.33: was hardcoded '2026-05' — now follows the calendar
+function _currentMonthPrefix633(){
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+function getMayBatches(){ return getBatches(_currentMonthPrefix633()); }
+function getGoals(){ return _UPLOAD.goals || {}; }
+function getInventory(){ return _UPLOAD.inventory || []; }
+function getLowItems(){ return getInventory().filter(function(i){ return i.status==='LOW'; }); }
+function hasData(){ return !!(_UPLOAD.batches && _UPLOAD.batches.length); }
+
+// Write a floor update for a batch
+function floorUpdate(batchId, updates){
+  if(!_FLOOR[batchId]) _FLOOR[batchId] = {};
+  Object.assign(_FLOOR[batchId], updates, {_ts: new Date().toISOString()});
+  localStorage.setItem(FLOOR_KEY, JSON.stringify(_FLOOR));
+  supaFloorWrite(batchId, _FLOOR[batchId]);
+  return true;
+}
+
+// Supabase write for cross-device sync
+function supaFloorWrite(batchId, data){
+  try{
+    fetch(SUPA_URL+'/rest/v1/hoc_batches', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Prefer':'resolution=merge-duplicates'},
+      body:JSON.stringify({batch_id:batchId, data:JSON.stringify(data), updated_at:new Date().toISOString()})
+    }).catch(function(){});
+  }catch(e){}
+}
+
+// Poll Supabase for updates from other devices
+function pollFloorUpdates(cb){
+  try{
+    fetch(SUPA_URL+'/rest/v1/hoc_batches?limit=500', {
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    }).then(function(r){return r.json();}).then(function(rows){
+      if(rows && rows.length){
+        rows.forEach(function(row){
+          try{
+            var d = JSON.parse(row.data||'{}');
+            _FLOOR[row.batch_id] = d;
+          }catch(e){}
+        });
+        localStorage.setItem(FLOOR_KEY, JSON.stringify(_FLOOR));
+        if(cb) cb();
+      }
+    }).catch(function(){});
+  }catch(e){}
+}
+
+function N(n){ return typeof n==='number'?n.toLocaleString():(n||'—'); }
+function fD(s){
+  if(!s||s==='—')return'—';
+  try{
+    var d=new Date(s.length===10?s+'T12:00:00':s);
+    if(isNaN(d))return s;
+    return d.toLocaleDateString('en-US',{month:'numeric',day:'numeric'});
+  }catch(e){return s;}
+}
+function pct(v){ return typeof v==='number'?Math.round(v*10)/10+'%':'—'; }
+
+function getStatus(b){
+  var s=String(b.status||'').toUpperCase().trim();
+  if(s==='COMPLETED')return'COMPLETED';
+  if(s==='RUNNING')return'RUNNING';
+  return'NOT STARTED';
+}
+function statusBadge(s){
+  var map={'COMPLETED':['var(--green)','COMPLETED'],'RUNNING':['var(--amber)','RUNNING'],'NOT STARTED':['var(--text3)','NOT STARTED']};
+  var m=map[getStatus({status:s})]||['var(--text3)',s||'—'];
+  return'<span style="font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;background:'+m[0]+'22;color:'+m[0]+';border:1px solid '+m[0]+'44">'+m[1]+'</span>';
+}
+function cmpdbadge(s){
+  if(!s||s==='—')return'<span class="t3">—</span>';
+  var c=s.includes('OVERDUE')||s.includes('CRITICAL')?'var(--red)':s.includes('AT RISK')?'var(--amber)':s.includes('COMPLETE')?'var(--green)':'var(--text3)';
+  return'<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:'+c+'22;color:'+c+';border:1px solid '+c+'44">'+s+'</span>';
+}
+
+
+var PM={cmd:0,data:1};
+function P(id){ showPage(id,PM); renderAll(); }
+function renderAll(){
+  renderSyncBar(document.getElementById('sync-bar'));
+  loadAll();
+  var empty=document.getElementById('empty-main'); var main=document.getElementById('main-content');
+  if(!hasData()){ if(empty)empty.style.display='block'; if(main)main.style.display='none'; return; }
+  if(empty)empty.style.display='none'; if(main)main.style.display='block';
+
+  var goals=getGoals(); var batches=getMayBatches();
+  var ns=batches.filter(function(b){return _getEffectiveStatus633(b)==='NOT STARTED';}).length;
+
+  // ── KPI source priority (v6.32) ────────────────────────────────────
+  // Manual entry on Data Upload Hub overrides any parsed/sheet values for
+  // OEE and Attainment. Attainment also falls back to attainment paste
+  // plant cumulative % when no manual entry exists. Cases come straight
+  // from goals.may_actual which the v6.32 parser now fills correctly from
+  // the Production Schedule's MTD Scheduled-row Total # of Completed Cases.
+  var manualKpi = {};
+  try { manualKpi = JSON.parse(localStorage.getItem('hoc_kpi_manual_v1') || 'null') || {}; } catch(e){}
+  var oeeGoal = manualKpi.oee_goal != null ? Number(manualKpi.oee_goal) : 60;
+  var attGoal = manualKpi.att_goal != null ? Number(manualKpi.att_goal) : 90;
+
+  // OEE: manual > parsed
+  var oeeShow = manualKpi.oee != null ? Math.round(Number(manualKpi.oee)*10)/10
+              : (Number(goals.oee_act)||0);
+
+  // Attainment: manual > attainment paste > parsed
+  var attFromPaste = null;
+  try {
+    var ad = JSON.parse(localStorage.getItem('hoc_attainment_v1') || 'null');
+    if(ad && ad.plant && Array.isArray(ad.plant.wks)){
+      for(var iwk = ad.plant.wks.length-1; iwk >= 0; iwk--){
+        var wk = ad.plant.wks[iwk];
+        if(wk && wk.attainment_cum_pct != null && wk.attainment_cum_pct > 0){
+          attFromPaste = Math.round(wk.attainment_cum_pct); break;
+        }
+      }
+    }
+  } catch(e){}
+  var attShow = manualKpi.att != null ? Math.round(Number(manualKpi.att)*10)/10
+              : attFromPaste != null ? attFromPaste
+              : (Number(goals.att_act)||0);
+
+  document.getElementById('kpi-grid').innerHTML=[
+    {l:'May Actual',     v:N(goals.may_actual||0), s:'Cases produced',  c:'var(--green)', href:'HOC_Schedule_Reforecast.html'},
+    {l:'May Goal',       v:N(goals.may_goal||0),   s:'Target cases',    c:'var(--text2)', href:'HOC_Schedule_Reforecast.html'},
+    {l:'Case Balance',   v:N(goals.may_bal||0),    s:'vs goal',         c:(goals.may_bal||0)>=0?'var(--green)':'var(--red)', href:'HOC_Schedule_Reforecast.html'},
+    {l:'Attainment',     v:attShow+'%',            s:'vs '+attGoal+'% goal',     c:attShow>=attGoal?'var(--green)':'var(--red)', href:'HOC_Production_Supervisor.html'},
+    {l:'OEE',            v:oeeShow+'%',            s:'vs '+oeeGoal+'% goal',     c:oeeShow>=oeeGoal?'var(--green)':'var(--amber)', href:'HOC_Production_Supervisor.html'},
+    {l:'Not Started',    v:ns,                      s:'Scheduled ahead', c:'var(--text)', href:'HOC_Production_Schedule.html'},
+    {l:'Remaining Days', v:goals.remaining_days||17,s:'In month',        c:'var(--text)', href:'HOC_Production_Schedule.html'},
+  ].map(function(k){
+    return '<div class="kpi" onclick="window.location.href=\''+k.href+'\'" title="Click to investigate" style="cursor:pointer;transition:transform .1s,border-color .1s;border:1px solid transparent" onmouseover="this.style.transform=\'translateY(-2px)\';this.style.borderColor=\'rgba(255,255,255,.12)\'" onmouseout="this.style.transform=\'translateY(0)\';this.style.borderColor=\'transparent\'"><div class="kl">'+k.l+'</div><div class="kv" style="color:'+k.c+'">'+k.v+'</div><div class="ks">'+k.s+'</div></div>';
+  }).join('');
+
+
+  var oee_lines=getGoals().oee_by_line||{};
+  document.getElementById('detail-content').innerHTML='<div class="card"><div class="card-title">OEE by Line</div>'+
+    Object.keys(oee_lines).map(function(line){
+      var v=oee_lines[line];
+      var c=v>=60?'var(--green)':v>=50?'var(--amber)':'var(--red)';
+      return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'+
+        '<span style="min-width:50px;font-weight:700">Line '+line+'</span>'+
+        '<div style="flex:1;background:var(--gray-l);border-radius:4px;height:14px;overflow:hidden"><div style="height:100%;width:'+Math.min(v,100)+'%;background:'+c+'"></div></div>'+
+        '<span style="min-width:40px;text-align:right;font-weight:700;color:'+c+'">'+v+'%</span></div>';
+    }).join('')+'</div>';
+
+}
+
+window.addEventListener('load', function(){
+  loadAll();
+  renderAll();
+  pullScheduleFromSupabase(function(){ loadAll(); renderAll(); });
+  setInterval(function(){ pollFloorUpdates(renderAll); }, 15000);
+  setInterval(function(){ pullScheduleFromSupabase(function(){ loadAll(); renderAll(); }); }, 30000);
+});
+window.addEventListener('storage', function(e){
+  if(e.key===UPLOAD_KEY||e.key===FLOOR_KEY){ loadAll(); renderAll(); }
+});
+</script>
+<script src="hoc_events.js"></script>
+</body>
+</html>

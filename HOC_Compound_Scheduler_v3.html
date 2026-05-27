@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HOC Compound Scheduler</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0B0E17;--bg2:#111520;--bg3:#161C28;
+  --border:#1E293B;--text:#DDE4F0;--text2:#8A97B4;--text3:#4A5570;
+  --blue:#3B82F6;--blue-l:rgba(59,130,246,.12);
+  --amber:#F59E0B;--amber-l:rgba(245,158,11,.12);
+  --red:#EF4444;--red-l:rgba(239,68,68,.12);
+  --green:#22C55E;--green-l:rgba(34,197,94,.08);
+  --purple:#8B5CF6;--purple-l:rgba(139,92,246,.1);
+  --teal:#10B981;--teal-l:rgba(16,185,129,.1);
+  --gray-l:#1E2535;
+  font-family:ui-monospace,"Cascadia Code","Fira Code",monospace;
+}
+body{background:var(--bg);color:var(--text);min-height:100vh;font-size:12px}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 14px;display:flex;align-items:stretch;position:sticky;top:0;z-index:100}
+.brand{display:flex;align-items:center;gap:8px;padding:9px 13px 9px 0;border-right:1px solid var(--border);margin-right:11px;flex-shrink:0}
+.logo{width:26px;height:26px;background:var(--blue);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff}
+.brand-name{font-weight:700;font-size:12px}.brand-sub{font-size:9px;color:var(--text3)}
+.nav{display:flex;flex:1;overflow-x:auto}
+.nb{padding:0 10px;background:none;border:none;border-bottom:2px solid transparent;color:var(--text2);cursor:pointer;font:inherit;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;transition:all .15s;white-space:nowrap}
+.nb:hover{color:var(--text)}.nb.active{color:var(--blue);border-bottom-color:var(--blue)}
+.badges{display:flex;gap:5px;align-items:center;padding:7px 0;margin-left:auto;flex-shrink:0}
+.badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:.04em}
+.b-red{background:var(--red-l);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.b-amb{background:var(--amber-l);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.b-grn{background:var(--green-l);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.b-gry{background:var(--gray-l);color:var(--text2);border:1px solid var(--border)}
+.content{padding:13px;max-width:1500px;margin:0 auto}
+.page{display:none}.page.active{display:block}
+.card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px}
+.card-title{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:6px;margin-bottom:10px}
+.kpi{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 11px}
+.kl{font-size:8px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.kv{font-size:21px;font-weight:700;line-height:1}.ks{font-size:9px;color:var(--text3);margin-top:3px}
+.tbl-wrap{border-radius:8px;border:1px solid var(--border);overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{padding:5px 8px;font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);text-align:left;border-bottom:1px solid var(--border);background:var(--bg2);white-space:nowrap}
+td{padding:5px 8px;border-bottom:1px solid rgba(30,41,59,.5);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.015)}
+.pill{display:inline-flex;font-size:8px;font-weight:700;padding:2px 6px;border-radius:3px;letter-spacing:.05em;white-space:nowrap}
+.p-od{background:var(--red-l);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.p-ar{background:var(--amber-l);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.p-ot{background:var(--green-l);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.p-ns{background:var(--gray-l);color:var(--text3);border:1px solid var(--border)}
+.p-run{background:var(--blue-l);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.p-done{background:rgba(148,163,184,.08);color:#475569;border:1px solid #334155}
+.p-pb{background:var(--purple-l);color:var(--purple);border:1px solid rgba(139,92,246,.3)}
+.p-qc{background:var(--teal-l);color:var(--teal);border:1px solid rgba(16,185,129,.3)}
+.filter-row{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
+.fb{padding:4px 9px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font:inherit;font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;transition:all .15s}
+.fb:hover{color:var(--text)}.fb.active{background:var(--blue);border-color:var(--blue);color:#fff}
+.detail{background:var(--bg3);border:1px solid var(--blue);border-radius:10px;padding:12px;margin-bottom:10px;display:none}
+.detail.open{display:block}
+.dg{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:8px 0;font-size:11px}
+.df label{font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);display:block;margin-bottom:2px}
+.df span{color:var(--text);font-weight:600}
+.su{margin-top:10px;padding:10px 12px;background:rgba(59,130,246,.06);border-radius:7px;border:1px solid rgba(59,130,246,.2)}
+.su-section{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.su-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
+.su-label{font-size:10px;color:var(--text2);white-space:nowrap}
+select,input[type=date],input[type=text],textarea{background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:5px;padding:4px 8px;font:inherit;font-size:10px}
+select:focus,input:focus,textarea:focus{outline:none;border-color:var(--blue)}
+textarea{width:100%;resize:vertical;min-height:50px;margin-top:4px}
+.qc-panel{margin-top:8px;padding:10px 12px;background:rgba(16,185,129,.05);border-radius:7px;border:1px solid rgba(16,185,129,.2);display:none}
+.qc-panel.show{display:block}
+.qc-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px}
+.qc-field{display:flex;flex-direction:column;gap:3px}
+.qc-field label{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--teal)}
+.close-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:17px;line-height:1}
+.alert-strip{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:10px 12px;margin-bottom:10px}
+.at{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--red);margin-bottom:5px}
+.ag{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px}
+.ai{background:rgba(239,68,68,.08);border-radius:6px;padding:7px 9px;border:1px solid rgba(239,68,68,.15)}
+.day-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.day-col{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px}
+.day-col.today{border-color:var(--blue);background:rgba(59,130,246,.04)}
+.db{border-radius:4px;padding:5px 6px;margin-bottom:3px;cursor:pointer;font-size:10px}
+.db.od{background:rgba(239,68,68,.1);border-left:3px solid var(--red)}
+.db.ar{background:rgba(245,158,11,.1);border-left:3px solid var(--amber)}
+.db.ot{background:rgba(34,197,94,.08);border-left:3px solid var(--green)}
+.saved-note{font-size:10px;color:var(--green);display:none}.saved-note.show{display:inline}
+.t3{color:var(--text3)}.done-row td{color:#475569}
+.btn-save{padding:5px 12px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:5px;color:var(--blue);font:inherit;font-size:10px;font-weight:700;cursor:pointer}
+.btn-save:hover{background:rgba(59,130,246,.2)}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand">
+    <div class="logo">HC</div>
+    <div><div class="brand-name">Compound Scheduler</div><div class="brand-sub">House of Cheatham · Est. 1924</div></div>
+  </div>
+  <nav class="nav">
+    <a href="index.html" style="display:flex;align-items:center;padding:9px 13px;color:var(--text2);text-decoration:none;font-size:11px;border-right:1px solid var(--border);margin-right:8px" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text2)'">← Hub</a>
+    <button class="nb active"  onclick="showPage('cmd')">Command Center</button>
+    <button class="nb"         onclick="showPage('sched')">Schedule by Line</button>
+    <button class="nb"         onclick="showPage('batches')">All Batches</button>
+    <button class="nb"         onclick="showPage('standards')">Formula Standards</button>
+    <button class="nb"         onclick="showPage('cycle')">Cycle Time Intelligence</button>
+    <button class="nb"         onclick="showPage('export')">Export / Sync</button>
+  </nav>
+  <div class="badges" id="badges"></div>
+</div>
+<div class="content">
+
+<!-- COMMAND CENTER -->
+<div class="page active" id="page-cmd">
+  <div class="alert-strip"><div class="at">Compound Overdue — Production Cannot Start These Batches</div><div class="ag" id="alert-grid"></div></div>
+  <div class="kpi-grid" id="kpis"></div>
+  <div class="card">
+    <div class="card-title">Compound Must-Complete — Next 5 Days</div>
+    <div class="day-grid" id="day-grid"></div>
+  </div>
+  <div class="detail" id="detail">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-size:12px;font-weight:700;color:var(--blue)" id="detail-title">Batch Detail</div>
+      <button class="close-btn" onclick="closeDetail()">×</button>
+    </div>
+    <div class="dg" id="detail-grid"></div>
+
+    <!-- STATUS UPDATE PANEL -->
+    <div class="su">
+      <div class="su-section" style="color:var(--blue)">Compound Status Update</div>
+      <div class="su-row">
+        <span class="su-label">Status:</span>
+        <select id="su-status" onchange="onStatusChange()">
+          <option value="">— select —</option>
+          <option>NOT STARTED</option>
+          <option>PRE-BATCH ASSIGNED</option>
+          <option>PRE-BATCH IN PROGRESS</option>
+          <option>PRE-BATCH COMPLETE</option>
+          <option>MIXING IN PROGRESS</option>
+          <option>MIX COMPLETE - PENDING QC</option>
+          <option>QC IN PROCESS</option>
+          <option>QC HOLD</option>
+          <option>QC RELEASED</option>
+          <option>FAILED - REWORK</option>
+          <option>FAILED - SCRAP</option>
+        </select>
+        <span class="su-label">Compounder:</span>
+        <select id="su-name">
+          <option value="">— select —</option>
+          <option>Corey McBurrow</option>
+<option>Eli Coley</option>
+<option>J. Vernon Gray</option>
+<option>Kashindi Kasa</option>
+<option>Omega Thompson</option>
+<option>Rodregius Nowell</option>
+<option>Emmanuel Gayton</option>
+<option>Leroy Fountain</option>
+<option>Robert Peoples</option>
+<option>Devin Dennis</option>
+<option>Jose Puati</option>
+<option>Paul Manuel</option>
+        </select>
+        <span class="su-label">Pre-batcher:</span>
+        <select id="su-pbname">
+          <option value="">— select —</option>
+          <option>Eli Coley</option>
+<option>Robert Peoples</option>
+        </select>
+        <span class="su-label">Tank:</span>
+        <select id="su-tank" style="width:160px;font:inherit;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:4px 6px">
+          <option value="">— select tank —</option>
+        </select>
+        <span class="su-label">QC Date:</span>
+        <input type="date" id="su-qcdate">
+        <button class="btn-save" onclick="saveStatus()">Save</button>
+        <span class="saved-note" id="saved-note">✓ Saved</span>
+      </div>
+
+      <!-- QC PANEL — shows when QC IN PROCESS or QC HOLD -->
+      <div class="qc-panel" id="qc-panel">
+        <div class="su-section" style="color:var(--teal)">QC Assessment — Complete when status is QC IN PROCESS or QC HOLD</div>
+        <div class="qc-grid">
+          <div class="qc-field">
+            <label>QC Technician</label>
+            <select id="qc-tech">
+              <option value="">— select —</option>
+              <option>Makia Lindsey</option>
+<option>Nia Harrell</option>
+<option>Zaynah Powell</option>
+            </select>
+          </div>
+          <div class="qc-field">
+            <label>QC In Process Date</label>
+            <input type="date" id="qc-start-date">
+          </div>
+          <div class="qc-field">
+            <label>QC Complete Date</label>
+            <input type="date" id="qc-complete-date">
+          </div>
+          <div class="qc-field">
+            <label>Viscosity</label>
+            <select id="qc-viscosity">
+              <option value="">— select —</option>
+              <option>NORMAL</option><option>HIGH</option><option>LOW</option>
+            </select>
+          </div>
+          <div class="qc-field">
+            <label>Density</label>
+            <select id="qc-density">
+              <option value="">— select —</option>
+              <option>NORMAL</option><option>HIGH</option><option>LOW</option>
+            </select>
+          </div>
+          <div class="qc-field">
+            <label>pH</label>
+            <select id="qc-ph">
+              <option value="">— select —</option>
+              <option>NORMAL</option><option>HIGH</option><option>LOW</option>
+            </select>
+          </div>
+          <div class="qc-field">
+            <label>R&D Assistance Needed</label>
+            <select id="qc-rd">
+              <option value="">— select —</option>
+              <option>NO</option><option>YES</option>
+            </select>
+          </div>
+          <div class="qc-field">
+            <label>QC Tech Initials</label>
+            <input type="text" id="qc-initials" placeholder="ML" style="width:60px">
+          </div>
+        </div>
+        <div class="qc-field">
+          <label>QC Notes</label>
+          <textarea id="qc-notes" placeholder="Enter QC observations, hold reason, corrective action..."></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SCHEDULE BY LINE -->
+<div class="page" id="page-sched"><div id="sched-content"></div></div>
+
+<!-- ALL BATCHES -->
+<div class="page" id="page-batches">
+  <div class="filter-row" id="batch-filters"></div>
+  <div class="tbl-wrap"><table>
+    <thead><tr>
+      <th>MAIN Batch</th><th>Line</th><th>Description</th><th>Formula</th>
+      <th>Date</th><th>Fill Status</th><th>Compound Status</th>
+      <th>PB Start By</th><th>Cmpd Due</th><th>Prod Risk</th><th>My Status</th>
+    </tr></thead>
+    <tbody id="batch-tbody"></tbody>
+  </table></div>
+</div>
+
+<!-- FORMULA STANDARDS -->
+<div class="page" id="page-standards">
+  <div style="font-size:11px;color:var(--text2);margin-bottom:8px;line-height:1.7">
+    All formulas require pre-batch. Cycle times from 35 timed batch sheets. Total lead = Pre-batch + Cycle + QC hold.
+  </div>
+  <div class="tbl-wrap"><table>
+    <thead><tr>
+      <th>Formula</th><th>Compound Name</th><th>Std Batch lbs</th>
+      <th>Pre-batch Hrs</th><th>Cycle Hrs</th><th>QC Hrs</th>
+      <th>Total Lead Hrs</th><th>Batches/16-hr Day</th>
+    </tr></thead>
+    <tbody id="std-tbody"></tbody>
+  </table></div>
+</div>
+
+<!-- EXPORT / SYNC -->
+<div class="page" id="page-export">
+  <div class="card">
+    <div class="card-title">Export Status Updates → Paste into HOC_Compound_Tracker_FINAL.xlsx</div>
+    <p style="font-size:11px;color:var(--text2);margin-bottom:10px;line-height:1.7">
+      Updates saved here. Download CSV → open Compound Tracker → COMPOUND_STATUS_FEED → update matching MAIN batch rows in cols P (status), Q (QC date), S (tank), V (compounder), W (pre-batcher), AA (QC tech), AB–AI (QC fields).
+    </p>
+    <button onclick="exportCSV()" style="padding:6px 12px;background:var(--teal-l);border:1px solid rgba(16,185,129,.3);border-radius:6px;color:var(--teal);font:inherit;font-size:10px;font-weight:700;cursor:pointer">⬇ Download compound_status_updates.csv</button>
+    <div style="margin-top:7px;font-size:10px;color:var(--text3)" id="export-count"></div>
+  </div>
+</div>
+
+<!-- CYCLE TIME INTELLIGENCE -->
+<div class="page" id="page-cycle">
+
+  <!-- KPI strip -->
+  <div class="kpi-grid" style="margin-bottom:10px">
+    <div class="kpi">
+      <div class="kl">Formulas Analyzed</div>
+      <div class="kv" id="ct-k-formulas">—</div>
+      <div class="ks">with cycle time data</div>
+    </div>
+    <div class="kpi">
+      <div class="kl">Tracker Discrepancies</div>
+      <div class="kv" id="ct-k-discrep" style="color:var(--amber)">—</div>
+      <div class="ks">off by ≥ 0.5 hrs</div>
+    </div>
+    <div class="kpi">
+      <div class="kl">Missing Data</div>
+      <div class="kv" id="ct-k-missing" style="color:var(--text2)">—</div>
+      <div class="ks">tracker formulas, no batch sheets</div>
+    </div>
+    <div class="kpi">
+      <div class="kl">Source Batches</div>
+      <div class="kv" id="ct-k-batches">—</div>
+      <div class="ks">handwritten Start/Stop records</div>
+    </div>
+    <div class="kpi">
+      <div class="kl">Active Overrides</div>
+      <div class="kv" id="ct-k-overrides" style="color:var(--blue)">—</div>
+      <div class="ks">applied to scheduling math</div>
+    </div>
+  </div>
+
+  <!-- Discrepancies table -->
+  <div class="card">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+      <span>⚠ Tracker Discrepancies — formulas where actual cycle time differs from tracker by ≥ 0.5 hrs</span>
+      <span style="display:flex;gap:6px">
+        <button onclick="ctApplyAll()" style="padding:5px 10px;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.35);border-radius:5px;color:#34D399;font:inherit;font-size:9px;font-weight:700;cursor:pointer">Apply All Discrepancies</button>
+        <button onclick="ctRollbackAll()" style="padding:5px 10px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:5px;color:#F87171;font:inherit;font-size:9px;font-weight:700;cursor:pointer">Rollback All</button>
+      </span>
+    </div>
+    <p style="font-size:10px;color:var(--text2);margin:2px 0 8px 0;line-height:1.6">
+      Based on 162 handwritten compound batch sheets. Applying an override updates the formula's mix-cycle hours used by all planning math (lead time, pre-batch start, urgency). Discrepancies sorted by impact (largest difference first).
+    </p>
+    <div class="tbl-wrap"><table>
+      <thead><tr>
+        <th>Formula</th><th>Product</th><th>Batches</th>
+        <th style="text-align:right">Actual Avg</th><th style="text-align:right">Tracker</th><th style="text-align:right">Diff</th>
+        <th>Recommendation</th><th></th>
+      </tr></thead>
+      <tbody id="ct-disc-tbody"></tbody>
+    </table></div>
+  </div>
+
+  <!-- Full formula table -->
+  <div class="card">
+    <div class="card-title">All Formulas — 81 with cycle time data</div>
+    <p style="font-size:10px;color:var(--text2);margin:2px 0 8px 0;line-height:1.6">
+      Full per-formula breakdown: average, min/max, range (variability), avg hrs per lb, current tracker value if any. "Not in tracker" = the formula was made this period but isn't listed in May Compound Tracker.
+    </p>
+    <div style="margin-bottom:6px">
+      <input type="text" id="ct-filter" placeholder="Filter by formula or product…" oninput="renderCycleAll()" style="font:inherit;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:4px 8px;width:280px">
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr>
+        <th>Formula</th><th>Sample Product</th><th style="text-align:right">Batches</th>
+        <th style="text-align:right">Avg Hrs</th><th style="text-align:right">Min</th><th style="text-align:right">Max</th><th style="text-align:right">Range</th>
+        <th style="text-align:right">Avg Lbs</th><th style="text-align:right">Hrs/Lb</th>
+        <th style="text-align:right">Tracker</th><th>Status</th>
+      </tr></thead>
+      <tbody id="ct-all-tbody"></tbody>
+    </table></div>
+  </div>
+
+  <!-- Vicinity Labor Validation -->
+  <div class="card">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+      <span>⚖ Vicinity Labor Validation — current STD.cy vs Vicinity-derived projection</span>
+      <span id="ct-labor-meta" style="font-size:9px;color:var(--text3);font-weight:400">— no labor extract loaded —</span>
+    </div>
+    <p style="font-size:10px;color:var(--text2);margin:2px 0 8px 0;line-height:1.6">
+      The current <strong>STD.cy</strong> in this scheduler was built from multiple sources (batch sheets, tracker, tribal knowledge) — it's already a curated number. This card uses the Vicinity Fill Labor Extract (Hours/LB × batch lbs) as a <strong>second opinion</strong>: when the variance ≥ 15%, investigate. Vicinity is a contributor, not a replacement. Upload the Fill Labor Extract in Data Upload Hub.
+    </p>
+    <div style="margin-bottom:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <input type="text" id="ct-labor-filter" placeholder="Filter by formula or product…" oninput="renderLaborValidation()" style="font:inherit;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:4px 8px;width:240px">
+      <label style="font-size:10px;color:var(--text2);display:flex;align-items:center;gap:5px;cursor:pointer">
+        <input type="checkbox" id="ct-labor-variance-only" onchange="renderLaborValidation()" checked> Show only variance ≥ 15%
+      </label>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr>
+        <th>Formula</th><th>Product</th>
+        <th style="text-align:right">STD.cy</th>
+        <th style="text-align:right">Vicinity hrs/lb</th>
+        <th style="text-align:right">Sample lbs</th>
+        <th style="text-align:right">Vicinity proj hrs</th>
+        <th style="text-align:right">Variance</th>
+        <th>Verdict</th>
+      </tr></thead>
+      <tbody id="ct-labor-tbody"></tbody>
+    </table></div>
+  </div>
+
+  <!-- Missing -->
+  <div class="card">
+    <div class="card-title">Tracker formulas with no batch sheet data — 14 formulas</div>
+    <p style="font-size:10px;color:var(--text2);margin:2px 0 8px 0;line-height:1.6">
+      These formulas appear in the May tracker but no batch sheets were provided. Cannot validate cycle time. Consider scanning future batch sheets for these formulas to build data.
+    </p>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Formula</th><th style="text-align:right">Tracker Hrs</th><th>Note</th></tr></thead>
+      <tbody id="ct-miss-tbody"></tbody>
+    </table></div>
+  </div>
+
+</div>
+
+</div>
+<script>
+let BATCHES = [{"main":"MAIN063264","item":"1-552-12-1200","desc":"ORI Cocoa Butter Body Lotion, 12oz, 12ea","date":"2026-04-22","line":1,"origqty":755,"actqty":704,"minutes":313,"casepk":12,"planea":9060,"status":"COMPLETED","cmpd":"","risk":"","cmpddue":"","shortage":0,"formula":552,"fname":"","pb_hrs":3.0,"pb_start":"","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063460","item":"1-108-12-1200","desc":"AB Moisturizing Shampoo W/Conditioner, 12oz, 12ea","date":"2026-05-04","line":1,"origqty":1193,"actqty":1207,"minutes":337,"casepk":12,"planea":14316,"status":"COMPLETED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-04-30","shortage":0,"formula":108,"fname":"","pb_hrs":3.0,"pb_start":"2026-04-28","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063487","item":"1-698-12-1200","desc":"AJ Knot On My Watch Detangler, 12oz, 12ea","date":"2026-05-05","line":1,"origqty":1996,"actqty":175,"minutes":564,"casepk":12,"planea":23952,"status":"RUNNING","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-01","shortage":-5201,"formula":698,"fname":"AJ Knot On My Watch Detangler","pb_hrs":3.0,"pb_start":"2026-04-29","cy":4.5,"qc_h":2.0,"lbs":1995},{"main":"MAIN063515","item":"1-698-12-1200","desc":"AJ Knot On My Watch Detangler, 12oz, 12ea","date":"2026-05-06","line":1,"origqty":1996,"actqty":0,"minutes":564,"casepk":12,"planea":23952,"status":"NOT STARTED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-02","shortage":-5201,"formula":698,"fname":"AJ Knot On My Watch Detangler","pb_hrs":3.0,"pb_start":"2026-04-30","cy":4.5,"qc_h":2.0,"lbs":1995},{"main":"MAIN063357","item":"1-698-12-0623","desc":"AJ Knot On My Watch Detangler, 12oz, 6ea (2x3) Bundle","date":"2026-05-07","line":1,"origqty":3992,"actqty":0,"minutes":564,"casepk":6,"planea":23952,"status":"NOT STARTED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-03","shortage":-5201,"formula":698,"fname":"AJ Knot On My Watch Detangler","pb_hrs":3.0,"pb_start":"2026-05-01","cy":4.5,"qc_h":2.0,"lbs":1995},{"main":"MAIN063366","item":"1-693-12-1243","desc":"AJ Quench Leave-In Conditioner, 12oz, 12ea (4x3) Bundle","date":"2026-05-11","line":1,"origqty":1148,"actqty":0,"minutes":324,"casepk":12,"planea":13776,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-07","shortage":-3883,"formula":693,"fname":"AJ Quench Leave-In Conditioner","pb_hrs":2.5,"pb_start":"2026-05-05","cy":4.0,"qc_h":2.0,"lbs":1148},{"main":"MAIN063516","item":"1-693-12-1243","desc":"AJ Quench Leave-In Conditioner, 12oz, 12ea (4x3) Bundle","date":"2026-05-11","line":1,"origqty":1148,"actqty":0,"minutes":324,"casepk":12,"planea":13776,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-07","shortage":-3883,"formula":693,"fname":"AJ Quench Leave-In Conditioner","pb_hrs":2.5,"pb_start":"2026-05-05","cy":4.0,"qc_h":2.0,"lbs":1148},{"main":"MAIN063462","item":"1-693-12-1200","desc":"AJ Quench Leave-In Conditioner, 12oz, 12ea","date":"2026-05-12","line":1,"origqty":1148,"actqty":0,"minutes":324,"casepk":12,"planea":13776,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-08","shortage":-3883,"formula":693,"fname":"AJ Quench Leave-In Conditioner","pb_hrs":2.5,"pb_start":"2026-05-06","cy":4.0,"qc_h":2.0,"lbs":1148},{"main":"MAIN063463","item":"1-693-12-1200","desc":"AJ Quench Leave-In Conditioner, 12oz, 12ea","date":"2026-05-13","line":1,"origqty":1148,"actqty":0,"minutes":324,"casepk":12,"planea":13776,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-09","shortage":-3883,"formula":693,"fname":"AJ Quench Leave-In Conditioner","pb_hrs":2.5,"pb_start":"2026-05-07","cy":4.0,"qc_h":2.0,"lbs":1148},{"main":"MAIN063464","item":"1-693-12-1200","desc":"AJ Quench Leave-In Conditioner, 12oz, 12ea","date":"2026-05-14","line":1,"origqty":1148,"actqty":0,"minutes":324,"casepk":12,"planea":13776,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-10","shortage":-3883,"formula":693,"fname":"AJ Quench Leave-In Conditioner","pb_hrs":2.5,"pb_start":"2026-05-08","cy":4.0,"qc_h":2.0,"lbs":1148},{"main":"MAIN063488","item":"1-693-12-1200","desc":"AJ Quench Leave-In Conditioner, 12oz, 12ea","date":"2026-05-14","line":1,"origqty":1148,"actqty":0,"minutes":324,"casepk":12,"planea":13776,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-10","shortage":-3883,"formula":693,"fname":"AJ Quench Leave-In Conditioner","pb_hrs":2.5,"pb_start":"2026-05-08","cy":4.0,"qc_h":2.0,"lbs":1148},{"main":"MAIN063364","item":"1-693-16-1200","desc":"AJ Quench Leave-In Conditioner, 16oz, 12ea","date":"2026-05-18","line":1,"origqty":870,"actqty":0,"minutes":307,"casepk":12,"planea":10440,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-14","shortage":-3883,"formula":693,"fname":"AJ Quench Leave-In Conditioner","pb_hrs":2.5,"pb_start":"2026-05-12","cy":4.0,"qc_h":2.0,"lbs":1148},{"main":"MAIN063458","item":"1-693-16-1200","desc":"AJ Quench Leave-In Conditioner, 16oz, 12ea","date":"2026-05-18","line":1,"origqty":870,"actqty":0,"minutes":307,"casepk":12,"planea":10440,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-14","shortage":-3883,"formula":693,"fname":"AJ Quench Leave-In Conditioner","pb_hrs":2.5,"pb_start":"2026-05-12","cy":4.0,"qc_h":2.0,"lbs":1148},{"main":"MAIN063358","item":"1-115-12-1243","desc":"AB Ultimate Herbal Oil, 12oz, 12ea (4x3) Bundle","date":"2026-05-19","line":1,"origqty":3979,"actqty":0,"minutes":1123,"casepk":12,"planea":47748,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-15","shortage":-5881,"formula":115,"fname":"AB Ultimate Herbal Oil","pb_hrs":2.5,"pb_start":"2026-05-13","cy":4.0,"qc_h":2.0,"lbs":1917},{"main":"MAIN063416","item":"1-115-12-1243","desc":"AB Ultimate Herbal Oil, 12oz, 12ea (4x3) Bundle","date":"2026-05-21","line":1,"origqty":1989,"actqty":0,"minutes":562,"casepk":12,"planea":23868,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-17","shortage":-5881,"formula":115,"fname":"AB Ultimate Herbal Oil","pb_hrs":2.5,"pb_start":"2026-05-15","cy":4.0,"qc_h":2.0,"lbs":1917},{"main":"MAIN063417","item":"1-230-12-1200","desc":"TMW Curl Keeper, 12oz, 12ea","date":"2026-05-26","line":1,"origqty":1151,"actqty":0,"minutes":325,"casepk":12,"planea":13812,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-22","shortage":0,"formula":230,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-20","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063453","item":"1-230-12-1200","desc":"TMW Curl Keeper, 12oz, 12ea","date":"2026-05-27","line":1,"origqty":1151,"actqty":0,"minutes":325,"casepk":12,"planea":13812,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-23","shortage":0,"formula":230,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-21","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063398","item":"1-635-12-0623","desc":"AJ Curl LaLa Thirst Trap! Curl Milk, 12oz, 6ea (2x3)","date":"2026-04-28","line":2,"origqty":2292,"actqty":2138,"minutes":324,"casepk":6,"planea":13752,"status":"COMPLETED","cmpd":"","risk":"","cmpddue":"","shortage":0,"formula":635,"fname":"","pb_hrs":3.0,"pb_start":"","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063420","item":"1-670-08-1200","desc":"AJ Soft All Over, 8oz, 12ea","date":"2026-05-01","line":2,"origqty":1318,"actqty":1314,"minutes":372,"casepk":12,"planea":15816,"status":"COMPLETED","cmpd":"","risk":"","cmpddue":"","shortage":0,"formula":670,"fname":"","pb_hrs":3.0,"pb_start":"","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063444","item":"1-102-12-1243-01","desc":"AB Braid Sheen, 12oz, 12ea (4x3) Bundle FD","date":"2026-05-02","line":2,"origqty":1143,"actqty":910,"minutes":489,"casepk":12,"planea":13716,"status":"RUNNING","cmpd":"","risk":"","cmpddue":"","shortage":0,"formula":102,"fname":"","pb_hrs":3.0,"pb_start":"","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063202","item":"1-634-12-0623","desc":"AJ CLL Hold Plz! Styling Gel, 12oz, 6ea (2x3)","date":"2026-05-04","line":2,"origqty":2289,"actqty":0,"minutes":425,"casepk":6,"planea":13734,"status":"NOT STARTED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-04-30","shortage":0,"formula":634,"fname":"","pb_hrs":3.0,"pb_start":"2026-04-28","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063269","item":"1-647-04-1243","desc":"AJ B&H scratch free zone Itch Serum, 4oz, 12ea (4x3)","date":"2026-05-04","line":2,"origqty":1989,"actqty":0,"minutes":530,"casepk":12,"planea":23868,"status":"NOT STARTED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-04-30","shortage":-214,"formula":647,"fname":"","pb_hrs":3.0,"pb_start":"2026-04-28","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063203","item":"1-634-12-0623","desc":"AJ CLL Hold Plz! Styling Gel, 12oz, 6ea (2x3)","date":"2026-05-05","line":2,"origqty":2289,"actqty":0,"minutes":425,"casepk":6,"planea":13734,"status":"NOT STARTED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-01","shortage":0,"formula":634,"fname":"","pb_hrs":3.0,"pb_start":"2026-04-29","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063337","item":"1-646-04-1243","desc":"AJ B&H Scent-sational! Hair Perfume, 4oz, 12ea (4x3)","date":"2026-05-05","line":2,"origqty":1055,"actqty":0,"minutes":281,"casepk":12,"planea":12660,"status":"NOT STARTED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-01","shortage":0,"formula":646,"fname":"","pb_hrs":3.0,"pb_start":"2026-04-29","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063475","item":"1-690-04-2446","desc":"AJ Frizz Rebel Coconut & Sweet Almond, 4oz, 24ea (4x6) ","date":"2026-05-06","line":2,"origqty":461,"actqty":0,"minutes":260,"casepk":24,"planea":11064,"status":"NOT STARTED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-02","shortage":0,"formula":690,"fname":"","pb_hrs":3.0,"pb_start":"2026-04-30","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063270","item":"1-560-04-2446","desc":"ORI Jamaican Black Castor Oil, 4oz, 24ea (4x6) Display","date":"2026-05-07","line":2,"origqty":1639,"actqty":0,"minutes":926,"casepk":24,"planea":39336,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-03","shortage":0,"formula":560,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-01","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063084","item":"1-HB564-04-1226","desc":"HB GRO UP! Rosemary Mint & Biotin Oil, 4oz, 12ea (2X6) ","date":"2026-05-11","line":2,"origqty":1066,"actqty":0,"minutes":284,"casepk":12,"planea":12792,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-07","shortage":0,"formula":null,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-05","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063532","item":"1-642-12-1243","desc":"AJ Oh So Strong Braid Refresh Spray, 12oz, 12ea (4x3) B","date":"2026-05-12","line":2,"origqty":653,"actqty":0,"minutes":205,"casepk":12,"planea":7836,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-08","shortage":0,"formula":642,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-06","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063641","item":"1-698-08-1243-4700","desc":"AJ Knot On My Watch Detangler, 8oz, 12ea (4x3) Bundle B","date":"2026-05-12","line":2,"origqty":905,"actqty":0,"minutes":256,"casepk":12,"planea":10860,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-08","shortage":-5201,"formula":698,"fname":"AJ Knot On My Watch Detangler","pb_hrs":3.0,"pb_start":"2026-05-06","cy":4.5,"qc_h":2.0,"lbs":1995},{"main":"MAIN063505","item":"1-635-08-1243","desc":"AJ CLL Thirst Trap! Curl Milk, 8oz, 12ea (4x3) ","date":"2026-05-13","line":2,"origqty":921,"actqty":0,"minutes":260,"casepk":12,"planea":11052,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-09","shortage":0,"formula":635,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-07","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063554","item":"1-637-08-1243","desc":"AJ Curl LaLa Foam-a-licious Styling Mousse, 8.5oz, 12ea","date":"2026-05-14","line":2,"origqty":1502,"actqty":0,"minutes":663,"casepk":12,"planea":18024,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-10","shortage":0,"formula":637,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-08","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063555","item":"1-637-08-1243","desc":"AJ Curl LaLa Foam-a-licious Styling Mousse, 8.5oz, 12ea","date":"2026-05-15","line":2,"origqty":1502,"actqty":0,"minutes":663,"casepk":12,"planea":18024,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-11","shortage":0,"formula":637,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-09","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063603","item":"1-648-06-1243","desc":"AJ Biotin & Honey dry clean!, 6oz, 12ea (4x3)","date":"2026-05-19","line":2,"origqty":1166,"actqty":0,"minutes":412,"casepk":12,"planea":13992,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-15","shortage":0,"formula":648,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-13","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063204","item":"1-634-12-0623","desc":"AJ CLL Hold Plz! Styling Gel, 12oz, 6ea (2x3)","date":"2026-05-20","line":2,"origqty":2289,"actqty":0,"minutes":425,"casepk":6,"planea":13734,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-16","shortage":0,"formula":634,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-14","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063205","item":"1-634-12-0623","desc":"AJ CLL Hold Plz! Styling Gel, 12oz, 6ea (2x3)","date":"2026-05-21","line":2,"origqty":2289,"actqty":0,"minutes":425,"casepk":6,"planea":13734,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-17","shortage":0,"formula":634,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-15","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063206","item":"1-634-12-0623","desc":"AJ CLL Hold Plz! Styling Gel, 12oz, 6ea (2x3)","date":"2026-05-22","line":2,"origqty":2289,"actqty":0,"minutes":425,"casepk":6,"planea":13734,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-18","shortage":0,"formula":634,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-16","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063395","item":"1-634-12-0623","desc":"AJ CLL Hold Plz! Styling Gel, 12oz, 6ea (2x3)","date":"2026-05-23","line":2,"origqty":2289,"actqty":0,"minutes":425,"casepk":6,"planea":13734,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-19","shortage":0,"formula":634,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-17","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063469","item":"1-688-15-0600","desc":"AJ Coco Repair, 15oz, 6ea","date":"2026-04-28","line":3,"origqty":1698,"actqty":1625,"minutes":250,"casepk":6,"planea":10188,"status":"COMPLETED","cmpd":"","risk":"","cmpddue":"","shortage":0,"formula":688,"fname":"","pb_hrs":3.0,"pb_start":"","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN062987","item":"1-504-15-1200","desc":"ORI Kids Hair Nutrition, 15oz, 12ea","date":"2026-05-01","line":3,"origqty":994,"actqty":924,"minutes":292,"casepk":12,"planea":11928,"status":"COMPLETED","cmpd":"","risk":"","cmpddue":"","shortage":0,"formula":504,"fname":"","pb_hrs":3.0,"pb_start":"","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063288","item":"1-675-15-1200","desc":"AJ Fix My Hair, 15oz, 12ea","date":"2026-05-02","line":3,"origqty":891,"actqty":939,"minutes":257,"casepk":12,"planea":10692,"status":"COMPLETED","cmpd":"","risk":"","cmpddue":"","shortage":0,"formula":675,"fname":"","pb_hrs":3.0,"pb_start":"","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063425","item":"1-675-15-1200","desc":"AJ Fix My Hair, 15oz, 12ea","date":"2026-05-02","line":3,"origqty":891,"actqty":936,"minutes":257,"casepk":12,"planea":10692,"status":"COMPLETED","cmpd":"","risk":"","cmpddue":"","shortage":0,"formula":675,"fname":"","pb_hrs":3.0,"pb_start":"","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063498","item":"1-553-15-1200","desc":"ORI Olive Oil Body Whip, 15oz, 12ea","date":"2026-05-04","line":3,"origqty":976,"actqty":900,"minutes":287,"casepk":12,"planea":11712,"status":"COMPLETED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-04-30","shortage":-4300,"formula":553,"fname":"ORI Olive Oil Body Whip","pb_hrs":3.0,"pb_start":"2026-04-28","cy":4.5,"qc_h":2.0,"lbs":976},{"main":"MAIN063499","item":"1-553-15-1200","desc":"ORI Olive Oil Body Whip, 15oz, 12ea","date":"2026-05-04","line":3,"origqty":976,"actqty":982,"minutes":287,"casepk":12,"planea":11712,"status":"COMPLETED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-04-30","shortage":-4300,"formula":553,"fname":"ORI Olive Oil Body Whip","pb_hrs":3.0,"pb_start":"2026-04-28","cy":4.5,"qc_h":2.0,"lbs":976},{"main":"MAIN063273","item":"1-696-15-1200","desc":"AJ Curl La La Custard, 15oz, 12ea                      ","date":"2026-05-05","line":3,"origqty":978,"actqty":132,"minutes":276,"casepk":12,"planea":11736,"status":"RUNNING","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-01","shortage":-27046,"formula":696,"fname":"AJ Curl La La Custard","pb_hrs":4.0,"pb_start":"2026-04-29","cy":5.0,"qc_h":2.0,"lbs":978},{"main":"MAIN063274","item":"1-696-15-1200","desc":"AJ Curl La La Custard, 15oz, 12ea                      ","date":"2026-05-05","line":3,"origqty":978,"actqty":0,"minutes":276,"casepk":12,"planea":11736,"status":"NOT STARTED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-01","shortage":-27046,"formula":696,"fname":"AJ Curl La La Custard","pb_hrs":4.0,"pb_start":"2026-04-29","cy":5.0,"qc_h":2.0,"lbs":978},{"main":"MAIN063275","item":"1-696-15-1200","desc":"AJ Curl La La Custard, 15oz, 12ea                      ","date":"2026-05-06","line":3,"origqty":978,"actqty":0,"minutes":276,"casepk":12,"planea":11736,"status":"NOT STARTED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-02","shortage":-27046,"formula":696,"fname":"AJ Curl La La Custard","pb_hrs":4.0,"pb_start":"2026-04-30","cy":5.0,"qc_h":2.0,"lbs":978},{"main":"MAIN063276","item":"1-696-15-1200","desc":"AJ Curl La La Custard, 15oz, 12ea                      ","date":"2026-05-06","line":3,"origqty":978,"actqty":0,"minutes":276,"casepk":12,"planea":11736,"status":"NOT STARTED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-02","shortage":-27046,"formula":696,"fname":"AJ Curl La La Custard","pb_hrs":4.0,"pb_start":"2026-04-30","cy":5.0,"qc_h":2.0,"lbs":978},{"main":"MAIN063277","item":"1-696-15-1200","desc":"AJ Curl La La Custard, 15oz, 12ea                      ","date":"2026-05-07","line":3,"origqty":978,"actqty":0,"minutes":276,"casepk":12,"planea":11736,"status":"NOT STARTED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-03","shortage":-27046,"formula":696,"fname":"AJ Curl La La Custard","pb_hrs":4.0,"pb_start":"2026-05-01","cy":5.0,"qc_h":2.0,"lbs":978},{"main":"MAIN063278","item":"1-696-15-1200","desc":"AJ Curl La La Custard, 15oz, 12ea                      ","date":"2026-05-07","line":3,"origqty":978,"actqty":0,"minutes":276,"casepk":12,"planea":11736,"status":"NOT STARTED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-03","shortage":-27046,"formula":696,"fname":"AJ Curl La La Custard","pb_hrs":4.0,"pb_start":"2026-05-01","cy":5.0,"qc_h":2.0,"lbs":978},{"main":"MAIN063279","item":"1-696-15-1200","desc":"AJ Curl La La Custard, 15oz, 12ea                      ","date":"2026-05-08","line":3,"origqty":978,"actqty":0,"minutes":276,"casepk":12,"planea":11736,"status":"NOT STARTED","cmpd":"COMPOUND CRITICAL","risk":"WILL MISS","cmpddue":"2026-05-04","shortage":-27046,"formula":696,"fname":"AJ Curl La La Custard","pb_hrs":4.0,"pb_start":"2026-05-02","cy":5.0,"qc_h":2.0,"lbs":978},{"main":"MAIN063280","item":"1-696-15-1200","desc":"AJ Curl La La Custard, 15oz, 12ea                      ","date":"2026-05-08","line":3,"origqty":978,"actqty":0,"minutes":276,"casepk":12,"planea":11736,"status":"NOT STARTED","cmpd":"COMPOUND CRITICAL","risk":"WILL MISS","cmpddue":"2026-05-04","shortage":-27046,"formula":696,"fname":"AJ Curl La La Custard","pb_hrs":4.0,"pb_start":"2026-05-02","cy":5.0,"qc_h":2.0,"lbs":978},{"main":"MAIN063281","item":"1-696-15-1200","desc":"AJ Curl La La Custard, 15oz, 12ea                      ","date":"2026-05-09","line":3,"origqty":978,"actqty":0,"minutes":276,"casepk":12,"planea":11736,"status":"NOT STARTED","cmpd":"COMPOUND CRITICAL","risk":"WILL MISS","cmpddue":"2026-05-05","shortage":-27046,"formula":696,"fname":"AJ Curl La La Custard","pb_hrs":4.0,"pb_start":"2026-05-03","cy":5.0,"qc_h":2.0,"lbs":978},{"main":"MAIN063282","item":"1-696-15-1200","desc":"AJ Curl La La Custard, 15oz, 12ea                      ","date":"2026-05-09","line":3,"origqty":978,"actqty":0,"minutes":276,"casepk":12,"planea":11736,"status":"NOT STARTED","cmpd":"COMPOUND CRITICAL","risk":"WILL MISS","cmpddue":"2026-05-05","shortage":-27046,"formula":696,"fname":"AJ Curl La La Custard","pb_hrs":4.0,"pb_start":"2026-05-03","cy":5.0,"qc_h":2.0,"lbs":978},{"main":"MAIN063500","item":"1-553-15-1200","desc":"ORI Olive Oil Body Whip, 15oz, 12ea","date":"2026-05-11","line":3,"origqty":976,"actqty":0,"minutes":287,"casepk":12,"planea":11712,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-07","shortage":-4300,"formula":553,"fname":"ORI Olive Oil Body Whip","pb_hrs":3.0,"pb_start":"2026-05-05","cy":4.5,"qc_h":2.0,"lbs":976},{"main":"MAIN063501","item":"1-553-15-1200","desc":"ORI Olive Oil Body Whip, 15oz, 12ea","date":"2026-05-11","line":3,"origqty":976,"actqty":0,"minutes":287,"casepk":12,"planea":11712,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-07","shortage":-4300,"formula":553,"fname":"ORI Olive Oil Body Whip","pb_hrs":3.0,"pb_start":"2026-05-05","cy":4.5,"qc_h":2.0,"lbs":976},{"main":"MAIN063283","item":"1-696-15-0623","desc":"AJ Curl La La Custard, 15oz, 6ea (2x3) Bundle","date":"2026-05-12","line":3,"origqty":1956,"actqty":0,"minutes":307,"casepk":6,"planea":11736,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-08","shortage":-27046,"formula":696,"fname":"AJ Curl La La Custard","pb_hrs":4.0,"pb_start":"2026-05-06","cy":5.0,"qc_h":2.0,"lbs":978},{"main":"MAIN063284","item":"1-696-15-0623","desc":"AJ Curl La La Custard, 15oz, 6ea (2x3) Bundle","date":"2026-05-12","line":3,"origqty":1956,"actqty":0,"minutes":307,"casepk":6,"planea":11736,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-08","shortage":-27046,"formula":696,"fname":"AJ Curl La La Custard","pb_hrs":4.0,"pb_start":"2026-05-06","cy":5.0,"qc_h":2.0,"lbs":978},{"main":"MAIN063285","item":"1-696-15-0623","desc":"AJ Curl La La Custard, 15oz, 6ea (2x3) Bundle","date":"2026-05-13","line":3,"origqty":1956,"actqty":0,"minutes":307,"casepk":6,"planea":11736,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-09","shortage":-27046,"formula":696,"fname":"AJ Curl La La Custard","pb_hrs":4.0,"pb_start":"2026-05-07","cy":5.0,"qc_h":2.0,"lbs":978},{"main":"MAIN063286","item":"1-696-15-0623","desc":"AJ Curl La La Custard, 15oz, 6ea (2x3) Bundle","date":"2026-05-13","line":3,"origqty":1956,"actqty":0,"minutes":307,"casepk":6,"planea":11736,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-09","shortage":-27046,"formula":696,"fname":"AJ Curl La La Custard","pb_hrs":4.0,"pb_start":"2026-05-07","cy":5.0,"qc_h":2.0,"lbs":978},{"main":"MAIN063304","item":"1-696-09-1243","desc":"AJ Curl La La Custard, 9oz, 12ea (4x3) Bundle","date":"2026-05-14","line":3,"origqty":1649,"actqty":0,"minutes":466,"casepk":12,"planea":19788,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-10","shortage":-27046,"formula":696,"fname":"AJ Curl La La Custard","pb_hrs":4.0,"pb_start":"2026-05-08","cy":5.0,"qc_h":2.0,"lbs":978},{"main":"MAIN063305","item":"1-696-09-1243","desc":"AJ Curl La La Custard, 9oz, 12ea (4x3) Bundle","date":"2026-05-15","line":3,"origqty":1649,"actqty":0,"minutes":466,"casepk":12,"planea":19788,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-11","shortage":-27046,"formula":696,"fname":"AJ Curl La La Custard","pb_hrs":4.0,"pb_start":"2026-05-09","cy":5.0,"qc_h":2.0,"lbs":978},{"main":"MAIN063317","item":"1-696-09-1243","desc":"AJ Curl La La Custard, 9oz, 12ea (4x3) Bundle","date":"2026-05-16","line":3,"origqty":1649,"actqty":0,"minutes":466,"casepk":12,"planea":19788,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-12","shortage":-27046,"formula":696,"fname":"AJ Curl La La Custard","pb_hrs":4.0,"pb_start":"2026-05-10","cy":5.0,"qc_h":2.0,"lbs":978},{"main":"MAIN063341","item":"1-696-18-1200","desc":"AJ Curl La La Custard, 18oz, 12ea","date":"2026-05-16","line":3,"origqty":818,"actqty":0,"minutes":289,"casepk":12,"planea":9816,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-12","shortage":-27046,"formula":696,"fname":"AJ Curl La La Custard","pb_hrs":4.0,"pb_start":"2026-05-10","cy":5.0,"qc_h":2.0,"lbs":978},{"main":"MAIN063342","item":"1-696-18-1200","desc":"AJ Curl La La Custard, 18oz, 12ea","date":"2026-05-18","line":3,"origqty":818,"actqty":0,"minutes":289,"casepk":12,"planea":9816,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-14","shortage":-27046,"formula":696,"fname":"AJ Curl La La Custard","pb_hrs":4.0,"pb_start":"2026-05-12","cy":5.0,"qc_h":2.0,"lbs":978},{"main":"MAIN063427","item":"1-696-18-1200","desc":"AJ Curl La La Custard, 18oz, 12ea","date":"2026-05-18","line":3,"origqty":818,"actqty":0,"minutes":289,"casepk":12,"planea":9816,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-14","shortage":-27046,"formula":696,"fname":"AJ Curl La La Custard","pb_hrs":4.0,"pb_start":"2026-05-12","cy":5.0,"qc_h":2.0,"lbs":978},{"main":"MAIN063470","item":"1-696-18-1200","desc":"AJ Curl La La Custard, 18oz, 12ea","date":"2026-05-19","line":3,"origqty":818,"actqty":0,"minutes":289,"casepk":12,"planea":9816,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-15","shortage":-27046,"formula":696,"fname":"AJ Curl La La Custard","pb_hrs":4.0,"pb_start":"2026-05-13","cy":5.0,"qc_h":2.0,"lbs":978},{"main":"MAIN063474","item":"1-HB535-20-0600","desc":"HB Olive Cholesterol, 20oz, 6ea","date":"2026-05-19","line":3,"origqty":778,"actqty":0,"minutes":114,"casepk":6,"planea":4668,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-15","shortage":0,"formula":null,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-13","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063335","item":"1-692-09-1243","desc":"AJ Dont Shrink Curling Gel, 9oz, 12ea (4x3) Bundle","date":"2026-05-20","line":3,"origqty":1621,"actqty":0,"minutes":458,"casepk":12,"planea":19452,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-16","shortage":-10061,"formula":692,"fname":"AJ Dont Shrink Curling Gel","pb_hrs":3.0,"pb_start":"2026-05-14","cy":4.5,"qc_h":2.0,"lbs":968},{"main":"MAIN063518","item":"1-692-09-1243","desc":"AJ Dont Shrink Curling Gel, 9oz, 12ea (4x3) Bundle","date":"2026-05-20","line":3,"origqty":1621,"actqty":0,"minutes":458,"casepk":12,"planea":19452,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-16","shortage":-10061,"formula":692,"fname":"AJ Dont Shrink Curling Gel","pb_hrs":3.0,"pb_start":"2026-05-14","cy":4.5,"qc_h":2.0,"lbs":968},{"main":"MAIN063289","item":"1-692-15-0623","desc":"AJ Dont Shrink Curling Gel, 15oz, 6ea (2x3) Bundle","date":"2026-05-21","line":3,"origqty":1936,"actqty":0,"minutes":304,"casepk":6,"planea":11616,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-17","shortage":-10061,"formula":692,"fname":"AJ Dont Shrink Curling Gel","pb_hrs":3.0,"pb_start":"2026-05-15","cy":4.5,"qc_h":2.0,"lbs":968},{"main":"MAIN063290","item":"1-692-15-0623","desc":"AJ Dont Shrink Curling Gel, 15oz, 6ea (2x3) Bundle","date":"2026-05-22","line":3,"origqty":1936,"actqty":0,"minutes":304,"casepk":6,"planea":11616,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-18","shortage":-10061,"formula":692,"fname":"AJ Dont Shrink Curling Gel","pb_hrs":3.0,"pb_start":"2026-05-16","cy":4.5,"qc_h":2.0,"lbs":968},{"main":"MAIN063291","item":"1-692-15-0623","desc":"AJ Dont Shrink Curling Gel, 15oz, 6ea (2x3) Bundle","date":"2026-05-22","line":3,"origqty":1936,"actqty":0,"minutes":304,"casepk":6,"planea":11616,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-18","shortage":-10061,"formula":692,"fname":"AJ Dont Shrink Curling Gel","pb_hrs":3.0,"pb_start":"2026-05-16","cy":4.5,"qc_h":2.0,"lbs":968},{"main":"MAIN063292","item":"1-692-15-0623","desc":"AJ Dont Shrink Curling Gel, 15oz, 6ea (2x3) Bundle","date":"2026-05-26","line":3,"origqty":1936,"actqty":0,"minutes":304,"casepk":6,"planea":11616,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-22","shortage":-10061,"formula":692,"fname":"AJ Dont Shrink Curling Gel","pb_hrs":3.0,"pb_start":"2026-05-20","cy":4.5,"qc_h":2.0,"lbs":968},{"main":"MAIN063293","item":"1-692-15-1200","desc":"AJ Dont Shrink Curling Gel, 15oz, 12ea","date":"2026-05-26","line":3,"origqty":968,"actqty":0,"minutes":285,"casepk":12,"planea":11616,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-22","shortage":-10061,"formula":692,"fname":"AJ Dont Shrink Curling Gel","pb_hrs":3.0,"pb_start":"2026-05-20","cy":4.5,"qc_h":2.0,"lbs":968},{"main":"MAIN063348","item":"1-692-15-1200","desc":"AJ Dont Shrink Curling Gel, 15oz, 12ea","date":"2026-05-27","line":3,"origqty":968,"actqty":0,"minutes":285,"casepk":12,"planea":11616,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-23","shortage":-10061,"formula":692,"fname":"AJ Dont Shrink Curling Gel","pb_hrs":3.0,"pb_start":"2026-05-21","cy":4.5,"qc_h":2.0,"lbs":968},{"main":"MAIN063349","item":"1-692-15-1200","desc":"AJ Dont Shrink Curling Gel, 15oz, 12ea","date":"2026-05-27","line":3,"origqty":968,"actqty":0,"minutes":285,"casepk":12,"planea":11616,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-23","shortage":-10061,"formula":692,"fname":"AJ Dont Shrink Curling Gel","pb_hrs":3.0,"pb_start":"2026-05-21","cy":4.5,"qc_h":2.0,"lbs":968},{"main":"MAIN063350","item":"1-692-15-1200","desc":"AJ Dont Shrink Curling Gel, 15oz, 12ea","date":"2026-05-28","line":3,"origqty":968,"actqty":0,"minutes":285,"casepk":12,"planea":11616,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-24","shortage":-10061,"formula":692,"fname":"AJ Dont Shrink Curling Gel","pb_hrs":3.0,"pb_start":"2026-05-22","cy":4.5,"qc_h":2.0,"lbs":968},{"main":"MAIN063351","item":"1-692-15-1200","desc":"AJ Dont Shrink Curling Gel, 15oz, 12ea","date":"2026-05-28","line":3,"origqty":968,"actqty":0,"minutes":285,"casepk":12,"planea":11616,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-24","shortage":-10061,"formula":692,"fname":"AJ Dont Shrink Curling Gel","pb_hrs":3.0,"pb_start":"2026-05-22","cy":4.5,"qc_h":2.0,"lbs":968},{"main":"MAIN063352","item":"1-692-15-1200","desc":"AJ Dont Shrink Curling Gel, 15oz, 12ea","date":"2026-05-29","line":3,"origqty":968,"actqty":0,"minutes":285,"casepk":12,"planea":11616,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-25","shortage":-10061,"formula":692,"fname":"AJ Dont Shrink Curling Gel","pb_hrs":3.0,"pb_start":"2026-05-23","cy":4.5,"qc_h":2.0,"lbs":968},{"main":"MAIN063336","item":"1-692-18-1200","desc":"AJ Dont Shrink Curling Gel, 18oz, 12ea","date":"2026-05-29","line":3,"origqty":810,"actqty":0,"minutes":254,"casepk":12,"planea":9720,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-25","shortage":-10061,"formula":692,"fname":"AJ Dont Shrink Curling Gel","pb_hrs":3.0,"pb_start":"2026-05-23","cy":4.5,"qc_h":2.0,"lbs":968},{"main":"MAIN063599","item":"1-692-18-1200","desc":"AJ Dont Shrink Curling Gel, 18oz, 12ea","date":"2026-05-30","line":3,"origqty":810,"actqty":0,"minutes":254,"casepk":12,"planea":9720,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-26","shortage":-10061,"formula":692,"fname":"AJ Dont Shrink Curling Gel","pb_hrs":3.0,"pb_start":"2026-05-24","cy":4.5,"qc_h":2.0,"lbs":968},{"main":"MAIN063471","item":"1-658-18-1200","desc":"AJ Ice Curls Styling Gel, 18oz, 12ea","date":"2026-05-30","line":3,"origqty":777,"actqty":0,"minutes":244,"casepk":12,"planea":9324,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-26","shortage":-6271,"formula":658,"fname":"AJ Ice Curls Styling Gel","pb_hrs":3.0,"pb_start":"2026-05-24","cy":4.5,"qc_h":2.0,"lbs":1829},{"main":"MAIN063005","item":"1-502-07-1200","desc":"ORI Kids Gro Strong, 7oz, 12ea","date":"2026-05-01","line":4,"origqty":936,"actqty":921,"minutes":322,"casepk":12,"planea":11232,"status":"COMPLETED","cmpd":"","risk":"","cmpddue":"","shortage":0,"formula":502,"fname":"","pb_hrs":3.0,"pb_start":"","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063172","item":"1-114-05-1200","desc":"AB Super Gro, 5.25oz, 12ea","date":"2026-05-02","line":4,"origqty":1305,"actqty":1220,"minutes":400,"casepk":12,"planea":15660,"status":"COMPLETED","cmpd":"","risk":"","cmpddue":"","shortage":0,"formula":114,"fname":"","pb_hrs":3.0,"pb_start":"","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063328","item":"1-107-05-1200","desc":"AB Max Strength Super Gro, 5.25oz, 12ea","date":"2026-05-04","line":4,"origqty":1600,"actqty":1600,"minutes":411,"casepk":12,"planea":19200,"status":"COMPLETED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-04-30","shortage":-5872,"formula":107,"fname":"AB Max Strength Super Gro","pb_hrs":2.5,"pb_start":"2026-04-28","cy":4.0,"qc_h":2.0,"lbs":2396},{"main":"MAIN063328","item":"1-107-05-1243","desc":"AB Max Strength Super Gro, 5oz, 12ea (4x3) Bundle","date":"2026-05-04","line":4,"origqty":796,"actqty":733,"minutes":261,"casepk":12,"planea":9552,"status":"COMPLETED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-04-30","shortage":-5872,"formula":107,"fname":"AB Max Strength Super Gro","pb_hrs":2.5,"pb_start":"2026-04-28","cy":4.0,"qc_h":2.0,"lbs":2396},{"main":"MAIN063302","item":"1-107-05-1243","desc":"AB Max Strength Super Gro, 5oz, 12ea (4x3) Bundle","date":"2026-05-05","line":4,"origqty":2396,"actqty":1248,"minutes":787,"casepk":12,"planea":28752,"status":"RUNNING","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-01","shortage":-5872,"formula":107,"fname":"AB Max Strength Super Gro","pb_hrs":2.5,"pb_start":"2026-04-29","cy":4.0,"qc_h":2.0,"lbs":2396},{"main":"MAIN063303","item":"1-107-05-1243","desc":"AB Max Strength Super Gro, 5oz, 12ea (4x3) Bundle","date":"2026-05-07","line":4,"origqty":2396,"actqty":0,"minutes":787,"casepk":12,"planea":28752,"status":"NOT STARTED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-03","shortage":-5872,"formula":107,"fname":"AB Max Strength Super Gro","pb_hrs":2.5,"pb_start":"2026-05-01","cy":4.0,"qc_h":2.0,"lbs":2396},{"main":"MAIN063489","item":"1-2124-05-1243","desc":"ORI Aloe & Avocado Conditioning Hair Food, 5.25oz, 12ea","date":"2026-05-08","line":4,"origqty":1349,"actqty":0,"minutes":443,"casepk":12,"planea":16188,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-04","shortage":0,"formula":2124,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-02","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063311","item":"1-K035-04-1200","desc":"KZ Indian Hemp Hair & Scalp, 4oz, 12ea","date":"2026-05-09","line":4,"origqty":1770,"actqty":0,"minutes":543,"casepk":12,"planea":21240,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-05","shortage":0,"formula":null,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-03","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063312","item":"1-K035-08-0600","desc":"KZ Indian Hemp Hair & Scalp, 7.7oz, 6ea","date":"2026-05-11","line":4,"origqty":1840,"actqty":0,"minutes":541,"casepk":6,"planea":11040,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-07","shortage":0,"formula":null,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-05","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063446","item":"1-687-07-0600","desc":"AJ Butter Creme, 7.5oz, 6ea","date":"2026-05-13","line":4,"origqty":3344,"actqty":0,"minutes":525,"casepk":6,"planea":20064,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-09","shortage":0,"formula":687,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-07","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063295","item":"1-207-15-1200","desc":"ORI Hair Mayonnaise, 15oz, 12ea","date":"2026-05-14","line":4,"origqty":944,"actqty":0,"minutes":282,"casepk":12,"planea":11328,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-10","shortage":-12472,"formula":207,"fname":"Hair Mayonnaise","pb_hrs":3.0,"pb_start":"2026-05-08","cy":4.5,"qc_h":2.0,"lbs":944},{"main":"MAIN063296","item":"1-207-15-1200","desc":"ORI Hair Mayonnaise, 15oz, 12ea","date":"2026-05-14","line":4,"origqty":944,"actqty":0,"minutes":282,"casepk":12,"planea":11328,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-10","shortage":-12472,"formula":207,"fname":"Hair Mayonnaise","pb_hrs":3.0,"pb_start":"2026-05-08","cy":4.5,"qc_h":2.0,"lbs":944},{"main":"MAIN063297","item":"1-207-15-1200","desc":"ORI Hair Mayonnaise, 15oz, 12ea","date":"2026-05-15","line":4,"origqty":944,"actqty":0,"minutes":282,"casepk":12,"planea":11328,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-11","shortage":-12472,"formula":207,"fname":"Hair Mayonnaise","pb_hrs":3.0,"pb_start":"2026-05-09","cy":4.5,"qc_h":2.0,"lbs":944},{"main":"MAIN063508","item":"1-207-15-1200","desc":"ORI Hair Mayonnaise, 15oz, 12ea","date":"2026-05-15","line":4,"origqty":944,"actqty":0,"minutes":282,"casepk":12,"planea":11328,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-11","shortage":-12472,"formula":207,"fname":"Hair Mayonnaise","pb_hrs":3.0,"pb_start":"2026-05-09","cy":4.5,"qc_h":2.0,"lbs":944},{"main":"MAIN063509","item":"1-207-15-1200","desc":"ORI Hair Mayonnaise, 15oz, 12ea","date":"2026-05-16","line":4,"origqty":944,"actqty":0,"minutes":282,"casepk":12,"planea":11328,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-12","shortage":-12472,"formula":207,"fname":"Hair Mayonnaise","pb_hrs":3.0,"pb_start":"2026-05-10","cy":4.5,"qc_h":2.0,"lbs":944},{"main":"MAIN063306","item":"1-207-15-1243","desc":"ORI Hair Mayonnaise, 15oz, 12ea (4x3) Bundle","date":"2026-05-16","line":4,"origqty":944,"actqty":0,"minutes":296,"casepk":12,"planea":11328,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-12","shortage":-12472,"formula":207,"fname":"Hair Mayonnaise","pb_hrs":3.0,"pb_start":"2026-05-10","cy":4.5,"qc_h":2.0,"lbs":944},{"main":"MAIN063307","item":"1-207-15-1243","desc":"ORI Hair Mayonnaise, 15oz, 12ea (4x3) Bundle","date":"2026-05-18","line":4,"origqty":944,"actqty":0,"minutes":296,"casepk":12,"planea":11328,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-14","shortage":-12472,"formula":207,"fname":"Hair Mayonnaise","pb_hrs":3.0,"pb_start":"2026-05-12","cy":4.5,"qc_h":2.0,"lbs":944},{"main":"MAIN063325","item":"1-671-15-1200","desc":"AJ Curl Mane-Tenance, 15oz, 12ea","date":"2026-05-19","line":4,"origqty":902,"actqty":0,"minutes":265,"casepk":12,"planea":10824,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-15","shortage":0,"formula":671,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-13","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063345","item":"1-925-12-1200","desc":"RF Tub O' Butter Cocoa Butter Cream, 12oz, 12ea","date":"2026-05-19","line":4,"origqty":1022,"actqty":0,"minutes":240,"casepk":12,"planea":12264,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-15","shortage":-4117,"formula":925,"fname":"Red Fox Cocoa Butter Cream","pb_hrs":2.5,"pb_start":"2026-05-13","cy":4.0,"qc_h":2.0,"lbs":1022},{"main":"MAIN063346","item":"1-925-12-1200","desc":"RF Tub O' Butter Cocoa Butter Cream, 12oz, 12ea","date":"2026-05-20","line":4,"origqty":1022,"actqty":0,"minutes":240,"casepk":12,"planea":12264,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-16","shortage":-4117,"formula":925,"fname":"Red Fox Cocoa Butter Cream","pb_hrs":2.5,"pb_start":"2026-05-14","cy":4.0,"qc_h":2.0,"lbs":1022},{"main":"MAIN063347","item":"1-925-12-1200","desc":"RF Tub O' Butter Cocoa Butter Cream, 12oz, 12ea","date":"2026-05-20","line":4,"origqty":1022,"actqty":0,"minutes":240,"casepk":12,"planea":12264,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-16","shortage":-4117,"formula":925,"fname":"Red Fox Cocoa Butter Cream","pb_hrs":2.5,"pb_start":"2026-05-14","cy":4.0,"qc_h":2.0,"lbs":1022},{"main":"MAIN063313","item":"1-K035-08-0600","desc":"KZ Indian Hemp Hair & Scalp, 7.7oz, 6ea","date":"2026-05-21","line":4,"origqty":1840,"actqty":0,"minutes":541,"casepk":6,"planea":11040,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-17","shortage":0,"formula":null,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-15","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063316","item":"1-K035-18-0600","desc":"KZ Indian Hemp Hair & Scalp, 18oz, 6ea","date":"2026-05-22","line":4,"origqty":787,"actqty":0,"minutes":121,"casepk":6,"planea":4722,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-18","shortage":0,"formula":null,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-16","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063329","item":"1-K035-18-0600","desc":"KZ Indian Hemp Hair & Scalp, 18oz, 6ea","date":"2026-05-26","line":4,"origqty":787,"actqty":0,"minutes":121,"casepk":6,"planea":4722,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-22","shortage":0,"formula":null,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-20","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063330","item":"1-K035-18-0600","desc":"KZ Indian Hemp Hair & Scalp, 18oz, 6ea","date":"2026-05-26","line":4,"origqty":787,"actqty":0,"minutes":121,"casepk":6,"planea":4722,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-22","shortage":0,"formula":null,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-20","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063331","item":"1-K035-18-0600","desc":"KZ Indian Hemp Hair & Scalp, 18oz, 6ea","date":"2026-05-27","line":4,"origqty":787,"actqty":0,"minutes":121,"casepk":6,"planea":4722,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-23","shortage":0,"formula":null,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-21","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063332","item":"1-K035-18-0600","desc":"KZ Indian Hemp Hair & Scalp, 18oz, 6ea","date":"2026-05-27","line":4,"origqty":787,"actqty":0,"minutes":121,"casepk":6,"planea":4722,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-23","shortage":0,"formula":null,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-21","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063333","item":"1-K035-18-0600","desc":"KZ Indian Hemp Hair & Scalp, 18oz, 6ea","date":"2026-05-28","line":4,"origqty":787,"actqty":0,"minutes":121,"casepk":6,"planea":4722,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-24","shortage":0,"formula":null,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-22","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063334","item":"1-K035-18-0600","desc":"KZ Indian Hemp Hair & Scalp, 18oz, 6ea","date":"2026-05-28","line":4,"origqty":787,"actqty":0,"minutes":121,"casepk":6,"planea":4722,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-24","shortage":0,"formula":null,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-22","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063339","item":"1-667-15-0600","desc":"AJ Soft N Sassy Conditioner, 15oz, 6ea","date":"2026-05-29","line":4,"origqty":1831,"actqty":0,"minutes":269,"casepk":6,"planea":10986,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-25","shortage":0,"formula":667,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-23","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063323","item":"1-697-15-1200","desc":"AJ In Control Conditioner, 15oz, 12ea","date":"2026-05-30","line":4,"origqty":966,"actqty":0,"minutes":310,"casepk":12,"planea":11592,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-26","shortage":0,"formula":697,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-24","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063598","item":"1-697-15-1200","desc":"AJ In Control Conditioner, 15oz, 12ea","date":"2026-05-30","line":4,"origqty":518,"actqty":0,"minutes":166,"casepk":12,"planea":6216,"status":"ACTIVE","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-26","shortage":0,"formula":697,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-24","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063369","item":"1-118-01-1200","desc":"AB No-Lye Relaxer Kit Super, 1, 12ea","date":"2026-05-01","line":5,"origqty":1800,"actqty":0,"minutes":410,"casepk":12,"planea":21600,"status":"NOT STARTED","cmpd":"","risk":"","cmpddue":"","shortage":0,"formula":118,"fname":"AB No-Lye Relaxer Super","pb_hrs":3.5,"pb_start":"","cy":4.5,"qc_h":2.0,"lbs":2000},{"main":"MAIN063370","item":"1-118-01-1243","desc":"AB No-Lye Relaxer Kit Super, 1, 12ea (4x3) Bundle","date":"2026-05-06","line":5,"origqty":1800,"actqty":0,"minutes":438,"casepk":12,"planea":21600,"status":"NOT STARTED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-02","shortage":-11577,"formula":118,"fname":"AB No-Lye Relaxer Super","pb_hrs":3.5,"pb_start":"2026-04-30","cy":4.5,"qc_h":2.0,"lbs":2000},{"main":"MAIN063368","item":"1-117-01-1243","desc":"AB No-Lye Relaxer Kit Regular, 1, 12ea (4x3) Bundle","date":"2026-05-07","line":5,"origqty":2250,"actqty":0,"minutes":548,"casepk":12,"planea":27000,"status":"NOT STARTED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-03","shortage":-13545,"formula":117,"fname":"AB No-Lye Relaxer Regular","pb_hrs":3.5,"pb_start":"2026-05-01","cy":4.5,"qc_h":2.0,"lbs":3000},{"main":"MAIN063426","item":"1-247-01-0600-16","desc":"ORI Value Kit Super 2 App, 1oz, 6ea Paulina","date":"2026-05-09","line":5,"origqty":3200,"actqty":1863,"minutes":565,"casepk":6,"planea":19200,"status":"NOT STARTED","cmpd":"COMPOUND CRITICAL","risk":"WILL MISS","cmpddue":"2026-05-05","shortage":0,"formula":247,"fname":"ORI Value Kit Super","pb_hrs":3.0,"pb_start":"2026-05-03","cy":4.5,"qc_h":2.0,"lbs":2000},{"main":"MAIN063371","item":"1-236-01-1200","desc":"ORI Olive Oil Kit Regular, 1, 12ea","date":"2026-05-14","line":5,"origqty":1500,"actqty":0,"minutes":316,"casepk":12,"planea":18000,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-10","shortage":-4171,"formula":236,"fname":"ORI Olive Oil Kit Regular","pb_hrs":3.0,"pb_start":"2026-05-08","cy":4.5,"qc_h":2.0,"lbs":2000},{"main":"MAIN063372","item":"1-237-01-1200","desc":"ORI Olive Oil Kit Super, 1, 12ea","date":"2026-05-15","line":5,"origqty":1000,"actqty":0,"minutes":211,"casepk":12,"planea":12000,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-11","shortage":0,"formula":237,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-09","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063373","item":"1-238-01-1200","desc":"TMW Men'S Texturizing Kit, 1oz, 12ea","date":"2026-05-16","line":5,"origqty":1500,"actqty":0,"minutes":460,"casepk":12,"planea":18000,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-12","shortage":0,"formula":238,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-10","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063377","item":"1-117-01-1200","desc":"AB No-Lye Relaxer Kit Regular, 1, 12ea","date":"2026-05-21","line":5,"origqty":3000,"actqty":0,"minutes":683,"casepk":12,"planea":36000,"status":"ACTIVE","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-17","shortage":-13545,"formula":117,"fname":"AB No-Lye Relaxer Regular","pb_hrs":3.5,"pb_start":"2026-05-15","cy":4.5,"qc_h":2.0,"lbs":3000},{"main":"MAIN063506","item":"1-247-01-0600-16","desc":"ORI Value Kit Super 2 App, 1oz, 6ea Paulina","date":"2026-05-27","line":5,"origqty":3000,"actqty":0,"minutes":529,"casepk":6,"planea":18000,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-23","shortage":0,"formula":247,"fname":"ORI Value Kit Super","pb_hrs":3.0,"pb_start":"2026-05-21","cy":4.5,"qc_h":2.0,"lbs":2000},{"main":"MAIN063434","item":"2-934-02-00","desc":"Adult Act Sup, 1.85oz, bulk","date":"2026-05-01","line":6,"origqty":19030,"actqty":1400,"minutes":203,"casepk":1,"planea":19030,"status":"RUNNING","cmpd":"","risk":"","cmpddue":"","shortage":0,"formula":934,"fname":"Activator Super","pb_hrs":4.0,"pb_start":"","cy":3.0,"qc_h":1.5,"lbs":28430},{"main":"MAIN063249","item":"2-933-02-00","desc":"Adult Act Reg, 1.6oz, bulk","date":"2026-05-06","line":6,"origqty":32640,"actqty":28200,"minutes":349,"casepk":1,"planea":32640,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-02","shortage":0,"formula":933,"fname":"Activator Regular","pb_hrs":4.0,"pb_start":"2026-04-30","cy":3.0,"qc_h":1.5,"lbs":32640},{"main":"MAIN063391","item":"2-933-02-00","desc":"Adult Act Reg, 1.6oz, bulk","date":"2026-05-07","line":6,"origqty":32640,"actqty":0,"minutes":349,"casepk":1,"planea":32640,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-03","shortage":0,"formula":933,"fname":"Activator Regular","pb_hrs":4.0,"pb_start":"2026-05-01","cy":3.0,"qc_h":1.5,"lbs":32640},{"main":"MAIN063392","item":"2-933-02-00","desc":"Adult Act Reg, 1.6oz, bulk","date":"2026-05-08","line":6,"origqty":32640,"actqty":0,"minutes":349,"casepk":1,"planea":32640,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-04","shortage":0,"formula":933,"fname":"Activator Regular","pb_hrs":4.0,"pb_start":"2026-05-02","cy":3.0,"qc_h":1.5,"lbs":32640},{"main":"MAIN063435","item":"2-934-02-00","desc":"Adult Act Sup, 1.85oz, bulk","date":"2026-05-13","line":6,"origqty":28430,"actqty":0,"minutes":304,"casepk":1,"planea":28430,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-09","shortage":0,"formula":934,"fname":"Activator Super","pb_hrs":4.0,"pb_start":"2026-05-07","cy":3.0,"qc_h":1.5,"lbs":28430},{"main":"MAIN063436","item":"2-934-02-00","desc":"Adult Act Sup, 1.85oz, bulk","date":"2026-05-22","line":6,"origqty":28430,"actqty":0,"minutes":304,"casepk":1,"planea":28430,"status":"ACTIVE","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-18","shortage":0,"formula":934,"fname":"Activator Super","pb_hrs":4.0,"pb_start":"2026-05-16","cy":3.0,"qc_h":1.5,"lbs":28430},{"main":"MAIN063379","item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","date":"2026-04-22","line":8,"origqty":11736,"actqty":10133,"minutes":251,"casepk":1,"planea":11736,"status":"COMPLETED","cmpd":"","risk":"","cmpddue":"","shortage":0,"formula":121,"fname":"Universal Relaxer Creme","pb_hrs":8.0,"pb_start":"","cy":8.3,"qc_h":2.0,"lbs":17160},{"main":"MAIN063405","item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","date":"2026-04-23","line":8,"origqty":17160,"actqty":17328,"minutes":367,"casepk":1,"planea":17160,"status":"RUNNING","cmpd":"","risk":"","cmpddue":"","shortage":0,"formula":121,"fname":"Universal Relaxer Creme","pb_hrs":8.0,"pb_start":"","cy":8.3,"qc_h":2.0,"lbs":17160},{"main":"MAIN063406","item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","date":"2026-04-24","line":8,"origqty":17160,"actqty":3743,"minutes":367,"casepk":1,"planea":17160,"status":"NOT STARTED","cmpd":"","risk":"","cmpddue":"","shortage":0,"formula":121,"fname":"Universal Relaxer Creme","pb_hrs":8.0,"pb_start":"","cy":8.3,"qc_h":2.0,"lbs":17160},{"main":"MAIN063407","item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","date":"2026-04-29","line":8,"origqty":17160,"actqty":0,"minutes":367,"casepk":1,"planea":17160,"status":"NOT STARTED","cmpd":"","risk":"","cmpddue":"","shortage":0,"formula":121,"fname":"Universal Relaxer Creme","pb_hrs":8.0,"pb_start":"","cy":8.3,"qc_h":2.0,"lbs":17160},{"main":"MAIN063408","item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","date":"2026-04-30","line":8,"origqty":17160,"actqty":0,"minutes":367,"casepk":1,"planea":17160,"status":"NOT STARTED","cmpd":"","risk":"","cmpddue":"","shortage":0,"formula":121,"fname":"Universal Relaxer Creme","pb_hrs":8.0,"pb_start":"","cy":8.3,"qc_h":2.0,"lbs":17160},{"main":"MAIN063409","item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","date":"2026-05-01","line":8,"origqty":17160,"actqty":0,"minutes":367,"casepk":1,"planea":17160,"status":"NOT STARTED","cmpd":"","risk":"","cmpddue":"","shortage":0,"formula":121,"fname":"Universal Relaxer Creme","pb_hrs":8.0,"pb_start":"","cy":8.3,"qc_h":2.0,"lbs":17160},{"main":"MAIN063410","item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","date":"2026-05-02","line":8,"origqty":17160,"actqty":0,"minutes":367,"casepk":1,"planea":17160,"status":"NOT STARTED","cmpd":"","risk":"","cmpddue":"","shortage":0,"formula":121,"fname":"Universal Relaxer Creme","pb_hrs":8.0,"pb_start":"","cy":8.3,"qc_h":2.0,"lbs":17160},{"main":"MAIN063411","item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","date":"2026-05-06","line":8,"origqty":17160,"actqty":0,"minutes":367,"casepk":1,"planea":17160,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-02","shortage":0,"formula":121,"fname":"Universal Relaxer Creme","pb_hrs":8.0,"pb_start":"2026-04-30","cy":8.3,"qc_h":2.0,"lbs":17160},{"main":"MAIN063412","item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","date":"2026-05-07","line":8,"origqty":17160,"actqty":0,"minutes":367,"casepk":1,"planea":17160,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-03","shortage":0,"formula":121,"fname":"Universal Relaxer Creme","pb_hrs":8.0,"pb_start":"2026-05-01","cy":8.3,"qc_h":2.0,"lbs":17160},{"main":"MAIN063413","item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","date":"2026-05-08","line":8,"origqty":17160,"actqty":0,"minutes":367,"casepk":1,"planea":17160,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-04","shortage":0,"formula":121,"fname":"Universal Relaxer Creme","pb_hrs":8.0,"pb_start":"2026-05-02","cy":8.3,"qc_h":2.0,"lbs":17160},{"main":"MAIN063414","item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","date":"2026-05-13","line":8,"origqty":17160,"actqty":0,"minutes":367,"casepk":1,"planea":17160,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-09","shortage":0,"formula":121,"fname":"Universal Relaxer Creme","pb_hrs":8.0,"pb_start":"2026-05-07","cy":8.3,"qc_h":2.0,"lbs":17160},{"main":"MAIN063421","item":"2-226-04","desc":"TMW Mens Txtr Cr\u00c3\u00a8me, 4oz, bulk","date":"2026-05-15","line":8,"origqty":25288,"actqty":0,"minutes":541,"casepk":1,"planea":25288,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-11","shortage":0,"formula":226,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-09","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063430","item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","date":"2026-05-20","line":8,"origqty":17160,"actqty":0,"minutes":367,"casepk":1,"planea":17160,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-16","shortage":0,"formula":121,"fname":"Universal Relaxer Creme","pb_hrs":8.0,"pb_start":"2026-05-14","cy":8.3,"qc_h":2.0,"lbs":17160},{"main":"MAIN063431","item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","date":"2026-05-21","line":8,"origqty":17160,"actqty":0,"minutes":367,"casepk":1,"planea":17160,"status":"ACTIVE","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-17","shortage":0,"formula":121,"fname":"Universal Relaxer Creme","pb_hrs":8.0,"pb_start":"2026-05-15","cy":8.3,"qc_h":2.0,"lbs":17160},{"main":"MAIN063432","item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","date":"2026-05-27","line":8,"origqty":17160,"actqty":0,"minutes":367,"casepk":1,"planea":17160,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-23","shortage":0,"formula":121,"fname":"Universal Relaxer Creme","pb_hrs":8.0,"pb_start":"2026-05-21","cy":8.3,"qc_h":2.0,"lbs":17160},{"main":"MAIN063437","item":"2-3191-01-402","desc":"dual packet, Hair Mayo1.5/Olive Oil Cream.5, bulk","date":"2026-05-06","line":10,"origqty":150000,"actqty":0,"minutes":3922,"casepk":1,"planea":150000,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-02","shortage":0,"formula":3191,"fname":"","pb_hrs":3.0,"pb_start":"2026-04-30","cy":0,"qc_h":0,"lbs":0},{"main":"MAINS63381","item":"2-106-15-77","desc":"AB Deep Cnd, 1.5oz(packet), bulk","date":"2026-05-13","line":10,"origqty":100000,"actqty":0,"minutes":1384,"casepk":1,"planea":100000,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-09","shortage":0,"formula":106,"fname":"AB Leave-In Deep Conditioner","pb_hrs":4.0,"pb_start":"2026-05-07","cy":5.0,"qc_h":2.0,"lbs":13855},{"main":"MAINR63260","item":"2-290-15-77","desc":"Olive Oil Neut Shamp, 1.5oz(packet), bulk","date":"2026-05-16","line":10,"origqty":150000,"actqty":0,"minutes":1939,"casepk":1,"planea":150000,"status":"ACTIVE","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-12","shortage":0,"formula":290,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-10","cy":0,"qc_h":0,"lbs":0},{"main":"MAINR63387","item":"2-290-15-77","desc":"Olive Oil Neut Shamp, 1.5oz(packet), bulk","date":"2026-05-25","line":10,"origqty":100000,"actqty":0,"minutes":1293,"casepk":1,"planea":100000,"status":"RUNNING","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-21","shortage":0,"formula":290,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-19","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063200","item":"1-HB590-02-72612-12DT","desc":"HB Tea Tree Oil, 2oz, 72ea (6x12) Display 2wide","date":"2026-05-01","line":11,"origqty":717,"actqty":202,"minutes":1761,"casepk":72,"planea":51624,"status":"NOT STARTED","cmpd":"","risk":"","cmpddue":"","shortage":0,"formula":null,"fname":"","pb_hrs":3.0,"pb_start":"","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063468","item":"1-698-24-0600","desc":"AJ Knot On My Watch Detangler, 24oz, 6ea","date":"2026-05-06","line":11,"origqty":1032,"actqty":0,"minutes":331,"casepk":6,"planea":6192,"status":"NOT STARTED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-02","shortage":-5201,"formula":698,"fname":"AJ Knot On My Watch Detangler","pb_hrs":3.0,"pb_start":"2026-04-30","cy":4.5,"qc_h":2.0,"lbs":1995},{"main":"MAIN063324","item":"1-693-24-0600","desc":"AJ Quench Leave-In Conditioner, 24oz, 6ea","date":"2026-05-07","line":11,"origqty":1035,"actqty":0,"minutes":332,"casepk":6,"planea":6210,"status":"NOT STARTED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-03","shortage":-3883,"formula":693,"fname":"AJ Quench Leave-In Conditioner","pb_hrs":2.5,"pb_start":"2026-05-01","cy":4.0,"qc_h":2.0,"lbs":1148},{"main":"MAIN063402","item":"1-HB552-08-1200","desc":"HB Coconut Oil, 8oz, 12ea","date":"2026-05-08","line":11,"origqty":533,"actqty":0,"minutes":215,"casepk":12,"planea":6396,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-04","shortage":0,"formula":null,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-02","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063442","item":"1-HB590-08-1243","desc":"HB Tea Tree Oil, 8oz, 12ea (4x3) Bundle","date":"2026-05-09","line":11,"origqty":1867,"actqty":0,"minutes":753,"casepk":12,"planea":22404,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-05","shortage":0,"formula":null,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-03","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063441","item":"1-HB567-08-1200","desc":"HB Batana Oil, 8oz, 12ea","date":"2026-05-12","line":11,"origqty":1420,"actqty":0,"minutes":376,"casepk":12,"planea":17040,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-08","shortage":0,"formula":null,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-06","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063441","item":"1-HB567-02-72126","desc":"HB Batana Oil, 2oz, 72ea (12x6)","date":"2026-05-13","line":11,"origqty":250,"actqty":0,"minutes":614,"casepk":72,"planea":18000,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-08","shortage":0,"formula":null,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-06","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063440","item":"1-HB576-02-72126","desc":"HB Jojoba Oil, 2oz, 72ea (12x6) Display","date":"2026-05-15","line":11,"origqty":1197,"actqty":0,"minutes":2898,"casepk":72,"planea":86184,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-11","shortage":0,"formula":null,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-09","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063214","item":"1-636-04-1243","desc":"AJ Curl LaLa Bounce Back! Serum, 4oz, 12ea (4x3)","date":"2026-05-22","line":11,"origqty":3526,"actqty":0,"minutes":939,"casepk":12,"planea":42312,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-18","shortage":0,"formula":636,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-16","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063467","item":"1-HB590-02-72126","desc":"HB Tea Tree Oil, 2oz, 72ea (12x6) Display","date":"2026-05-22","line":11,"origqty":1244,"actqty":0,"minutes":3055,"casepk":72,"planea":89568,"status":"COMPLETED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-18","shortage":0,"formula":null,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-16","cy":0,"qc_h":0,"lbs":0},{"main":"MAIN063215","item":"1-636-04-1243","desc":"AJ Curl LaLa Bounce Back! Serum, 4oz, 12ea (4x3)","date":"2026-05-26","line":11,"origqty":3526,"actqty":0,"minutes":939,"casepk":12,"planea":42312,"status":"ACTIVE","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-22","shortage":0,"formula":636,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-20","cy":0,"qc_h":0,"lbs":0},{"main":"MAINR62222","item":"2-230-06-77","desc":"TMW Curl Keeper, 0.6oz(packet), bulk","date":"2026-04-06","line":14,"origqty":2100,"actqty":2100,"minutes":55,"casepk":1,"planea":2100,"status":"NOT STARTED","cmpd":"","risk":"","cmpddue":"","shortage":0,"formula":230,"fname":"","pb_hrs":3.0,"pb_start":"","cy":0,"qc_h":0,"lbs":0},{"main":"MAINT63382","item":"2-240-06-77","desc":"TMW Mens Wave Keeper, 0.6oz(packet), bulk","date":"2026-05-01","line":14,"origqty":20000,"actqty":11200,"minutes":523,"casepk":1,"planea":20000,"status":"NOT STARTED","cmpd":"","risk":"","cmpddue":"","shortage":0,"formula":240,"fname":"","pb_hrs":3.0,"pb_start":"","cy":0,"qc_h":0,"lbs":0},{"main":"MAINS63383","item":"2-243-06-77","desc":"TMW Mens Pre-Text Control, 0.6oz(packet), bulk","date":"2026-05-06","line":14,"origqty":20000,"actqty":0,"minutes":523,"casepk":1,"planea":20000,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-02","shortage":0,"formula":243,"fname":"","pb_hrs":3.0,"pb_start":"2026-04-30","cy":0,"qc_h":0,"lbs":0},{"main":"MAINR63438","item":"2-207-75-77-53-1","desc":"TMW Hair Mayo, 0.75oz(packet), bulk","date":"2026-05-07","line":14,"origqty":20000,"actqty":0,"minutes":523,"casepk":1,"planea":20000,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-03","shortage":0,"formula":207,"fname":"Hair Mayonnaise","pb_hrs":3.0,"pb_start":"2026-05-01","cy":4.5,"qc_h":2.0,"lbs":944},{"main":"MAINR63438","item":"2-207-75-77-53","desc":"TMW Hair Mayo, 0.75oz(packet), bulk","date":"2026-05-08","line":14,"origqty":20000,"actqty":0,"minutes":523,"casepk":1,"planea":20000,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-03","shortage":0,"formula":207,"fname":"Hair Mayonnaise","pb_hrs":3.0,"pb_start":"2026-05-01","cy":4.5,"qc_h":2.0,"lbs":944},{"main":"MAINS62222","item":"2-230-06-77","desc":"TMW Curl Keeper, 0.6oz(packet), bulk","date":"2026-05-12","line":14,"origqty":20000,"actqty":0,"minutes":523,"casepk":1,"planea":20000,"status":"ACTIVE","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-08","shortage":0,"formula":230,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-06","cy":0,"qc_h":0,"lbs":0},{"main":"MAINR63242","item":"2-231-06-77","desc":"TMW Text Control, 0.6oz(packet), bulk","date":"2026-05-14","line":14,"origqty":20000,"actqty":0,"minutes":523,"casepk":1,"planea":20000,"status":"RUNNING","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-10","shortage":0,"formula":231,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-08","cy":0,"qc_h":0,"lbs":0},{"main":"MAINR63175","item":"2-290-15-77","desc":"Olive Oil Neut Shamp, 1.5oz(packet), bulk","date":"2026-04-01","line":15,"origqty":62000,"actqty":10800,"minutes":802,"casepk":1,"planea":62000,"status":"NOT STARTED","cmpd":"","risk":"","cmpddue":"","shortage":0,"formula":290,"fname":"","pb_hrs":3.0,"pb_start":"","cy":0,"qc_h":0,"lbs":0},{"main":"MAINS63260","item":"2-290-15-77","desc":"Olive Oil Neut Shamp, 1.5oz(packet), bulk","date":"2026-05-06","line":15,"origqty":100000,"actqty":0,"minutes":1293,"casepk":1,"planea":100000,"status":"ACTIVE","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-02","shortage":0,"formula":290,"fname":"","pb_hrs":3.0,"pb_start":"2026-04-30","cy":0,"qc_h":0,"lbs":0},{"main":"MAINR63631","item":"2-505-15-77","desc":"KOri Neut Shamp, 1.5oz, bulk","date":"2026-05-25","line":15,"origqty":10000,"actqty":0,"minutes":151,"casepk":1,"planea":10000,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-21","shortage":0,"formula":505,"fname":"","pb_hrs":3.0,"pb_start":"2026-05-19","cy":0,"qc_h":0,"lbs":0},{"main":"MAINT61796","item":"2-692-03","desc":"AJ Flxsd Dont Shrink Gel, 3 oz, bulk","date":"2026-05-11","line":16,"origqty":6000,"actqty":0,"minutes":282,"casepk":1,"planea":6000,"status":"ACTIVE","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-07","shortage":0,"formula":692,"fname":"AJ Dont Shrink Curling Gel","pb_hrs":3.0,"pb_start":"2026-05-05","cy":4.5,"qc_h":2.0,"lbs":968},{"main":"MAINT60787","item":"2-693-03","desc":"AJ Quench Lv-In Cnd, 3 oz, bulk (7-2907-693 ETA 5/19)","date":"2026-05-26","line":16,"origqty":6000,"actqty":0,"minutes":282,"casepk":1,"planea":6000,"status":"ACTIVE","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-22","shortage":0,"formula":693,"fname":"AJ Quench Leave-In Conditioner","pb_hrs":2.5,"pb_start":"2026-05-20","cy":4.0,"qc_h":2.0,"lbs":1148}];
+let STD = {"696":{"n":"AJ Curl La La Custard","lbs":978,"cy":5.0,"qc":2.0},"692":{"n":"AJ Dont Shrink Curling Gel","lbs":968,"cy":4.5,"qc":2.0},"121":{"n":"Universal Relaxer Creme","lbs":17160,"cy":8.3,"qc":2.0},"207":{"n":"Hair Mayonnaise","lbs":944,"cy":4.5,"qc":2.0},"686":{"n":"AJ Coconut Creme Curl Boss","lbs":1970,"cy":5.0,"qc":2.0},"638":{"n":"AJ C&C Transform Leave-In","lbs":1941,"cy":4.5,"qc":2.0},"933":{"n":"Activator Regular","lbs":32640,"cy":3.0,"qc":1.5},"658":{"n":"AJ Ice Curls Styling Gel","lbs":1829,"cy":4.5,"qc":2.0},"934":{"n":"Activator Super","lbs":28430,"cy":3.0,"qc":1.5},"698":{"n":"AJ Knot On My Watch Detangler","lbs":1995,"cy":4.5,"qc":2.0},"118":{"n":"AB No-Lye Relaxer Super","lbs":2000,"cy":4.5,"qc":2.0},"693":{"n":"AJ Quench Leave-In Conditioner","lbs":1148,"cy":4.0,"qc":2.0},"115":{"n":"AB Ultimate Herbal Oil","lbs":1917,"cy":4.0,"qc":2.0},"660":{"n":"AJ Hair Mousse","lbs":1700,"cy":4.0,"qc":2.0},"117":{"n":"AB No-Lye Relaxer Regular","lbs":3000,"cy":4.5,"qc":2.0},"106":{"n":"AB Leave-In Deep Conditioner","lbs":13855,"cy":5.0,"qc":2.0},"925":{"n":"Red Fox Cocoa Butter Cream","lbs":1022,"cy":4.0,"qc":2.0},"107":{"n":"AB Max Strength Super Gro","lbs":2396,"cy":4.0,"qc":2.0},"247":{"n":"ORI Value Kit Super","lbs":2000,"cy":4.5,"qc":2.0},"668":{"n":"AJ Baby Curls Custard","lbs":1932,"cy":4.5,"qc":2.0},"246":{"n":"ORI Value Kit Regular","lbs":6000,"cy":5.0,"qc":2.0},"553":{"n":"ORI Olive Oil Body Whip","lbs":976,"cy":4.5,"qc":2.0},"236":{"n":"ORI Olive Oil Kit Regular","lbs":2000,"cy":4.5,"qc":2.0},"104":{"n":"AB Detangling Conditioner","lbs":11546,"cy":5.0,"qc":2.0},"991":{"n":"Body Shea","lbs":10414,"cy":9.0,"qc":2.0}}
+const PREBATCH_HRS = {"696":4.0,"692":3.0,"121":8.0,"207":3.0,"686":3.5,"638":3.0,"933":4.0,"934":4.0,"658":3.0,"698":3.0,"118":3.5,"693":2.5,"115":2.5,"660":2.5,"117":3.5,"106":4.0,"925":2.5,"107":2.5,"247":3.0,"668":3.0,"246":3.5,"553":3.0,"236":3.0,"104":4.0,"991":5.0}
+
+const TODAY = new Date(); TODAY.setHours(0,0,0,0);
+let currentBatch=null, batchFilter='ALL';
+let statusUpdates={};
+try{statusUpdates=JSON.parse(localStorage.getItem('hoc_cmpd_v3')||'{}');}catch(e){}
+
+const N  = n=>typeof n==='number'?n.toLocaleString():(n||'—');
+const fS = s=>{if(!s)return'—';try{return new Date(s+'T12:00:00').toLocaleDateString('en-US',{month:'numeric',day:'numeric'});}catch{return s;}};
+const fD = s=>{if(!s)return'—';try{return new Date(s+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});}catch{return s;}};
+const todayStr=()=>TODAY.toISOString().slice(0,10);
+const addDays=(s,n)=>{try{const d=new Date(s+'T12:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);}catch{return '';}};
+
+function cmpdCls(c){
+  if(!c||c==='')return'ns';
+  if(c.includes('OVERDUE')||c.includes('CRITICAL'))return'od';
+  if(c.includes('AT RISK'))return'ar';
+  if(c.includes('ON TRACK'))return'ot';
+  return'ns';
+}
+function cmpdBadge(c){
+  return`<span class="pill p-${cmpdCls(c)}">${c?c.replace('COMPOUND ',''):'NO STD'}</span>`;
+}
+function stBadge(s){
+  if(s==='COMPLETED')return'<span class="pill p-done">COMPLETED</span>';
+  if(s==='RUNNING'||s==='ACTIVE')return'<span class="pill p-run">RUNNING</span>';
+  return'<span class="pill p-ns">NOT STARTED</span>';
+}
+function myBadge(main){
+  const u=statusUpdates[main];
+  if(!u||!u.status)return'<span class="t3">—</span>';
+  const c=u.status==='QC RELEASED'?'ot':u.status.includes('QC')?'qc':u.status.includes('PRE-BATCH')?'pb':u.status.includes('HOLD')?'ar':'ns';
+  return`<span class="pill p-${c}">${u.status.replace('PRE-BATCH ','PB ').replace('MIX COMPLETE - PENDING QC','PENDING QC')}</span>`;
+}
+function riskBadge(r){
+  if(r==='WILL MISS')return'<span class="pill p-od">WILL MISS</span>';
+  if(r==='AT RISK')return'<span class="pill p-ar">AT RISK</span>';
+  if(r==='ON TRACK')return'<span class="pill p-ot">ON TRACK</span>';
+  return'<span class="pill p-ns">—</span>';
+}
+
+function renderBadges(){
+  const od=BATCHES.filter(b=>b.cmpd==='COMPOUND OVERDUE').length;
+  const cr=BATCHES.filter(b=>b.cmpd==='COMPOUND CRITICAL').length;
+  const ar=BATCHES.filter(b=>b.cmpd==='COMPOUND AT RISK').length;
+  const ot=BATCHES.filter(b=>b.cmpd==='COMPOUND ON TRACK').length;
+  const done=BATCHES.filter(b=>b.status==='COMPLETED').length;
+  document.getElementById('badges').innerHTML=
+    `<span class="badge b-red">${od+cr} OVERDUE</span>`+
+    `<span class="badge b-amb">${ar} AT RISK</span>`+
+    `<span class="badge b-grn">${ot} ON TRACK</span>`+
+    `<span class="badge b-gry">${done} DONE</span>`;
+}
+
+function renderAlert(){
+  const list=BATCHES.filter(b=>(b.cmpd==='COMPOUND OVERDUE'||b.cmpd==='COMPOUND CRITICAL')&&b.status!=='COMPLETED').slice(0,6);
+  document.getElementById('alert-grid').innerHTML=list.map(b=>`
+    <div class="ai">
+      <div style="font-size:9px;font-weight:700;color:var(--red)">F.${b.formula||'?'} · Line ${b.line} · ${b.main}</div>
+      <div style="font-size:11px;color:var(--text);font-weight:500;margin:2px 0">${b.desc}</div>
+      <div style="font-size:9px;color:var(--text3)">Cmpd due: ${fS(b.cmpddue)}${b.shortage?' · '+N(b.shortage)+' shortage':''}</div>
+    </div>`).join('');
+}
+
+function renderKPIs(){
+  const od=BATCHES.filter(b=>b.cmpd==='COMPOUND OVERDUE'||b.cmpd==='COMPOUND CRITICAL').length;
+  const done=BATCHES.filter(b=>b.status==='COMPLETED').length;
+  const run=BATCHES.filter(b=>b.status==='RUNNING'||b.status==='ACTIVE').length;
+  const qcHold=Object.values(statusUpdates).filter(u=>u.status==='QC HOLD').length;
+  const myUp=Object.keys(statusUpdates).length;
+  document.getElementById('kpis').innerHTML=[
+    {l:'Total batches',v:BATCHES.length,s:'In schedule',c:'var(--text)'},
+    {l:'Running now',v:run,s:'Active on line',c:'var(--blue)'},
+    {l:'Completed',v:done,s:'Done this period',c:'var(--green)'},
+    {l:'Compound overdue',v:od,s:'OVERDUE + CRITICAL',c:'var(--red)'},
+    {l:'QC Hold (session)',v:qcHold,s:'Awaiting QC decision',c:'var(--teal)'},
+    {l:'My updates',v:myUp,s:'Export to sync',c:'var(--purple)'},
+  ].map(k=>`<div class="kpi"><div class="kl">${k.l}</div><div class="kv" style="color:${k.c}">${k.v}</div><div class="ks">${k.s}</div></div>`).join('');
+}
+
+function renderDays(){
+  const grid=document.getElementById('day-grid');
+  grid.innerHTML='';
+  const ts=todayStr();
+  for(let d=0;d<5;d++){
+    const date=new Date(TODAY);date.setDate(TODAY.getDate()+d);
+    const ds=date.toISOString().slice(0,10);
+    const rows=BATCHES.filter(b=>{
+      if(!b.cmpddue||b.status==='COMPLETED')return false;
+      return d===0?b.cmpddue<=ds:b.cmpddue===ds;
+    });
+    const col=document.createElement('div');
+    col.className='day-col'+(d===0?' today':'');
+    col.innerHTML=`
+      <div style="font-size:8px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.07em">${date.toLocaleDateString('en-US',{weekday:'short'})}${d===0?' · TODAY':''}</div>
+      <div style="font-size:13px;font-weight:700;margin:2px 0 6px">${fS(ds)}</div>
+      ${rows.length===0?'<div class="t3" style="font-size:10px">None due</div>':
+        rows.map(b=>`<div class="db ${cmpdCls(b.cmpd)}" onclick="openDetail('${b.main}')">
+          <div style="font-size:9px;font-weight:700;color:${b.cmpd.includes('OVERDUE')||b.cmpd.includes('CRITICAL')?'var(--red)':b.cmpd.includes('ON TRACK')?'var(--green)':'var(--amber)'}">${b.cmpd.replace('COMPOUND ','')}</div>
+          <div style="color:var(--text)">${b.desc.slice(0,26)}</div>
+          <div style="font-size:9px;color:var(--text3)">F.${b.formula||'?'} · Ln ${b.line}</div>
+        </div>`).join('')}`;
+    grid.appendChild(col);
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────
+// populateTankDropdown — pulls live tank state from Tank Board's localStorage
+// (hoc_tank_state_v1 + hoc_tank_config_v1) and renders a smart dropdown.
+// Tanks with enough capacity for THIS batch's lbs sort first; "in use" tanks
+// are flagged with status icons but remain selectable. Falls back to a static
+// list (matches Tank Board's seeded data) if Tank Board hasn't been opened yet.
+// ────────────────────────────────────────────────────────────────────────
+function populateTankDropdown(batch){
+  var sel = document.getElementById('su-tank');
+  if(!sel) return;
+  var current = sel.value;
+  var batchLbs = (batch && batch.lbs) || 0;
+
+  // Static fallback list — capacities (gallons × 8 lb/gal) match Tank Board
+  var staticTanks = [
+    {id:'MT-1',  cap_lbs:28800}, {id:'MT-2',  cap_lbs:28800},
+    {id:'MT-3',  cap_lbs:24000}, {id:'MT-4',  cap_lbs:43200},
+    {id:'MT-5',  cap_lbs:12000}, {id:'MT-6',  cap_lbs:12000},
+    {id:'MT-7',  cap_lbs:12000}, {id:'MT-8',  cap_lbs:12000},
+    {id:'MT-9',  cap_lbs:6400},  {id:'MT-10', cap_lbs:8000},
+    {id:'MT-11', cap_lbs:6000},  {id:'MT-12', cap_lbs:6000},
+    {id:'MT-13', cap_lbs:6000},  {id:'MT-18', cap_lbs:16000}
+  ];
+
+  var tanks = staticTanks;
+  var liveStatus = {};
+  try {
+    // First try shared sync layer — this is cross-device aware (Compound
+    // Scheduler's poll pulls Tank Board's state from Supabase sync_bus).
+    var shared = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+    if(shared.__tanks && shared.__tanks.state){
+      liveStatus = shared.__tanks.state;
+    }
+    // Fallback to local Tank Board storage (same-device only)
+    if(!Object.keys(liveStatus).length){
+      var ts = JSON.parse(localStorage.getItem('hoc_tank_state_v1') || '{}');
+      if(ts && Object.keys(ts).length) liveStatus = ts;
+    }
+    var tc = JSON.parse(localStorage.getItem('hoc_tank_config_v1') || '{}');
+    if(tc && Object.keys(tc).length){
+      tanks = tanks.map(function(t){
+        if(tc[t.id] && tc[t.id].cap_lbs) return Object.assign({}, t, {cap_lbs: tc[t.id].cap_lbs});
+        return t;
+      });
+    }
+  } catch(e){}
+
+  // Sort: fits-batch first, then by capacity ascending (smallest fit first)
+  tanks.sort(function(a,b){
+    var aFits = batchLbs ? (a.cap_lbs >= batchLbs) : true;
+    var bFits = batchLbs ? (b.cap_lbs >= batchLbs) : true;
+    if(aFits !== bFits) return aFits ? -1 : 1;
+    if(a.cap_lbs !== b.cap_lbs) return a.cap_lbs - b.cap_lbs;
+    return a.id.localeCompare(b.id);
+  });
+
+  var opts = '<option value="">— select tank —</option>';
+  tanks.forEach(function(t){
+    var ls = liveStatus[t.id] || {};
+    var st = (ls.status || '').toLowerCase();
+    var fits = batchLbs ? (t.cap_lbs >= batchLbs) : true;
+    var fitMark = !fits ? ' ⚠' : '';
+    var stMark = '';
+    if(st === 'filling')      stMark = ' · filling';
+    else if(st === 'full')    stMark = ' · full';
+    else if(st === 'draining')stMark = ' · draining';
+    else if(st === 'cleaning')stMark = ' · cleaning';
+    else if(st === 'offline') stMark = ' · OFFLINE';
+    var assigned = ls.batch_assigned && ls.batch_assigned !== (batch && batch.main) ? ' · holding '+ls.batch_assigned : '';
+    var label = t.id + fitMark + ' (' + t.cap_lbs.toLocaleString() + ' lb)' + stMark + assigned;
+    opts += '<option value="'+t.id+'">'+label+'</option>';
+  });
+  sel.innerHTML = opts;
+  if(current) sel.value = current;
+}
+
+function openDetail(main){
+  const b=BATCHES.find(x=>x.main===main);if(!b)return;
+  currentBatch=b;
+  const u=statusUpdates[main]||{};
+  const std=STD[b.formula]||{};
+  const pb_hrs=PREBATCH_HRS[b.formula]||3.0;
+  document.getElementById('detail-title').textContent=`${b.main} · ${b.desc}`;
+  document.getElementById('detail-grid').innerHTML=[
+    ['MAIN Batch',b.main],['Line','Line '+b.line],
+    ['Formula',b.formula?`F.${b.formula} · ${std.n||b.fname||'?'}`:'Not mapped'],
+    ['Scheduled',fD(b.date)],['Fill Status',b.status],
+    ['Compound Status',b.cmpd||'—'],['Prod Risk',b.risk||'—'],
+    ['Compound Due',fD(b.cmpddue)],['Unit Shortage',b.shortage?N(b.shortage):'None'],
+    ['Pre-batch Start By',fD(b.pb_start)],['Pre-batch Hrs',pb_hrs+'h staging'],
+    ['Mix Cycle',std.cy?std.cy+'h':'—'],['QC Hold',std.qc_h?std.qc_h+'h':b.qc_h?b.qc_h+'h':'2h'],
+    ['Total Lead',(pb_hrs+(std.cy||0)+(std.qc||b.qc_h||2)).toFixed(1)+'h'],
+  ].map(([l,v])=>`<div class="df"><label>${l}</label><span>${v}</span></div>`).join('');
+
+  // Populate status update fields
+  document.getElementById('su-status').value=u.status||'';
+  document.getElementById('su-name').value=u.name||'';
+  document.getElementById('su-pbname').value=u.pbname||'';
+  // ── TANK DROPDOWN: pull from Tank Board's live state ──
+  // Tank Board stores in hoc_tank_state_v1 (config) and shared sync layer.
+  // We show: tank id, capacity, status — and highlight tanks whose capacity
+  // can hold THIS batch's lbs.
+  populateTankDropdown(b);
+  document.getElementById('su-tank').value=u.tank||'';
+  document.getElementById('su-qcdate').value=u.qcdate||'';
+  // QC fields
+  document.getElementById('qc-tech').value=u.qc_tech||'';
+  document.getElementById('qc-start-date').value=u.qc_start||'';
+  document.getElementById('qc-complete-date').value=u.qc_complete||'';
+  document.getElementById('qc-viscosity').value=u.viscosity||'';
+  document.getElementById('qc-density').value=u.density||'';
+  document.getElementById('qc-ph').value=u.ph||'';
+  document.getElementById('qc-rd').value=u.rd||'';
+  document.getElementById('qc-initials').value=u.initials||'';
+  document.getElementById('qc-notes').value=u.qc_notes||'';
+
+  // Show/hide QC panel
+  const showQC=['QC IN PROCESS','QC HOLD'].includes(u.status||'');
+  document.getElementById('qc-panel').classList.toggle('show',showQC);
+  document.getElementById('saved-note').classList.remove('show');
+  document.getElementById('detail').classList.add('open');
+  document.getElementById('detail').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function closeDetail(){document.getElementById('detail').classList.remove('open');currentBatch=null;}
+
+function onStatusChange(){
+  const st=document.getElementById('su-status').value;
+  const showQC=['QC IN PROCESS','QC HOLD'].includes(st);
+  document.getElementById('qc-panel').classList.toggle('show',showQC);
+}
+
+function saveStatus(){
+  if(!currentBatch)return;
+  const main=currentBatch.main;
+  statusUpdates[main]={
+    status:document.getElementById('su-status').value,
+    name:document.getElementById('su-name').value,
+    pbname:document.getElementById('su-pbname').value,
+    tank:document.getElementById('su-tank').value,
+    qcdate:document.getElementById('su-qcdate').value,
+    qc_tech:document.getElementById('qc-tech').value,
+    qc_start:document.getElementById('qc-start-date').value,
+    qc_complete:document.getElementById('qc-complete-date').value,
+    viscosity:document.getElementById('qc-viscosity').value,
+    density:document.getElementById('qc-density').value,
+    ph:document.getElementById('qc-ph').value,
+    rd:document.getElementById('qc-rd').value,
+    initials:document.getElementById('qc-initials').value,
+    qc_notes:document.getElementById('qc-notes').value,
+    saved:new Date().toISOString(),
+  };
+  try{localStorage.setItem('hoc_cmpd_v3',JSON.stringify(statusUpdates));}catch(e){}
+  document.getElementById('saved-note').classList.add('show');
+  renderBadges();renderKPIs();renderBatches();
+}
+
+function renderSched(){
+  const lines=[...new Set(BATCHES.map(b=>b.line))].filter(Boolean).sort((a,b)=>a-b);
+  let html='';
+  // Header bar so users can see column meaning. PB Status column added per ops
+  // request — replaces the standalone Pre-batch Capacity tab.
+  const headerStyle = 'display:grid;grid-template-columns:90px 145px 42px 75px 70px 65px 65px 120px 1fr;gap:5px;padding:6px 8px;border-bottom:1px solid var(--border);font-size:8px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text3)';
+  lines.forEach(ln=>{
+    const lb=BATCHES.filter(b=>b.line===ln);
+    const done=lb.filter(b=>b.status==='COMPLETED').length;
+    html+=`<div style="background:#1A2744;color:#fff;padding:7px 12px;border-radius:6px;margin:9px 0 4px;font-size:11px;font-weight:700">Line ${ln} · ${lb.length} batches · ${done} completed</div>`;
+    html+=`<div style="${headerStyle}">
+      <div>MAIN Batch</div><div>Description</div><div>Date</div>
+      <div>Fill Status</div><div>Cmpd Status</div><div>Cmpd Due</div>
+      <div>PB Start</div><div>PB Status</div><div>My Status</div>
+    </div>`;
+    lb.forEach(b=>{
+      const bc=b.cmpd.includes('OVERDUE')||b.cmpd.includes('CRITICAL')?'var(--red)':b.cmpd.includes('AT RISK')?'var(--amber)':b.cmpd.includes('ON TRACK')?'var(--green)':'#334155';
+      // Pull live pre-batch status from shared sync layer (PreWeigh writes here on Start/Complete)
+      // and statusUpdates (this dashboard's own saved state). Pre-batch status overrides
+      // come from the prebatcher's actions in PreWeigh OR from the saved Compound
+      // Scheduler status update (Pre-batcher field).
+      let pbStatus = '—', pbColor = 'var(--text3)';
+      try {
+        const shared = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+        const pw = (shared[b.main] && shared[b.main].pw) || {};
+        const cs = (statusUpdates[b.main] || {});
+        // Priority: PreWeigh "PW_COMPLETE" > "PW_IN_PROGRESS" > "QUEUED" > Compound Scheduler status field
+        if(pw.pw_complete_ts){ pbStatus='PW Complete'; pbColor='var(--green)'; }
+        else if(pw.pw_start_ts){ pbStatus='PW In Progress'; pbColor='var(--blue)'; }
+        else if(pw.pw_status === 'QUEUED'){ pbStatus='Queued'; pbColor='var(--amber)'; }
+        else if(cs.status && cs.status.indexOf('PRE-BATCH') >= 0){
+          // Map full status to short label
+          if(cs.status.indexOf('COMPLETE') >= 0){ pbStatus='PW Complete'; pbColor='var(--green)'; }
+          else if(cs.status.indexOf('PROGRESS') >= 0){ pbStatus='PW In Progress'; pbColor='var(--blue)'; }
+          else if(cs.status.indexOf('ASSIGNED') >= 0){ pbStatus='PB Assigned'; pbColor='var(--amber)'; }
+        } else if(cs.pbname){
+          pbStatus='Assigned: '+cs.pbname.split(' ')[0]; pbColor='var(--text2)';
+        }
+      } catch(e){}
+      const pbPill = `<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(255,255,255,.04);color:${pbColor};border:1px solid var(--border);white-space:nowrap">${pbStatus}</span>`;
+      html+=`<div style="display:grid;grid-template-columns:90px 145px 42px 75px 70px 65px 65px 120px 1fr;gap:5px;padding:5px 8px;border-bottom:1px solid rgba(30,41,59,.4);border-left:3px solid ${bc};${b.status==='COMPLETED'?'opacity:.4;':''}cursor:pointer" onclick="openDetail('${b.main}');showPage('cmd')">
+        <div style="font-size:10px;color:var(--text2);font-weight:700">${b.main}</div>
+        <div style="font-size:10px">${b.desc.slice(0,26)}</div>
+        <div style="font-size:10px;color:var(--text3)">${fS(b.date)}</div>
+        <div>${stBadge(b.status)}</div>
+        <div>${cmpdBadge(b.cmpd)}</div>
+        <div style="font-size:10px;color:var(--text2)">${fS(b.cmpddue)}</div>
+        <div style="font-size:10px;color:var(--purple)">${fS(b.pb_start)}</div>
+        <div>${pbPill}</div>
+        <div>${myBadge(b.main)}</div>
+      </div>`;
+    });
+  });
+  document.getElementById('sched-content').innerHTML=html;
+}
+
+function renderBatches(){
+  const filters=['ALL','RUNNING','NOT STARTED','COMPLETED','COMPOUND OVERDUE','COMPOUND AT RISK','QC HOLD','MY UPDATES'];
+  const counts={
+    'ALL':BATCHES.length,
+    'RUNNING':BATCHES.filter(b=>b.status==='RUNNING'||b.status==='ACTIVE').length,
+    'NOT STARTED':BATCHES.filter(b=>b.status==='NOT STARTED').length,
+    'COMPLETED':BATCHES.filter(b=>b.status==='COMPLETED').length,
+    'COMPOUND OVERDUE':BATCHES.filter(b=>b.cmpd==='COMPOUND OVERDUE').length,
+    'COMPOUND AT RISK':BATCHES.filter(b=>b.cmpd==='COMPOUND AT RISK').length,
+    'QC HOLD':Object.values(statusUpdates).filter(u=>u.status==='QC HOLD').length,
+    'MY UPDATES':Object.keys(statusUpdates).length,
+  };
+  document.getElementById('batch-filters').innerHTML=filters.map(f=>
+    `<button class="fb${f===batchFilter?' active':''}" onclick="setBF('${f}')">${f} (${counts[f]})</button>`).join('');
+  let rows=BATCHES;
+  if(batchFilter==='MY UPDATES') rows=BATCHES.filter(b=>statusUpdates[b.main]);
+  else if(batchFilter==='QC HOLD') rows=BATCHES.filter(b=>statusUpdates[b.main]&&statusUpdates[b.main].status==='QC HOLD');
+  else if(batchFilter==='RUNNING') rows=BATCHES.filter(b=>b.status==='RUNNING'||b.status==='ACTIVE');
+  else if(batchFilter.startsWith('COMPOUND')) rows=BATCHES.filter(b=>b.cmpd===batchFilter);
+  else if(batchFilter!=='ALL') rows=BATCHES.filter(b=>b.status===batchFilter);
+  document.getElementById('batch-tbody').innerHTML=rows.map(b=>`
+    <tr class="${b.status==='COMPLETED'?'done-row':''}" onclick="openDetail('${b.main}');showPage('cmd')" style="cursor:pointer">
+      <td style="font-size:10px;color:var(--text2);font-weight:700">${b.main}</td>
+      <td style="text-align:center;color:var(--blue);font-weight:700">${b.line}</td>
+      <td>${b.desc}</td>
+      <td style="text-align:center;color:var(--blue);font-weight:700">${b.formula?'F.'+b.formula:'—'}</td>
+      <td style="text-align:center">${fS(b.date)}</td>
+      <td>${stBadge(b.status)}</td>
+      <td>${cmpdBadge(b.cmpd)}</td>
+      <td style="text-align:center;color:var(--purple);font-size:10px">${fS(b.pb_start)}</td>
+      <td style="text-align:center;font-size:10px">${fS(b.cmpddue)}</td>
+      <td>${riskBadge(b.risk)}</td>
+      <td>${myBadge(b.main)}</td>
+    </tr>`).join('');
+}
+function setBF(f){batchFilter=f;renderBatches();}
+
+
+function renderStandards(){
+  const rows=Object.entries(STD).sort((a,b)=>(b[1].lbs||0)-(a[1].lbs||0));
+  document.getElementById('std-tbody').innerHTML=rows.map(([fid,s],i)=>{
+    const pb=PREBATCH_HRS[fid]||3.0;
+    const total=pb+(s.cy||0)+(s.qc||0);
+    // Show "applied" badge next to cycle hours if this formula has an active
+    // cycle time override from the Cycle Time Intelligence tab. Helps anyone
+    // looking at standards know which numbers came from actual batch data
+    // vs the original tracker.
+    const isOverridden = s.cy_overridden;
+    const cyBadge = isOverridden
+      ? ' <span style="font-size:7px;font-weight:700;padding:1px 4px;border-radius:5px;background:rgba(59,130,246,.15);color:#60A5FA;border:1px solid rgba(59,130,246,.3);vertical-align:middle" title="Cycle time overridden by Cycle Time Intelligence">✓ from data</span>'
+      : '';
+    return`<tr style="background:${i%2?'rgba(255,255,255,.01)':'transparent'}">
+      <td style="color:var(--blue);font-weight:700">F.${fid}</td>
+      <td>${s.n}</td>
+      <td style="text-align:center">${N(s.lbs)}</td>
+      <td style="text-align:center;color:var(--purple);font-weight:700">${pb}h</td>
+      <td style="text-align:center">${s.cy}h${cyBadge}</td>
+      <td style="text-align:center">${s.qc}h</td>
+      <td style="text-align:center;font-weight:700;color:var(--blue)">${total.toFixed(1)}h</td>
+      <td style="text-align:center;color:var(--green);font-weight:700">${(16/total).toFixed(1)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function exportCSV(){
+  const hdrs=['MAIN_Batch','Compound_Status','Compounder','Pre_Batcher','Tank','QC_Date',
+    'QC_Tech','QC_In_Process_Date','Viscosity','Density','pH','RD_Assistance',
+    'QC_Notes','QC_Initials','QC_Complete_Date','Saved'];
+  const rows=Object.entries(statusUpdates).map(([main,u])=>[
+    main,u.status||'',u.name||'',u.pbname||'',u.tank||'',u.qcdate||'',
+    u.qc_tech||'',u.qc_start||'',u.viscosity||'',u.density||'',u.ph||'',
+    u.rd||'',u.qc_notes||'',u.initials||'',u.qc_complete||'',u.saved||'']);
+  if(!rows.length){alert('No updates to export yet.');return;}
+  const csv=[hdrs,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='compound_status_updates.csv';a.click();
+  document.getElementById('export-count').textContent=`Exported ${rows.length} updates.`;
+}
+
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  // Order matches the nav buttons (Command Center, Schedule by Line, All Batches, Formula Standards, Cycle Time Intelligence, Export / Sync).
+  // 'prebatch' kept as an alias so any stale links still resolve gracefully — falls through to standards.
+  const map={cmd:0,sched:1,batches:2,standards:3,cycle:4,export:5,prebatch:3};
+  document.querySelectorAll('.nb')[map[id]].classList.add('active');
+}
+
+renderBadges();renderAlert();renderKPIs();renderDays();
+renderSched();renderBatches();renderStandards();
+
+// ─────────────────────────────────────────────────────────────
+// HOC OES INTEGRATION — added to v2 baseline
+// Reads real data from upload (replaces hardcoded sample BATCHES)
+// and mirrors local status updates to Supabase via heartbeat pattern
+// so multiple tablets see each other's changes within 15s.
+// ─────────────────────────────────────────────────────────────
+const SUPA_URL = 'https://yemtpvrumqvbzrzpwnyy.supabase.co';
+const SUPA_KEY = 'sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl';
+const SUPA_H = { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY };
+
+async function loadRealUpload(){
+  // 1. Try Supabase first (so all devices share the same uploaded schedule)
+  let upload = null;
+  try {
+    const r = await fetch(SUPA_URL + '/rest/v1/hoc_schedule?select=blob,uploaded_at&order=uploaded_at.desc&limit=1', {headers: SUPA_H});
+    if(r.ok){
+      const rows = await r.json();
+      if(rows.length && rows[0].blob){
+        upload = rows[0].blob;
+        upload._uploaded_at = rows[0].uploaded_at;
+      }
+    }
+  } catch(e){}
+  // 2. Fallback to localStorage
+  if(!upload){
+    try { upload = JSON.parse(localStorage.getItem('hoc_upload_v1') || 'null'); }
+    catch(e){}
+  }
+  if(!upload || !upload.batches) return false;
+
+  // Map upload batch records into the shape this dashboard expects.
+  // Field translations:
+  //   upload.batches[].batch    → BATCH.main
+  //   upload.batches[].descr    → BATCH.desc
+  //   upload.batches[].date     → BATCH.date (already ISO from parser)
+  //   upload.batches[].cmpddue  → BATCH.cmpddue
+  //   upload.batches[].formula  → BATCH.formula
+  //   upload.batches[].cmpd     → BATCH.cmpd (compound status)
+  BATCHES = upload.batches.map(function(b){
+    return {
+      main:    b.batch || '',
+      item:    b.item || '',
+      desc:    b.descr || b.description || b.desc || '',
+      date:    b.date || '',
+      line:    b.line || 0,
+      origqty: b.origqty || 0,
+      actqty:  b.actqty || 0,
+      minutes: b.minutes || 0,
+      casepk:  b.casepk || 1,
+      planea:  b.planea || 0,
+      status:  b.status || 'NOT STARTED',
+      cmpd:    b.cmpd || '',
+      risk:    b.risk || '',
+      cmpddue: b.cmpddue || '',
+      shortage: b.shortage || 0,
+      formula: b.formula || null,
+      fname:   b.fname || '',
+      pb_hrs:  b.pb_hrs || 3.0,
+      pb_start: b.pb_start || '',
+      cy:      b.cy || 0,
+      qc_h:    b.qc_h || 0,
+      lbs:     b.lbs || 0
+    };
+  });
+
+  // Map formula standards from upload if present (STD format: {696:{n:..,lbs:..,cy:..,qc:..}})
+  if(upload.compound_standards){
+    STD = upload.compound_standards;
+  } else if(upload.formula_standards){
+    STD = upload.formula_standards;
+  }
+  return true;
+}
+
+// ─────────────────────────────────────────────────────────────
+// CROSS-DEVICE SYNC (heartbeat pattern — id=1, payload jsonb)
+// All compound dashboards write to the same hoc_sync_bus row.
+// On save, also mirror our statusUpdates into shared payload so
+// Compound Coordinator + Pre-Weigh see our changes.
+// ─────────────────────────────────────────────────────────────
+let _lastSyncAt = null;
+
+async function pushStatusToSupabase(){
+  try {
+    const shared = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+    // Mirror each saved statusUpdates entry into shared[batch].cs (compound-scheduler bucket)
+    Object.keys(statusUpdates).forEach(function(main){
+      if(!shared[main]) shared[main] = {};
+      shared[main].cs = Object.assign({}, statusUpdates[main], {source: 'compound_scheduler'});
+    });
+    localStorage.setItem('hoc_sync_v1', JSON.stringify(shared));
+
+    await fetch(SUPA_URL + '/rest/v1/hoc_sync_bus?id=eq.1', {
+      method: 'POST',
+      headers: Object.assign({'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'}, SUPA_H),
+      body: JSON.stringify({id: 1, payload: shared, updated_at: new Date().toISOString()})
+    });
+  } catch(e){ console.warn('Sync write failed:', e); }
+}
+
+async function pollRemoteUpdates(){
+  try {
+    const r = await fetch(SUPA_URL + '/rest/v1/hoc_sync_bus?id=eq.1&select=updated_at,payload', {headers: SUPA_H});
+    if(!r.ok) return;
+    const rows = await r.json();
+    if(!rows.length) return;
+    const row = rows[0];
+    if(_lastSyncAt && row.updated_at <= _lastSyncAt) return;
+    _lastSyncAt = row.updated_at;
+    const remote = row.payload || {};
+    // Merge any cc/pw/cs updates into our localStorage shared cache so other
+    // dashboards' changes are visible if user re-loads.
+    const shared = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+    let changed = false;
+    Object.keys(remote).forEach(function(main){
+      if(typeof remote[main] !== 'object') return;
+      if(!shared[main]) shared[main] = {};
+      Object.keys(remote[main]).forEach(function(k){
+        shared[main][k] = remote[main][k];
+        changed = true;
+      });
+    });
+    if(changed){
+      localStorage.setItem('hoc_sync_v1', JSON.stringify(shared));
+      // ── Re-render Schedule by Line so the PB Status pills pick up remote
+      // changes (e.g., a pre-batcher on another tablet stamped Start).
+      // Cheap operation — just rebuilds DOM from current in-memory state.
+      try {
+        if(typeof renderSched === 'function') renderSched();
+        if(typeof renderBadges === 'function') renderBadges();
+      } catch(e){}
+    }
+  } catch(e){}
+}
+
+// Wrap saveStatus to also push to Supabase
+const _origSaveStatus = typeof saveStatus === 'function' ? saveStatus : null;
+if(_origSaveStatus){
+  window.saveStatus = function(){
+    _origSaveStatus.apply(this, arguments);
+    pushStatusToSupabase();
+  };
+}
+
+// On load: replace hardcoded sample BATCHES with real upload, then re-render
+(async function(){
+  const ok = await loadRealUpload();
+  if(ok){
+    // Force the page to re-render with real data
+    try { renderBadges(); renderKPIs(); renderDays(); renderBatches(); } catch(e){}
+    try { showPage('cmd'); } catch(e){}
+  } else {
+    console.warn('[Compound Scheduler] No upload found — showing sample data. Upload from Data Upload Hub.');
+  }
+  // Start polling
+  pollRemoteUpdates();
+  setInterval(pollRemoteUpdates, 15000);
+})();
+
+
+// ─────────────────────────────────────────────────────────────
+// CYCLE TIME INTELLIGENCE
+// Data sourced from HOC_OES_Compound_Cycle_Time_Analysis.xlsx
+// (162 handwritten batch sheets aggregated by formula). Overrides
+// applied here update STD[formula].cy which flows into every
+// planning calc (lead time, pre-batch start, urgency).
+// ─────────────────────────────────────────────────────────────
+const CYCLE_DATA = [{"formula": "102", "product": "AB Braid Sheen", "batches": 2, "avg_hrs": 2, "min_hrs": 2, "max_hrs": 2, "range_hrs": 0, "avg_lbs": 11760, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "104", "product": "AB Detangling Conditioner", "batches": 2, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 11546, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "106", "product": "AB Rinse-Out & Leave-in Deep Conditioner", "batches": 2, "avg_hrs": 4, "min_hrs": 4, "max_hrs": 4, "range_hrs": 0, "avg_lbs": 18325, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "107", "product": "AB Max Str Sup Gro", "batches": 2, "avg_hrs": 6, "min_hrs": 6, "max_hrs": 6, "range_hrs": 0, "avg_lbs": 9980, "tracker_hrs": 4, "diff": 2, "status": "Tracker UNDER by 2.0 hrs"}, {"formula": "108", "product": "AB Moist. Shampoo w/Conditioner", "batches": 2, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 16303, "tracker_hrs": 5, "diff": 0, "status": "OK (matches)"}, {"formula": "110", "product": "AB Oil Moisturizer", "batches": 2, "avg_hrs": 4, "min_hrs": 3, "max_hrs": 5, "range_hrs": 2, "avg_lbs": 11463, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "114", "product": "AB Super Gro", "batches": 2, "avg_hrs": 6, "min_hrs": 6, "max_hrs": 6, "range_hrs": 0, "avg_lbs": 5311, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "115", "product": "AB Ultimate Herbal Oil", "batches": 2, "avg_hrs": 2.5, "min_hrs": 2, "max_hrs": 3, "range_hrs": 1, "avg_lbs": 10682, "tracker_hrs": 4, "diff": -1.5, "status": "Tracker OVER by 1.5 hrs"}, {"formula": "121", "product": "Universal Relaxer Creme", "batches": 2, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 7067, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "203", "product": "Carrot Tea Tree Oil", "batches": 2, "avg_hrs": 1.38, "min_hrs": 1, "max_hrs": 1.75, "range_hrs": 0.75, "avg_lbs": 5733, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "204", "product": "Cholesterol Tea-Tree Oil Moisturizer", "batches": 2, "avg_hrs": 5.5, "min_hrs": 5, "max_hrs": 6, "range_hrs": 1, "avg_lbs": 11756, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "207", "product": "Hair Mayonnaise", "batches": 2, "avg_hrs": 6, "min_hrs": 6, "max_hrs": 6, "range_hrs": 0, "avg_lbs": 11441, "tracker_hrs": 4.5, "diff": 1.5, "status": "Tracker UNDER by 1.5 hrs"}, {"formula": "2125", "product": "ORI Olive Styling Gel", "batches": 2, "avg_hrs": 3, "min_hrs": 3, "max_hrs": 3, "range_hrs": 0, "avg_lbs": 11662, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "213", "product": "Olive Oil Cream Therapy", "batches": 2, "avg_hrs": 5, "min_hrs": 4, "max_hrs": 6, "range_hrs": 2, "avg_lbs": 5962, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "226", "product": "TMW Comb-Thru Creme Texturizer Creme", "batches": 2, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 6835, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "230", "product": "TMW Curl Keeper", "batches": 2, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 11616, "tracker_hrs": 5, "diff": 0, "status": "OK (matches)"}, {"formula": "231", "product": "TMW Texturizer Control", "batches": 2, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 5715, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "240", "product": "TMW Men's Wave Keeper", "batches": 2, "avg_hrs": 4.75, "min_hrs": 4.5, "max_hrs": 5, "range_hrs": 0.5, "avg_lbs": 6093, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "243", "product": "TMW Mens Pre-Text Control", "batches": 2, "avg_hrs": 4, "min_hrs": 3, "max_hrs": 5, "range_hrs": 2, "avg_lbs": 5883, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "290", "product": "Olive Oil Neutralizing Shampoo", "batches": 2, "avg_hrs": 4, "min_hrs": 3, "max_hrs": 5, "range_hrs": 2, "avg_lbs": 25581, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "502", "product": "Kids Gro Strong", "batches": 1, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 5624, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "509", "product": "Kids Shea Butter Detangling Lotion", "batches": 2, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 8596, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "512", "product": "Kids by Africa's Best ScalpGuard Pre-Relaxer", "batches": 2, "avg_hrs": 5.5, "min_hrs": 5, "max_hrs": 6, "range_hrs": 1, "avg_lbs": 3544, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "513", "product": "Kids Olive & Soy Gro Lot 1/10", "batches": 1, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 6121, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "516", "product": "Kids Olive Oil Complex", "batches": 2, "avg_hrs": 3.5, "min_hrs": 2, "max_hrs": 5, "range_hrs": 3, "avg_lbs": 3064, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "525", "product": "Kids Olive Oil Styling Gel", "batches": 2, "avg_hrs": 4.5, "min_hrs": 4, "max_hrs": 5, "range_hrs": 1, "avg_lbs": 11722, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "526", "product": "Kids 2n1 Detangler", "batches": 1, "avg_hrs": 3, "min_hrs": 3, "max_hrs": 3, "range_hrs": 0, "avg_lbs": 11845, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "527", "product": "Kids Protein Growth Oil Remedy", "batches": 2, "avg_hrs": 1.5, "min_hrs": 1, "max_hrs": 2, "range_hrs": 1, "avg_lbs": 8278, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "550", "product": "UO Body Cream", "batches": 2, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 11134, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "551", "product": "Body Gloss", "batches": 2, "avg_hrs": 2, "min_hrs": 2, "max_hrs": 2, "range_hrs": 0, "avg_lbs": 12887, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "552", "product": "Ultimate Body Lotion", "batches": 2, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 11132, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "553", "product": "Olive Oil Body Whip", "batches": 2, "avg_hrs": 4.5, "min_hrs": 4, "max_hrs": 5, "range_hrs": 1, "avg_lbs": 11332, "tracker_hrs": 4.5, "diff": 0, "status": "OK (matches)"}, {"formula": "555", "product": "Coconut Oil", "batches": 2, "avg_hrs": 2, "min_hrs": 2, "max_hrs": 2, "range_hrs": 0, "avg_lbs": 5723, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "556", "product": "Tea Tree Oil", "batches": 2, "avg_hrs": 2.5, "min_hrs": 2, "max_hrs": 3, "range_hrs": 1, "avg_lbs": 8202, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "557", "product": "Olive Oil Therapy", "batches": 2, "avg_hrs": 2.5, "min_hrs": 2, "max_hrs": 3, "range_hrs": 1, "avg_lbs": 5721, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "559", "product": "Ultimate Originals Therapy Argan Oil Stimulating", "batches": 2, "avg_hrs": 2, "min_hrs": 1.5, "max_hrs": 2.5, "range_hrs": 1, "avg_lbs": 5723, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "560", "product": "Ultimate Originals Therapy Jamaican Black Castor", "batches": 2, "avg_hrs": 2, "min_hrs": 2, "max_hrs": 2, "range_hrs": 0, "avg_lbs": 8202, "tracker_hrs": 5, "diff": -3, "status": "Tracker OVER by 3.0 hrs"}, {"formula": "635", "product": "AJ CLL Thirst Trap! Curl Milk", "batches": 2, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 11034, "tracker_hrs": 5, "diff": 0, "status": "OK (matches)"}, {"formula": "636", "product": "AJ CLL Serum", "batches": 2, "avg_hrs": 4.5, "min_hrs": 4, "max_hrs": 5, "range_hrs": 1, "avg_lbs": 6317, "tracker_hrs": 5, "diff": -0.5, "status": "Tracker OVER by 0.5 hrs"}, {"formula": "638", "product": "AJ Transform Hydrating Leave-In Conditioner", "batches": 2, "avg_hrs": 6, "min_hrs": 6, "max_hrs": 6, "range_hrs": 0, "avg_lbs": 11338, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "656", "product": "AJ Power Wash", "batches": 2, "avg_hrs": 4, "min_hrs": 3, "max_hrs": 5, "range_hrs": 2, "avg_lbs": 11931, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "657", "product": "AJ Grapeseed Conditioner", "batches": 2, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 11445, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "658", "product": "AJ Ice Curls", "batches": 2, "avg_hrs": 4, "min_hrs": 3, "max_hrs": 5, "range_hrs": 2, "avg_lbs": 11660, "tracker_hrs": 4.5, "diff": -0.5, "status": "Tracker OVER by 0.5 hrs"}, {"formula": "660", "product": "AJ Hair Mousse", "batches": 2, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 11799, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "661", "product": "AJ Shine Boss Refreshing Sheen Mist", "batches": 2, "avg_hrs": 3.25, "min_hrs": 1.5, "max_hrs": 5, "range_hrs": 3.5, "avg_lbs": 2561, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "666", "product": "AJK Knot Havin It Leave In Detangling Moisturizer", "batches": 2, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 15770, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "667", "product": "AJK Soft N Sassy Super Duper Softening Conditioner", "batches": 2, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 11445, "tracker_hrs": 5, "diff": 0, "status": "OK (matches)"}, {"formula": "668", "product": "AJK Baby Curls Curling & Twisting Custard", "batches": 2, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 11561, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "669", "product": "AJK E-Blast Vitamin E & Flaxseed Nourishing Scalp", "batches": 2, "avg_hrs": 2, "min_hrs": 1.5, "max_hrs": 2.5, "range_hrs": 1, "avg_lbs": 8277, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "670", "product": "AJ Flaxseed Recipes Soft All Over Multi-Purpose Oil", "batches": 1, "avg_hrs": 2, "min_hrs": 2, "max_hrs": 2, "range_hrs": 0, "avg_lbs": 10780, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "671", "product": "AJ Flaxseed Recipes Curl Mane-tenance", "batches": 2, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 11564, "tracker_hrs": 5, "diff": 0, "status": "OK (matches)"}, {"formula": "675", "product": "AJ Flaxseed Fix My Hair Intensive Repair Conditioning Masque", "batches": 2, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 11396, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "676", "product": "AJ Flxsd Recipes Purify Me Co-Wash", "batches": 3, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 11579, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "686", "product": "AJ Coconut Creme Recipes Curl Boss Coconut Curlin", "batches": 2, "avg_hrs": 4, "min_hrs": 4, "max_hrs": 4, "range_hrs": 0, "avg_lbs": 11662, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "687", "product": "AJ Coconut Creme Recipes Butter Creme Coconut Int", "batches": 1, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 10914, "tracker_hrs": 5, "diff": 0, "status": "OK (matches)"}, {"formula": "688", "product": "AJ Coconut Creme Recipes Coco Repair Coconut Crem", "batches": 2, "avg_hrs": 5.5, "min_hrs": 5, "max_hrs": 6, "range_hrs": 1, "avg_lbs": 11395, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "689", "product": "AJ Coconut Creme Recipes Coco Wash Coconut Milk Cleanser", "batches": 2, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 11858, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "691", "product": "AJ Balance Grapeseed & Avocado", "batches": 2, "avg_hrs": 3.5, "min_hrs": 2, "max_hrs": 5, "range_hrs": 3, "avg_lbs": 4388, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "692", "product": "AJ Don't Shrink Flaxseed Elongating Curling Gel", "batches": 2, "avg_hrs": 3.5, "min_hrs": 3, "max_hrs": 4, "range_hrs": 1, "avg_lbs": 11660, "tracker_hrs": 4.5, "diff": -1, "status": "Tracker OVER by 1.0 hrs"}, {"formula": "693", "product": "AJ Quench Moisture Intensive Leave-In Conditioner", "batches": 2, "avg_hrs": 4.75, "min_hrs": 4.5, "max_hrs": 5, "range_hrs": 0.5, "avg_lbs": 11397, "tracker_hrs": 4, "diff": 0.75, "status": "Tracker UNDER by 0.8 hrs"}, {"formula": "694", "product": "AJ Repair My Hair Argan", "batches": 2, "avg_hrs": 1.5, "min_hrs": 1.5, "max_hrs": 1.5, "range_hrs": 0, "avg_lbs": 5723, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "695", "product": "AJ Nourish My Hair Flaxseed & Monoi", "batches": 2, "avg_hrs": 4.25, "min_hrs": 3.5, "max_hrs": 5, "range_hrs": 1.5, "avg_lbs": 7128, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "696", "product": "AJ Curl La La Custard", "batches": 2, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 11563, "tracker_hrs": 5, "diff": 0, "status": "OK (matches)"}, {"formula": "697", "product": "AJ In Control Conditioner", "batches": 2, "avg_hrs": 5.5, "min_hrs": 5, "max_hrs": 6, "range_hrs": 1, "avg_lbs": 11447, "tracker_hrs": 5, "diff": 0.5, "status": "Tracker UNDER by 0.5 hrs"}, {"formula": "698", "product": "AJ Knot On My Watch Detangler", "batches": 2, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 19920, "tracker_hrs": 4.5, "diff": 0.5, "status": "Tracker UNDER by 0.5 hrs"}, {"formula": "699", "product": "AJ Oh So Clean Shampoo", "batches": 2, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 16149, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "925", "product": "Red Fox Cocoa Butter Cream", "batches": 2, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 9682, "tracker_hrs": 5, "diff": 0, "status": "OK (matches)"}, {"formula": "933", "product": "Activator Reg", "batches": 1, "avg_hrs": 3, "min_hrs": 3, "max_hrs": 3, "range_hrs": 0, "avg_lbs": 3916, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "934", "product": "Activator Super BULK", "batches": 3, "avg_hrs": 2.67, "min_hrs": 2, "max_hrs": 3, "range_hrs": 1, "avg_lbs": 3941, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "HB535", "product": "HB Olive Oil Cholesterol Moisturizer", "batches": 4, "avg_hrs": 5.25, "min_hrs": 5, "max_hrs": 6, "range_hrs": 1, "avg_lbs": 11339, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "HB552", "product": "HB Coconut Oil Hair Oil", "batches": 2, "avg_hrs": 2, "min_hrs": 2, "max_hrs": 2, "range_hrs": 0, "avg_lbs": 5208, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "HB555", "product": "HB Vitamin E Hair Oil", "batches": 2, "avg_hrs": 2, "min_hrs": 2, "max_hrs": 2, "range_hrs": 0, "avg_lbs": 10685, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "HB567", "product": "HB Batana Oil", "batches": 2, "avg_hrs": 1.75, "min_hrs": 1.5, "max_hrs": 2, "range_hrs": 0.5, "avg_lbs": 8201, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "HB576", "product": "HB Jojoba Hair Oil", "batches": 2, "avg_hrs": 3.5, "min_hrs": 2, "max_hrs": 5, "range_hrs": 3, "avg_lbs": 7078, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "HB590", "product": "HB Tea Tree Oil Hair Oil", "batches": 1, "avg_hrs": 1, "min_hrs": 1, "max_hrs": 1, "range_hrs": 0, "avg_lbs": 10682, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "K036", "product": "Kuza 100% Indian Hemp Hair & Scalp Treatment", "batches": 2, "avg_hrs": 4.5, "min_hrs": 4, "max_hrs": 5, "range_hrs": 1, "avg_lbs": 5313, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "XBP634", "product": "AJ Curl La La Hold Me Down Styling Gel", "batches": 1, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 11481, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "XBP637", "product": "AJ CLL Foam-a-licious Styling Mousse", "batches": 1, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 6316, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "XHB700", "product": "HB Scalp and Hair Detox Rinse", "batches": 1, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 6198, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "XHB703", "product": "HB Tea Tree & Rosemary Hair Masque", "batches": 2, "avg_hrs": 5, "min_hrs": 5, "max_hrs": 5, "range_hrs": 0, "avg_lbs": 8476, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}, {"formula": "XHB704B", "product": "HB Tea Tree & Rosemary Scalp & Hair Conditioning", "batches": 2, "avg_hrs": 6, "min_hrs": 5, "max_hrs": 7, "range_hrs": 2, "avg_lbs": 5621, "tracker_hrs": null, "diff": null, "status": "Not in May tracker"}];
+const CYCLE_DISCREP = [{"formula": "560", "product": "Ultimate Originals Therapy Jamaican Black Castor", "batches": 2, "actual_avg": 2, "tracker": 5, "diff": -3, "recommendation": "Update tracker from 5 hrs \u2192 2.0 hrs (based on 2 actual batches)"}, {"formula": "107", "product": "AB Max Str Sup Gro", "batches": 2, "actual_avg": 6, "tracker": 4, "diff": 2, "recommendation": "Update tracker from 4 hrs \u2192 6.0 hrs (based on 2 actual batches)"}, {"formula": "115", "product": "AB Ultimate Herbal Oil", "batches": 2, "actual_avg": 2.5, "tracker": 4, "diff": -1.5, "recommendation": "Update tracker from 4 hrs \u2192 2.5 hrs (based on 2 actual batches)"}, {"formula": "207", "product": "Hair Mayonnaise", "batches": 2, "actual_avg": 6, "tracker": 4.5, "diff": 1.5, "recommendation": "Update tracker from 4.5 hrs \u2192 6.0 hrs (based on 2 actual batches)"}, {"formula": "692", "product": "AJ Don't Shrink Flaxseed Elongating Curling Gel", "batches": 2, "actual_avg": 3.5, "tracker": 4.5, "diff": -1, "recommendation": "Update tracker from 4.5 hrs \u2192 3.5 hrs (based on 2 actual batches)"}, {"formula": "693", "product": "AJ Quench Moisture Intensive Leave-In Conditioner", "batches": 2, "actual_avg": 4.75, "tracker": 4, "diff": 0.75, "recommendation": "Update tracker from 4 hrs \u2192 4.75 hrs (based on 2 actual batches)"}, {"formula": "636", "product": "AJ CLL Serum", "batches": 2, "actual_avg": 4.5, "tracker": 5, "diff": -0.5, "recommendation": "Update tracker from 5 hrs \u2192 4.5 hrs (based on 2 actual batches)"}, {"formula": "658", "product": "AJ Ice Curls", "batches": 2, "actual_avg": 4, "tracker": 4.5, "diff": -0.5, "recommendation": "Update tracker from 4.5 hrs \u2192 4.0 hrs (based on 2 actual batches)"}, {"formula": "697", "product": "AJ In Control Conditioner", "batches": 2, "actual_avg": 5.5, "tracker": 5, "diff": 0.5, "recommendation": "Update tracker from 5 hrs \u2192 5.5 hrs (based on 2 actual batches)"}, {"formula": "698", "product": "AJ Knot On My Watch Detangler", "batches": 2, "actual_avg": 5, "tracker": 4.5, "diff": 0.5, "recommendation": "Update tracker from 4.5 hrs \u2192 5.0 hrs (based on 2 actual batches)"}];
+const CYCLE_MISSING = [{"formula": "117", "tracker_hrs": 4.5, "note": "No batch sheets provided for this formula"}, {"formula": "118", "tracker_hrs": 4.5, "note": "No batch sheets provided for this formula"}, {"formula": "2124", "tracker_hrs": 5, "note": "No batch sheets provided for this formula"}, {"formula": "236", "tracker_hrs": 5, "note": "No batch sheets provided for this formula"}, {"formula": "237", "tracker_hrs": 5, "note": "No batch sheets provided for this formula"}, {"formula": "238", "tracker_hrs": 5, "note": "No batch sheets provided for this formula"}, {"formula": "247", "tracker_hrs": 4.5, "note": "No batch sheets provided for this formula"}, {"formula": "634", "tracker_hrs": 5, "note": "No batch sheets provided for this formula"}, {"formula": "637", "tracker_hrs": 5, "note": "No batch sheets provided for this formula"}, {"formula": "642", "tracker_hrs": 5, "note": "No batch sheets provided for this formula"}, {"formula": "646", "tracker_hrs": 5, "note": "No batch sheets provided for this formula"}, {"formula": "647", "tracker_hrs": 5, "note": "No batch sheets provided for this formula"}, {"formula": "648", "tracker_hrs": 5, "note": "No batch sheets provided for this formula"}, {"formula": "690", "tracker_hrs": 5, "note": "No batch sheets provided for this formula"}];
+const CYCLE_SUMMARY = {"total_records": 159, "incomplete": 3, "unique_formulas": 81, "meaningful_discrepancies": 10, "tracker_formulas_no_data": 14};
+
+// Active overrides (localStorage so they persist across reloads).
+// Structure: {formulaId: {old_cy: 4.5, new_cy: 6.0, source: 'tracker_discrepancy', applied_at: ISO}}
+let cycleOverrides = {};
+try { cycleOverrides = JSON.parse(localStorage.getItem('hoc_cycle_overrides_v1') || '{}'); } catch(e){}
+
+function saveOverrides(){
+  try { localStorage.setItem('hoc_cycle_overrides_v1', JSON.stringify(cycleOverrides)); } catch(e){}
+}
+
+// Apply all current overrides to STD (called on load + whenever overrides change).
+// Idempotent — re-applies from cycleOverrides map.
+function applyOverridesToSTD(){
+  Object.keys(cycleOverrides).forEach(function(f){
+    if(STD[f]){
+      STD[f].cy = cycleOverrides[f].new_cy;
+      STD[f].cy_overridden = true;
+      STD[f].cy_source = 'cycle_intelligence';
+    } else {
+      // Create a stub if formula isn't in STD yet (e.g. new formula from analysis)
+      STD[f] = {
+        n: cycleOverrides[f].product || ('Formula ' + f),
+        lbs: 0,
+        cy: cycleOverrides[f].new_cy,
+        qc: 2.0,
+        cy_overridden: true,
+        cy_source: 'cycle_intelligence'
+      };
+    }
+  });
+  // Also update each BATCH's cy field for matching formulas
+  if(typeof BATCHES !== 'undefined' && Array.isArray(BATCHES)){
+    BATCHES.forEach(function(b){
+      var fid = String(b.formula || '');
+      if(cycleOverrides[fid]){
+        b.cy = cycleOverrides[fid].new_cy;
+      }
+    });
+  }
+}
+
+function ctApply(formulaId, newCy, product){
+  var f = String(formulaId);
+  var old = (STD[f] && STD[f].cy) || 0;
+  cycleOverrides[f] = {
+    old_cy: old,
+    new_cy: parseFloat(newCy),
+    product: product || '',
+    source: 'tracker_discrepancy',
+    applied_at: new Date().toISOString()
+  };
+  saveOverrides();
+  applyOverridesToSTD();
+  renderCycle();
+  try { renderBadges(); renderKPIs(); renderBatches(); } catch(e){}
+}
+
+function ctRevert(formulaId){
+  var f = String(formulaId);
+  var ov = cycleOverrides[f];
+  if(ov && STD[f]){
+    STD[f].cy = ov.old_cy;
+    STD[f].cy_overridden = false;
+    delete STD[f].cy_source;
+  }
+  delete cycleOverrides[f];
+  saveOverrides();
+  // Re-apply remaining overrides (in case the BATCHES sync needs refresh)
+  applyOverridesToSTD();
+  renderCycle();
+  try { renderBadges(); renderKPIs(); renderBatches(); } catch(e){}
+}
+
+function ctApplyAll(){
+  var count = CYCLE_DISCREP.length;
+  if(!confirm('Apply all ' + count + ' tracker discrepancy recommendations? This updates the cycle time for those formulas in every planning calc. You can rollback any individual one later.')) return;
+  CYCLE_DISCREP.forEach(function(d){
+    ctApply(d.formula, d.actual_avg, d.product);
+  });
+}
+
+function ctRollbackAll(){
+  var n = Object.keys(cycleOverrides).length;
+  if(!n){ alert('No active overrides to rollback.'); return; }
+  if(!confirm('Rollback all ' + n + ' active cycle time overrides? Tracker values will be restored.')) return;
+  Object.keys(cycleOverrides).slice().forEach(function(f){ ctRevert(f); });
+}
+
+function renderCycle(){
+  // KPIs
+  document.getElementById('ct-k-formulas').textContent = CYCLE_SUMMARY.unique_formulas;
+  document.getElementById('ct-k-discrep').textContent  = CYCLE_SUMMARY.meaningful_discrepancies;
+  document.getElementById('ct-k-missing').textContent  = CYCLE_SUMMARY.tracker_formulas_no_data;
+  document.getElementById('ct-k-batches').textContent  = CYCLE_SUMMARY.total_records;
+  document.getElementById('ct-k-overrides').textContent= Object.keys(cycleOverrides).length;
+
+  // Discrepancies (sorted by |diff| desc)
+  var disc = CYCLE_DISCREP.slice().sort(function(a,b){ return Math.abs(b.diff||0) - Math.abs(a.diff||0); });
+  var dh = '';
+  disc.forEach(function(d){
+    var f = String(d.formula);
+    var isApplied = !!cycleOverrides[f];
+    var diffNum = parseFloat(d.diff||0);
+    var diffStr = (diffNum > 0 ? '+' : '') + diffNum.toFixed(1) + ' hr';
+    var diffColor = Math.abs(diffNum) >= 2 ? 'var(--red)' : Math.abs(diffNum) >= 1 ? 'var(--amber)' : 'var(--blue)';
+    var actionBtn = isApplied
+      ? '<button onclick="ctRevert(\''+f+'\')" style="padding:3px 8px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:4px;color:#F87171;font:inherit;font-size:9px;font-weight:700;cursor:pointer">Rollback</button>'
+      : '<button onclick="ctApply(\''+f+'\','+d.actual_avg+',\''+(d.product||'').replace(/'/g,"\\'")+'\')" style="padding:3px 8px;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.35);border-radius:4px;color:#34D399;font:inherit;font-size:9px;font-weight:700;cursor:pointer">Apply →</button>';
+    var statusPill = isApplied
+      ? '<span style="font-size:8px;font-weight:700;padding:1px 5px;border-radius:6px;background:rgba(59,130,246,.15);color:#60A5FA;border:1px solid rgba(59,130,246,.3);margin-left:5px">APPLIED</span>'
+      : '';
+    dh += '<tr><td><strong>F.'+f+'</strong>'+statusPill+'</td>' +
+      '<td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(d.product||'')+'</td>' +
+      '<td style="text-align:right">'+d.batches+'</td>' +
+      '<td style="text-align:right;font-weight:700">'+parseFloat(d.actual_avg||0).toFixed(2)+' hr</td>' +
+      '<td style="text-align:right;color:var(--text3)">'+parseFloat(d.tracker||0).toFixed(2)+' hr</td>' +
+      '<td style="text-align:right;color:'+diffColor+';font-weight:700">'+diffStr+'</td>' +
+      '<td style="font-size:10px;color:var(--text2)">'+(d.recommendation||'')+'</td>' +
+      '<td>'+actionBtn+'</td></tr>';
+  });
+  document.getElementById('ct-disc-tbody').innerHTML = dh || '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:14px">No discrepancies — tracker matches actuals.</td></tr>';
+
+  renderCycleAll();
+
+  // Missing
+  var mh = '';
+  CYCLE_MISSING.forEach(function(m){
+    mh += '<tr><td><strong>F.'+m.formula+'</strong></td>' +
+      '<td style="text-align:right">'+parseFloat(m.tracker_hrs||0).toFixed(1)+' hr</td>' +
+      '<td style="color:var(--text2);font-size:10px">'+(m.note||'')+'</td></tr>';
+  });
+  document.getElementById('ct-miss-tbody').innerHTML = mh;
+
+  // Render labor validation card last (depends on the loaded labor standards)
+  renderLaborValidation();
+}
+
+// ── VICINITY LABOR VALIDATION ────────────────────────────────────────
+// Reads hoc_labor_standards_v1 (uploaded via Data Upload Hub) and compares
+// each formula's current STD.cy against a Vicinity-derived projection:
+//   vicinity_hrs = comp_time (Hours/LB) × representative_lbs
+// Representative lbs comes from the formula's STD.lbs (the typical batch size).
+// If batches list a different lbs, we'd average — STD.lbs is consistent enough
+// for variance flagging. Variance ≥ 15% surfaces as a flag.
+function renderLaborValidation(){
+  var tbody = document.getElementById('ct-labor-tbody');
+  var meta  = document.getElementById('ct-labor-meta');
+  if(!tbody) return;
+
+  var laborData = null;
+  try { laborData = JSON.parse(localStorage.getItem('hoc_labor_standards_v1') || 'null'); } catch(e){}
+
+  if(!laborData || !laborData.standards){
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:18px">' +
+      'No Vicinity labor extract loaded. Go to <a href="HOC_Data_Upload_Hub.html" style="color:var(--blue)">Data Upload Hub</a> and drop the Fill Labor Extract XLSX in the "⏱ Fill Labor Extract" zone.' +
+      '</td></tr>';
+    meta.textContent = '— no labor extract loaded —';
+    return;
+  }
+
+  // Show file age in the header — important since the extract may be stale
+  var ageStr = '';
+  if(laborData._updated){
+    var ageMs = Date.now() - new Date(laborData._updated).getTime();
+    var ageDays = Math.floor(ageMs / 86400000);
+    ageStr = ageDays < 1 ? 'just now' : ageDays === 1 ? '1 day ago' : ageDays + ' days ago';
+    if(ageDays >= 60) ageStr += ' ⚠ stale';
+  }
+  var stats = laborData.stats || {};
+  meta.textContent = (stats.formulas || 0) + ' formulas in extract' + (ageStr ? ' · loaded ' + ageStr : '');
+
+  var filterEl = document.getElementById('ct-labor-filter');
+  var q = (filterEl ? filterEl.value : '').toLowerCase().trim();
+  var varianceOnly = document.getElementById('ct-labor-variance-only');
+  varianceOnly = varianceOnly ? varianceOnly.checked : true;
+
+  // Build comparison rows for every formula in STD that also has a labor entry
+  var rows = [];
+  Object.keys(STD).forEach(function(fid){
+    var std = STD[fid];
+    var labor = laborData.standards[fid];
+    if(!labor || !labor.comp_time) return;
+    if(!std.lbs) return;  // can't project without representative lbs
+
+    var stdCy = std.cy || 0;
+    var compTimePerLb = labor.comp_time;  // Hours/LB
+    var projectedHrs = compTimePerLb * std.lbs;
+    var variance = stdCy > 0 ? ((projectedHrs - stdCy) / stdCy) * 100 : null;
+    var absVar = variance != null ? Math.abs(variance) : 0;
+
+    rows.push({
+      formula: fid,
+      product: std.n || labor.description || '',
+      std_cy: stdCy,
+      vic_per_lb: compTimePerLb,
+      lbs: std.lbs,
+      projected: projectedHrs,
+      variance_pct: variance,
+      abs_var: absVar
+    });
+  });
+
+  // Filter
+  if(q){
+    rows = rows.filter(function(r){
+      return r.formula.toLowerCase().indexOf(q) >= 0 ||
+             String(r.product||'').toLowerCase().indexOf(q) >= 0;
+    });
+  }
+  if(varianceOnly){
+    rows = rows.filter(function(r){ return r.abs_var >= 15; });
+  }
+
+  // Sort by absolute variance descending so biggest discrepancies bubble up
+  rows.sort(function(a,b){ return b.abs_var - a.abs_var; });
+
+  if(!rows.length){
+    var msg = varianceOnly
+      ? 'No formulas with ≥ 15% variance. Uncheck "variance only" to see all matched formulas.'
+      : 'No formulas overlap between STD and Vicinity extract. Either the formula IDs don\'t match or STD has no lbs/cy set.';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:14px;font-style:italic">' + msg + '</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rows.slice(0, 200).map(function(r){
+    var varStr, varColor, verdict;
+    if(r.variance_pct == null){
+      varStr = '—'; varColor = 'var(--text3)'; verdict = 'no STD.cy to compare';
+    } else {
+      var sign = r.variance_pct > 0 ? '+' : '';
+      varStr = sign + r.variance_pct.toFixed(0) + '%';
+      if(r.abs_var >= 30){
+        varColor = 'var(--red)';
+        verdict = r.variance_pct > 0
+          ? '<span class="pill" style="background:rgba(239,68,68,.15);color:#F87171;border:1px solid rgba(239,68,68,.3)">STD too low</span>'
+          : '<span class="pill" style="background:rgba(239,68,68,.15);color:#F87171;border:1px solid rgba(239,68,68,.3)">STD too high</span>';
+      } else if(r.abs_var >= 15){
+        varColor = 'var(--amber)';
+        verdict = '<span class="pill" style="background:rgba(245,158,11,.15);color:#FBBF24;border:1px solid rgba(245,158,11,.3)">investigate</span>';
+      } else {
+        varColor = 'var(--green)';
+        verdict = '<span class="pill" style="background:rgba(16,185,129,.15);color:#34D399;border:1px solid rgba(16,185,129,.3)">aligned</span>';
+      }
+    }
+    return '<tr><td><strong>F.'+r.formula+'</strong></td>' +
+      '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+r.product+'</td>' +
+      '<td style="text-align:right;font-weight:700">'+r.std_cy.toFixed(1)+' h</td>' +
+      '<td style="text-align:right;color:var(--text3);font-size:9px">'+r.vic_per_lb.toExponential(2)+'</td>' +
+      '<td style="text-align:right;color:var(--text3)">'+r.lbs.toLocaleString()+'</td>' +
+      '<td style="text-align:right">'+r.projected.toFixed(2)+' h</td>' +
+      '<td style="text-align:right;color:'+varColor+';font-weight:700">'+varStr+'</td>' +
+      '<td>'+verdict+'</td></tr>';
+  }).join('');
+}
+
+function renderCycleAll(){
+  var filterEl = document.getElementById('ct-filter');
+  var q = (filterEl ? filterEl.value : '').toLowerCase().trim();
+  var rows = CYCLE_DATA.slice();
+  if(q){
+    rows = rows.filter(function(r){
+      return String(r.formula).toLowerCase().indexOf(q) >= 0 ||
+             String(r.product||'').toLowerCase().indexOf(q) >= 0;
+    });
+  }
+  // sort: discrepancies first, then by # batches desc
+  rows.sort(function(a,b){
+    var ad = Math.abs(parseFloat(a.diff)||0);
+    var bd = Math.abs(parseFloat(b.diff)||0);
+    if(ad !== bd) return bd - ad;
+    return (b.batches||0) - (a.batches||0);
+  });
+  var h = '';
+  rows.forEach(function(r){
+    var f = String(r.formula);
+    var isApplied = !!cycleOverrides[f];
+    var statusClass = '';
+    var statusText = r.status || '';
+    if(statusText.indexOf('OK') >= 0) statusClass = 'color:#34D399';
+    else if(statusText.indexOf('Tracker UNDER') >= 0 || statusText.indexOf('Tracker OVER') >= 0) statusClass = 'color:#FBBF24;font-weight:700';
+    else if(statusText.indexOf('Not in May') >= 0) statusClass = 'color:var(--text3)';
+    var appliedPill = isApplied ? ' <span style="font-size:7px;font-weight:700;padding:1px 4px;border-radius:5px;background:rgba(59,130,246,.15);color:#60A5FA;border:1px solid rgba(59,130,246,.3)">APPLIED</span>' : '';
+    h += '<tr><td><strong>F.'+f+'</strong>'+appliedPill+'</td>' +
+      '<td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(r.product||'')+'</td>' +
+      '<td style="text-align:right">'+(r.batches||0)+'</td>' +
+      '<td style="text-align:right;font-weight:700">'+(r.avg_hrs!=null?parseFloat(r.avg_hrs).toFixed(2):'—')+'</td>' +
+      '<td style="text-align:right;color:var(--text3)">'+(r.min_hrs!=null?parseFloat(r.min_hrs).toFixed(2):'—')+'</td>' +
+      '<td style="text-align:right;color:var(--text3)">'+(r.max_hrs!=null?parseFloat(r.max_hrs).toFixed(2):'—')+'</td>' +
+      '<td style="text-align:right;color:'+(parseFloat(r.range_hrs||0) >= 2 ? 'var(--amber)' : 'var(--text2)')+'">'+parseFloat(r.range_hrs||0).toFixed(1)+'</td>' +
+      '<td style="text-align:right;color:var(--text3)">'+(r.avg_lbs?parseInt(r.avg_lbs).toLocaleString():'—')+'</td>' +
+      '<td style="text-align:right;color:var(--text3);font-size:9px">'+(r.avg_hrs_lb!=null?parseFloat(r.avg_hrs_lb).toExponential(2):'—')+'</td>' +
+      '<td style="text-align:right">'+(r.tracker_hrs!=null?parseFloat(r.tracker_hrs).toFixed(1):'—')+'</td>' +
+      '<td style="font-size:9px;'+statusClass+'">'+statusText+'</td></tr>';
+  });
+  document.getElementById('ct-all-tbody').innerHTML = h || '<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:14px">No matches.</td></tr>';
+}
+
+// On load: apply persisted overrides and render the cycle tab
+applyOverridesToSTD();
+// Patch showPage so renderCycle runs when tab is opened
+(function(){
+  var _origShowPage = (typeof showPage === 'function') ? showPage : null;
+  window.showPage = function(id, map){
+    if(_origShowPage) _origShowPage.apply(this, arguments);
+    if(id === 'cycle'){
+      try { renderCycle(); } catch(e){ console.warn('renderCycle error:', e); }
+    }
+  };
+})();
+
+</script>
+<script src="hoc_events.js"></script>
+</body>
+</html>

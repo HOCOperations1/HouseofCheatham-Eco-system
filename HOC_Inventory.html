@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HOC OES — Inventory</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root{
+  --bg:#0B0E17;--bg2:#111520;--bg3:#161C28;
+  --border:#1E293B;--border2:#293548;
+  --text:#E2E8F3;--text2:#94A3B8;--text3:#64748B;
+  --green:#22C55E;--red:#EF4444;--amber:#F59E0B;--blue:#3B82F6;
+  --purple:#A78BFA;--cyan:#22D3EE;--pink:#F472B6;
+  --green-l:rgba(34,197,94,.1);--red-l:rgba(239,68,68,.1);
+  --amber-l:rgba(245,158,11,.1);--blue-l:rgba(59,130,246,.1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:ui-monospace,monospace;background:var(--bg);color:var(--text);font-size:11px;min-height:100vh}
+.topbar{display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;flex-wrap:wrap}
+.topbar a{color:var(--text2);text-decoration:none;padding:5px 9px;border-radius:5px;font-size:11px}
+.topbar a:hover{background:var(--bg3);color:var(--text)}
+.brand{font-size:13px;font-weight:700;color:var(--blue);margin-right:8px}
+.brand-sub{font-size:9px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase}
+nav.nav{display:flex;gap:0;border-bottom:1px solid var(--border);background:var(--bg2);padding:0 16px;flex-wrap:wrap}
+.nb{font:inherit;font-size:11px;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--text2);padding:9px 14px;cursor:pointer;letter-spacing:.04em;font-weight:600}
+.nb:hover{color:var(--text)}
+.nb.active{color:var(--blue);border-bottom-color:var(--blue)}
+.content{padding:14px 16px;max-width:1800px;margin:0 auto}
+.page{display:none}
+.page.active{display:block}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.card-title{font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px;letter-spacing:.04em;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.kl{font-size:9px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px}
+.kv{font-size:20px;font-weight:700;color:var(--text);margin-bottom:1px}
+.ks{font-size:9px;color:var(--text2)}
+table{width:100%;border-collapse:collapse;font-size:10px}
+thead th{background:var(--bg3);color:var(--text3);font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:5px 7px;text-align:left;border-bottom:1px solid var(--border);font-size:9px}
+tbody td{padding:5px 7px;border-bottom:1px solid rgba(30,41,59,.45)}
+tbody tr:hover{background:rgba(59,130,246,.05);cursor:pointer}
+.pill{display:inline-block;font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;letter-spacing:.04em}
+.p-grn{background:var(--green-l);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.p-amb{background:var(--amber-l);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.p-red{background:var(--red-l);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.p-blu{background:var(--blue-l);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.p-grey{background:rgba(100,116,139,.1);color:var(--text3);border:1px solid rgba(100,116,139,.25)}
+input,select,textarea{font:inherit;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:5px 8px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue)}
+button.btn{font:inherit;font-size:11px;font-weight:700;padding:6px 12px;border-radius:5px;border:none;cursor:pointer}
+.btn-pri{background:var(--blue);color:#fff}
+.btn-ok{background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.35)}
+.btn-warn{background:rgba(245,158,11,.15);color:var(--amber);border:1px solid rgba(245,158,11,.35)}
+.btn-danger{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--text);border-color:var(--border2)}
+.row{display:grid;gap:8px;margin-bottom:8px}
+.row-2{grid-template-columns:1fr 1fr}
+.row-3{grid-template-columns:1fr 1fr 1fr}
+.row-4{grid-template-columns:1fr 1fr 1fr 1fr}
+.field-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+.tbl-wrap{overflow-x:auto;border-radius:6px;border:1px solid var(--border)}
+.empty-state{text-align:center;padding:30px;color:var(--text3);font-style:italic}
+/* Tank Farm specific */
+.tank-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.tank-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;position:relative;overflow:hidden}
+.tank-card:hover{border-color:var(--blue)}
+.tank-id{font-size:14px;font-weight:700;color:var(--text);margin-bottom:2px}
+.tank-material{font-size:10px;color:var(--text2);margin-bottom:8px}
+.tank-level-bar{height:10px;background:var(--bg3);border-radius:5px;overflow:hidden;margin-bottom:6px}
+.tank-level-fill{height:100%;background:linear-gradient(90deg, var(--blue), var(--cyan));transition:width .3s}
+.tank-meta{display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-top:6px}
+/* FIFO override modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:1000}
+.modal-bg.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--amber);border-radius:10px;padding:16px 18px;max-width:420px;width:90%}
+.modal h3{font-size:13px;color:var(--amber);margin-bottom:10px}
+.modal p{font-size:10px;color:var(--text2);line-height:1.6;margin-bottom:10px}
+.pin-input{font-size:18px !important;letter-spacing:8px;text-align:center;padding:8px !important;width:100%}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="brand">HOC OES</span>
+  <span class="brand-sub">Inventory · raw materials · tank farm · FIFO</span>
+  <span style="flex:1"></span>
+  <a href="index.html">← Hub</a>
+  <a href="HOC_Warehouse_Movement.html">Warehouse Move</a>
+  <a href="HOC_Procurement_Dashboard.html">Procurement</a>
+  <a href="HOC_Compound_Coordinator.html">Compound Coord</a>
+  <a href="HOC_PreWeigh_Scheduler.html">PreWeigh</a>
+</div>
+
+<nav class="nav">
+  <button class="nb active" onclick="P('overview')">Overview</button>
+  <button class="nb"        onclick="P('tankfarm')">Tank Farm</button>
+  <button class="nb"        onclick="P('mus')">MU Browser</button>
+  <button class="nb"        onclick="P('receive')">Receive PO</button>
+  <button class="nb"        onclick="P('fifo')">FIFO Picker</button>
+  <button class="nb"        onclick="P('trace')">PO ↔ MU Trace</button>
+</nav>
+
+<!-- ───────── OVERVIEW ───────── -->
+<div class="page active" id="page-overview"><div class="content">
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kl">Tank Readings</div><div class="kv" id="kpi-tanks">—</div><div class="ks" id="kpi-tanks-sub">last 24h</div></div>
+    <div class="kpi"><div class="kl">Stale Tanks</div><div class="kv" id="kpi-stale" style="color:var(--amber)">—</div><div class="ks">no reading &gt;48h</div></div>
+    <div class="kpi"><div class="kl">Active MUs</div><div class="kv" id="kpi-mus">—</div><div class="ks" id="kpi-mus-sub">in inventory</div></div>
+    <div class="kpi"><div class="kl">Expiring Soon</div><div class="kv" id="kpi-expiring" style="color:var(--amber)">—</div><div class="ks">within 30 days</div></div>
+    <div class="kpi"><div class="kl">Expired</div><div class="kv" id="kpi-expired" style="color:var(--red)">—</div><div class="ks">past expiry</div></div>
+    <div class="kpi"><div class="kl">FIFO Overrides</div><div class="kv" id="kpi-overrides" style="color:var(--purple)">—</div><div class="ks">last 30 days</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Latest activity</div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>When</th><th>Type</th><th>Detail</th><th>User</th></tr></thead>
+      <tbody id="activity-tbody"></tbody>
+    </table></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Quick actions</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-pri" onclick="P('tankfarm')">📊 Update tank reading</button>
+      <button class="btn btn-ok"  onclick="P('receive')">📦 Receive PO</button>
+      <button class="btn btn-warn" onclick="P('fifo')">🔍 Find oldest MU (FIFO)</button>
+      <button class="btn btn-ghost" onclick="P('mus')">📋 Browse MUs</button>
+      <button class="btn btn-ghost" onclick="P('trace')">🔗 Trace PO ↔ MU</button>
+    </div>
+  </div>
+</div></div>
+
+<!-- ───────── TANK FARM ───────── -->
+<div class="page" id="page-tankfarm"><div class="content">
+  <div class="card">
+    <div class="card-title">
+      <span>Tank Farm — bulk raw material levels</span>
+      <button class="btn btn-pri" onclick="openTankReading()">+ Log Reading</button>
+    </div>
+    <p style="font-size:10px;color:var(--text2);margin-bottom:10px;line-height:1.6">
+      Manual readings logged here. Operator selects tank, enters level (gal / lbs / % full), saves. Each tank shows latest reading + days since last update. Stale tanks (no reading &gt; 48h) flagged amber. Future: sensor integration.
+    </p>
+    <div class="tank-grid" id="tank-grid"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Reading history (last 30 days)</div>
+    <div style="margin-bottom:6px">
+      <select id="tank-history-filter" onchange="renderTankHistory()">
+        <option value="">— filter by tank —</option>
+      </select>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr>
+        <th>Date / Time</th><th>Tank</th><th>Material</th>
+        <th style="text-align:right">Reading</th><th>Unit</th>
+        <th style="text-align:right">% Full</th>
+        <th>Reader</th><th>Notes</th>
+      </tr></thead>
+      <tbody id="tank-history-tbody"></tbody>
+    </table></div>
+  </div>
+</div></div>
+
+<!-- ───────── MU BROWSER ───────── -->
+<div class="page" id="page-mus"><div class="content">
+  <div class="card">
+    <div class="card-title">MU Browser — search & filter inventory</div>
+    <div class="row row-4">
+      <div>
+        <div class="field-label">Search (MU#, SKU, PO)</div>
+        <input type="text" id="mu-search" placeholder="e.g. MU-1234 or 7-1056" oninput="renderMUs()">
+      </div>
+      <div>
+        <div class="field-label">Location</div>
+        <select id="mu-loc-filter" onchange="renderMUs()"><option value="">All</option></select>
+      </div>
+      <div>
+        <div class="field-label">Age</div>
+        <select id="mu-age-filter" onchange="renderMUs()">
+          <option value="">All</option>
+          <option value="new">&lt; 30 days</option>
+          <option value="mid">30-90 days</option>
+          <option value="old">&gt; 90 days</option>
+          <option value="expired">Expired</option>
+          <option value="expiring">Expiring &lt; 30 days</option>
+        </select>
+      </div>
+      <div>
+        <div class="field-label">Status</div>
+        <select id="mu-status-filter" onchange="renderMUs()">
+          <option value="">All</option>
+          <option value="available">Available</option>
+          <option value="staged">Staged</option>
+          <option value="consumed">Consumed</option>
+          <option value="quarantined">Quarantined</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span>Inventory MUs — <span id="mu-count">0</span> shown</span>
+      <span style="font-size:9px;color:var(--text3)">Click row for details · oldest sorted first (FIFO)</span>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr>
+        <th>MU #</th><th>SKU</th><th>Description</th>
+        <th style="text-align:right">Qty</th><th>Location</th>
+        <th>PO #</th><th>Received</th>
+        <th style="text-align:right">Age</th><th>Expires</th>
+        <th>Status</th><th>FIFO</th>
+      </tr></thead>
+      <tbody id="mu-tbody"></tbody>
+    </table></div>
+  </div>
+</div></div>
+
+<!-- ───────── RECEIVE PO ───────── -->
+<div class="page" id="page-receive"><div class="content">
+  <div class="card">
+    <div class="card-title">Receive Purchase Order — log incoming materials</div>
+    <p style="font-size:10px;color:var(--text2);margin-bottom:10px;line-height:1.6">
+      Use this when raw materials arrive at the dock. Enter PO# + supplier, then add each line item (SKU, qty, expiry, MU# from supplier label). On save: MUs are created in inventory tagged to this PO for traceability. Print MU labels at the end.
+    </p>
+
+    <div class="row row-3">
+      <div>
+        <div class="field-label">PO Number</div>
+        <input type="text" id="rcv-po" placeholder="e.g. PO-12345" oninput="onReceivePoChange()">
+      </div>
+      <div>
+        <div class="field-label">Supplier</div>
+        <input type="text" id="rcv-supplier" placeholder="Auto-fills from PO if known">
+      </div>
+      <div>
+        <div class="field-label">Receive Date</div>
+        <input type="date" id="rcv-date">
+      </div>
+    </div>
+
+    <div style="margin:10px 0 6px 0;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Line Items</div>
+    <div id="rcv-lines"></div>
+    <button class="btn btn-ghost" onclick="addReceiveLine()" style="margin-top:6px">+ Add Line</button>
+
+    <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--border);padding-top:10px">
+      <button class="btn btn-ghost" onclick="clearReceiveForm()">Clear</button>
+      <button class="btn btn-ok" onclick="saveReceive()">💾 Save Receipt</button>
+      <button class="btn btn-pri" onclick="saveReceiveAndPrint()">💾 Save & 🖨 Print Labels</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Recent receipts</div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Date</th><th>PO#</th><th>Supplier</th><th>Lines</th><th>Total Qty</th><th>Received By</th></tr></thead>
+      <tbody id="recent-recv-tbody"></tbody>
+    </table></div>
+  </div>
+</div></div>
+
+<!-- ───────── FIFO PICKER ───────── -->
+<div class="page" id="page-fifo"><div class="content">
+  <div class="card">
+    <div class="card-title">FIFO Picker — find the right MU to pick</div>
+    <p style="font-size:10px;color:var(--text2);margin-bottom:10px;line-height:1.6">
+      Enter SKU + quantity needed. System returns the <strong>oldest available MUs</strong> (FIFO order) totaling the qty. Pick newer stock = supervisor PIN required (override logged for audit). Status: combo of <strong>visual flag + hard-block + supervisor override</strong>.
+    </p>
+
+    <div class="row row-3">
+      <div>
+        <div class="field-label">SKU needed</div>
+        <input type="text" id="fifo-sku" placeholder="e.g. 7-1056" oninput="onFifoSearch()">
+      </div>
+      <div>
+        <div class="field-label">Qty needed</div>
+        <input type="number" id="fifo-qty" placeholder="0" oninput="onFifoSearch()">
+      </div>
+      <div>
+        <div class="field-label">For batch (optional)</div>
+        <input type="text" id="fifo-batch" placeholder="e.g. MAIN063515">
+      </div>
+    </div>
+
+    <div id="fifo-result" style="margin-top:10px"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Recent FIFO overrides — audit log</div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>When</th><th>Picker</th><th>Supervisor</th><th>SKU</th><th>Should pick</th><th>Picked instead</th><th>Reason</th></tr></thead>
+      <tbody id="override-tbody"></tbody>
+    </table></div>
+  </div>
+</div></div>
+
+<!-- ───────── PO ↔ MU TRACE ───────── -->
+<div class="page" id="page-trace"><div class="content">
+  <div class="card">
+    <div class="card-title">PO ↔ MU Trace — full traceability</div>
+    <p style="font-size:10px;color:var(--text2);margin-bottom:10px;line-height:1.6">
+      Recall scenarios: search by PO# to see all MUs from that purchase order, or search by MU# to trace back to the PO + supplier + receive date. Critical for regulatory traceability.
+    </p>
+
+    <div class="row row-2">
+      <div>
+        <div class="field-label">Search by PO #</div>
+        <input type="text" id="trace-po" placeholder="PO-12345" oninput="onTraceSearch('po')">
+      </div>
+      <div>
+        <div class="field-label">Search by MU #</div>
+        <input type="text" id="trace-mu" placeholder="MU-1234" oninput="onTraceSearch('mu')">
+      </div>
+    </div>
+
+    <div id="trace-result" style="margin-top:10px"></div>
+  </div>
+</div></div>
+
+<!-- ───────── FIFO Override Modal ───────── -->
+<div class="modal-bg" id="fifo-modal">
+  <div class="modal">
+    <h3>⚠ FIFO Override — Supervisor PIN Required</h3>
+    <p id="fifo-modal-msg"></p>
+    <div class="field-label">Supervisor 4-digit PIN</div>
+    <input type="password" class="pin-input" id="fifo-pin" maxlength="4" placeholder="••••" autocomplete="off">
+    <div class="field-label" style="margin-top:8px">Reason for override</div>
+    <select id="fifo-reason" style="width:100%">
+      <option value="">— select reason —</option>
+      <option>Older MU quarantined</option>
+      <option>Older MU in inaccessible location</option>
+      <option>Customer/QC required specific lot</option>
+      <option>Older MU was wrong quantity</option>
+      <option>Other (explain in notes)</option>
+    </select>
+    <input type="text" id="fifo-notes" placeholder="Optional notes" style="width:100%;margin-top:6px">
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button class="btn btn-ghost" onclick="closeFifoModal()">Cancel</button>
+      <button class="btn btn-warn" onclick="approveFifoOverride()">Approve Override</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//  HOC OES — Inventory Dashboard
+// ═══════════════════════════════════════════════════════════════════
+// Storage keys:
+//   hoc_inventory_tanks_v1     — tank farm readings
+//   hoc_inventory_mus_v1       — MU records
+//   hoc_inventory_receipts_v1  — receipt log
+//   hoc_inventory_overrides_v1 — FIFO override audit log
+//   hoc_supervisor_pins_v1     — supervisor PINs (hashed locally, simple here)
+//
+// All data also pushed to Supabase hoc_sync_bus.payload.inventory for
+// cross-device sync. Each save calls syncToBus().
+// ═══════════════════════════════════════════════════════════════════
+
+const SUPA_URL = 'https://yemtpvrumqvbzrzpwnyy.supabase.co';
+const SUPA_KEY = 'sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl';
+const H = function(){ return {apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}; };
+const HJ = function(){ return {apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,'Content-Type':'application/json'}; };
+
+// ── Master tank list (bulk raw material tanks, separate from mixing tanks) ──
+// Mixing tanks live in Tank Board. THIS is the upstream raw-material tank farm —
+// bulk chemicals/oils/water tanks that feed pre-batch operations.
+const RAW_TANKS = [
+  {id:'RM-T01', material:'Deionized Water',         capacity_gal:8000, unit_pref:'gal'},
+  {id:'RM-T02', material:'Deionized Water',         capacity_gal:8000, unit_pref:'gal'},
+  {id:'RM-T03', material:'Mineral Oil USP',         capacity_gal:5000, unit_pref:'lbs'},
+  {id:'RM-T04', material:'Coconut Oil',             capacity_gal:3000, unit_pref:'lbs'},
+  {id:'RM-T05', material:'Castor Oil',              capacity_gal:3000, unit_pref:'lbs'},
+  {id:'RM-T06', material:'Olive Oil',               capacity_gal:3000, unit_pref:'lbs'},
+  {id:'RM-T07', material:'Glycerin',                capacity_gal:2500, unit_pref:'lbs'},
+  {id:'RM-T08', material:'Propylene Glycol',        capacity_gal:2500, unit_pref:'lbs'},
+  {id:'RM-T09', material:'Caprylic/Capric Triglyc', capacity_gal:2000, unit_pref:'lbs'},
+];
+
+const LS_TANKS     = 'hoc_inventory_tanks_v1';
+const LS_MUS       = 'hoc_inventory_mus_v1';
+const LS_RECEIPTS  = 'hoc_inventory_receipts_v1';
+const LS_OVERRIDES = 'hoc_inventory_overrides_v1';
+const LS_PINS      = 'hoc_supervisor_pins_v1';
+
+function load(key, def){ try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(def)); } catch(e){ return def; } }
+function save(key, val){ try { localStorage.setItem(key, JSON.stringify(val)); } catch(e){} }
+
+// Default supervisor PINs (in production these'd be in Supabase + bcrypted).
+// For MVP, factory-set 1234 for any supervisor; admins can update later in code.
+const DEFAULT_PINS = {'1234':'Supervisor (default)'};
+function getPins(){ var p = load(LS_PINS, null); return (p && Object.keys(p).length) ? p : DEFAULT_PINS; }
+
+// ── Cross-device sync ──────────────────────────────────────────────
+// Mirrors all inventory state to Supabase hoc_sync_bus.payload.inventory.
+// Other dashboards (PreWeigh, Compound Coord, Production Coord) read
+// inventory data from there via their existing polls.
+async function syncToBus(){
+  try {
+    const r = await fetch(SUPA_URL+'/rest/v1/hoc_sync_bus?id=eq.1&select=payload', {headers:H()});
+    if(!r.ok) return;
+    const rows = await r.json();
+    const existing = (rows[0] && rows[0].payload) || {};
+    existing.inventory = {
+      tanks:     load(LS_TANKS, []),
+      mus:       load(LS_MUS, []),
+      receipts:  load(LS_RECEIPTS, []),
+      overrides: load(LS_OVERRIDES, []),
+      ts:        new Date().toISOString()
+    };
+    await fetch(SUPA_URL+'/rest/v1/hoc_sync_bus?id=eq.1', {
+      method:'PATCH', headers:Object.assign({},HJ(),{'Prefer':'return=minimal'}),
+      body: JSON.stringify({updated_at:new Date().toISOString(), payload:existing})
+    });
+  } catch(e){ console.warn('syncToBus error', e); }
+}
+
+let _lastBusAt = null;
+async function pullFromBus(){
+  try {
+    const r = await fetch(SUPA_URL+'/rest/v1/hoc_sync_bus?id=eq.1&select=updated_at,payload', {headers:H()});
+    if(!r.ok) return;
+    const rows = await r.json();
+    if(!rows.length) return;
+    const row = rows[0];
+    if(_lastBusAt && row.updated_at <= _lastBusAt) return;
+    _lastBusAt = row.updated_at;
+    const inv = (row.payload && row.payload.inventory) || null;
+    if(!inv) return;
+    // Merge: if remote is newer than what we have locally, accept remote
+    if(inv.tanks)     save(LS_TANKS, inv.tanks);
+    if(inv.mus)       save(LS_MUS, inv.mus);
+    if(inv.receipts)  save(LS_RECEIPTS, inv.receipts);
+    if(inv.overrides) save(LS_OVERRIDES, inv.overrides);
+    renderAll();
+  } catch(e){}
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PAGE NAVIGATION
+// ═══════════════════════════════════════════════════════════════════
+function P(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
+  const el = document.getElementById('page-'+id);
+  if(el) el.classList.add('active');
+  const map={overview:0,tankfarm:1,mus:2,receive:3,fifo:4,trace:5};
+  const idx = map[id]; if(idx != null) document.querySelectorAll('.nb')[idx].classList.add('active');
+  // page-specific renders
+  if(id==='tankfarm'){ renderTanks(); renderTankHistory(); }
+  if(id==='mus'){ renderMUs(); }
+  if(id==='receive'){ if(document.querySelectorAll('#rcv-lines .rcv-line').length===0) addReceiveLine(); renderRecentReceipts(); }
+  if(id==='fifo'){ onFifoSearch(); renderOverrides(); }
+  if(id==='trace'){ document.getElementById('trace-result').innerHTML = ''; }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// OVERVIEW
+// ═══════════════════════════════════════════════════════════════════
+function renderOverview(){
+  const tanks = load(LS_TANKS, []);
+  const mus = load(LS_MUS, []);
+  const overrides = load(LS_OVERRIDES, []);
+  const now = Date.now();
+
+  // Tank readings — count those updated in last 24h
+  const recent = tanks.filter(t => (now - new Date(t.ts).getTime()) < 86400000).length;
+  const tankIds = new Set(tanks.map(t=>t.tank_id));
+  document.getElementById('kpi-tanks').textContent = recent;
+  document.getElementById('kpi-tanks-sub').textContent = recent+' of '+RAW_TANKS.length+' tanks';
+
+  // Stale: tanks with no reading in 48h
+  let stale = 0;
+  RAW_TANKS.forEach(t => {
+    const latest = tanks.filter(r => r.tank_id === t.id).sort((a,b)=>b.ts.localeCompare(a.ts))[0];
+    if(!latest || (now - new Date(latest.ts).getTime()) > 172800000) stale++;
+  });
+  document.getElementById('kpi-stale').textContent = stale;
+
+  // MUs
+  const active = mus.filter(m => m.status === 'available' || m.status === 'staged');
+  document.getElementById('kpi-mus').textContent = active.length;
+  document.getElementById('kpi-mus-sub').textContent = mus.length+' total';
+
+  // Expiry analysis
+  let expiring = 0, expired = 0;
+  mus.forEach(m => {
+    if(m.status === 'consumed') return;
+    if(!m.expiry) return;
+    const days = (new Date(m.expiry).getTime() - now) / 86400000;
+    if(days < 0) expired++;
+    else if(days < 30) expiring++;
+  });
+  document.getElementById('kpi-expiring').textContent = expiring;
+  document.getElementById('kpi-expired').textContent = expired;
+
+  // Overrides last 30 days
+  const recent30 = overrides.filter(o => (now - new Date(o.ts).getTime()) < 30*86400000).length;
+  document.getElementById('kpi-overrides').textContent = recent30;
+
+  // Activity feed: combine receipts, tank readings, overrides — most recent 10
+  const activity = [];
+  load(LS_RECEIPTS, []).slice(0,10).forEach(r => activity.push({ts:r.ts, type:'Receipt', detail:r.po+' · '+r.lines.length+' lines · '+(r.lines.reduce((s,l)=>s+(parseFloat(l.qty)||0),0).toLocaleString())+' units', user:r.user||'—'}));
+  tanks.slice(-10).reverse().forEach(t => activity.push({ts:t.ts, type:'Tank Reading', detail:t.tank_id+' · '+t.value+' '+t.unit+' ('+t.material+')', user:t.user||'—'}));
+  overrides.slice(0,10).forEach(o => activity.push({ts:o.ts, type:'FIFO Override', detail:o.sku+' · '+o.reason, user:o.picker+' / sup:'+o.supervisor}));
+  activity.sort((a,b)=>b.ts.localeCompare(a.ts));
+  const top = activity.slice(0,15);
+
+  const fmt = function(ts){
+    try { return new Date(ts).toLocaleString('en-US',{month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'}); } catch(e){ return ts; }
+  };
+  document.getElementById('activity-tbody').innerHTML = top.length ? top.map(a =>
+    '<tr><td style="color:var(--text3)">'+fmt(a.ts)+'</td>' +
+    '<td><span class="pill ' + (a.type==='Receipt'?'p-grn':a.type==='Tank Reading'?'p-blu':'p-amb') + '">'+a.type+'</span></td>' +
+    '<td>'+a.detail+'</td>' +
+    '<td style="color:var(--text2)">'+a.user+'</td></tr>'
+  ).join('') : '<tr><td colspan="4" class="empty-state">No activity yet. Log a tank reading or receive a PO to begin.</td></tr>';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TANK FARM
+// ═══════════════════════════════════════════════════════════════════
+function renderTanks(){
+  const tanks = load(LS_TANKS, []);
+  const now = Date.now();
+  const grid = document.getElementById('tank-grid');
+  grid.innerHTML = RAW_TANKS.map(t => {
+    const readings = tanks.filter(r => r.tank_id === t.id).sort((a,b)=>b.ts.localeCompare(a.ts));
+    const latest = readings[0];
+    let pctFull = 0, levelStr = '— no reading —', stale = true, valueDisplay = '—';
+    if(latest){
+      const ageMs = now - new Date(latest.ts).getTime();
+      stale = ageMs > 172800000;  // 48h
+      pctFull = parseFloat(latest.pct_full) || 0;
+      valueDisplay = latest.value + ' ' + latest.unit;
+      levelStr = pctFull.toFixed(0) + '% full · ' + fmtAgo(ageMs);
+    }
+    const barColor = pctFull < 20 ? 'var(--red)' : pctFull < 40 ? 'var(--amber)' : 'var(--blue)';
+    const staleBadge = stale && latest ? '<span class="pill p-amb" style="margin-left:5px">STALE</span>' : '';
+    const noReadingBadge = !latest ? '<span class="pill p-red" style="margin-left:5px">NO DATA</span>' : '';
+    return `<div class="tank-card" onclick="openTankReading('${t.id}')">
+      <div class="tank-id">${t.id}${staleBadge}${noReadingBadge}</div>
+      <div class="tank-material">${t.material}</div>
+      <div style="font-size:18px;font-weight:700;margin-bottom:4px;color:${barColor}">${valueDisplay}</div>
+      <div class="tank-level-bar"><div class="tank-level-fill" style="width:${Math.min(pctFull,100)}%;background:${barColor}"></div></div>
+      <div class="tank-meta">
+        <span>${levelStr}</span>
+        <span>cap: ${t.capacity_gal.toLocaleString()} gal</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Populate history filter
+  const sel = document.getElementById('tank-history-filter');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">— filter by tank —</option>' +
+    RAW_TANKS.map(t => '<option value="'+t.id+'">'+t.id+' · '+t.material+'</option>').join('');
+  sel.value = current;
+}
+
+function fmtAgo(ms){
+  const m = ms/60000;
+  if(m < 60) return Math.round(m)+'m ago';
+  const h = m/60;
+  if(h < 24) return Math.round(h)+'h ago';
+  const d = h/24;
+  return Math.round(d)+'d ago';
+}
+
+function renderTankHistory(){
+  const filter = document.getElementById('tank-history-filter').value;
+  let tanks = load(LS_TANKS, []).slice().sort((a,b)=>b.ts.localeCompare(a.ts));
+  if(filter) tanks = tanks.filter(t => t.tank_id === filter);
+  tanks = tanks.slice(0, 100);
+  const tbody = document.getElementById('tank-history-tbody');
+  tbody.innerHTML = tanks.length ? tanks.map(t =>
+    '<tr><td style="color:var(--text3)">'+new Date(t.ts).toLocaleString('en-US',{month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'})+'</td>' +
+    '<td><strong>'+t.tank_id+'</strong></td>' +
+    '<td style="color:var(--text2)">'+(t.material||'')+'</td>' +
+    '<td style="text-align:right;font-weight:700">'+(t.value||'')+'</td>' +
+    '<td>'+(t.unit||'')+'</td>' +
+    '<td style="text-align:right">'+(t.pct_full ? parseFloat(t.pct_full).toFixed(0)+'%' : '—')+'</td>' +
+    '<td style="color:var(--text2)">'+(t.user||'—')+'</td>' +
+    '<td style="font-size:9px;color:var(--text2)">'+(t.notes||'')+'</td></tr>'
+  ).join('') : '<tr><td colspan="8" class="empty-state">No readings logged yet. Click "Log Reading" to begin.</td></tr>';
+}
+
+function openTankReading(tankId){
+  const tank = tankId ? RAW_TANKS.find(t => t.id === tankId) : null;
+  const tankList = RAW_TANKS.map(t => '<option value="'+t.id+'"'+(t.id===tankId?' selected':'')+'>'+t.id+' · '+t.material+' (cap '+t.capacity_gal.toLocaleString()+' gal)</option>').join('');
+  const tankIdSelected = tank ? tank.id : '';
+  const unitPref = tank ? tank.unit_pref : 'gal';
+  const promptHtml =
+    '<div style="margin-bottom:8px"><div class="field-label">Tank</div>' +
+    '<select id="trd-tank" style="width:100%">' + tankList + '</select></div>' +
+    '<div class="row row-2">' +
+      '<div><div class="field-label">Reading value</div><input type="number" id="trd-value" step="0.1" placeholder="0.0"></div>' +
+      '<div><div class="field-label">Unit</div>' +
+        '<select id="trd-unit"><option value="gal"' + (unitPref==='gal'?' selected':'') + '>gallons</option><option value="lbs"' + (unitPref==='lbs'?' selected':'') + '>pounds</option><option value="pct">% full</option></select></div>' +
+    '</div>' +
+    '<div class="field-label" style="margin-top:8px">Reader name</div><input type="text" id="trd-user" placeholder="Your name" style="width:100%">' +
+    '<div class="field-label" style="margin-top:8px">Notes (optional)</div><input type="text" id="trd-notes" placeholder="e.g. New shipment received, calibrated meter, etc." style="width:100%">';
+  const modal = quickModal('Log Tank Reading', promptHtml, function(){
+    const tid = document.getElementById('trd-tank').value;
+    const val = parseFloat(document.getElementById('trd-value').value);
+    const unit = document.getElementById('trd-unit').value;
+    const user = document.getElementById('trd-user').value.trim() || 'unknown';
+    const notes = document.getElementById('trd-notes').value.trim();
+    if(!tid || isNaN(val)){ alert('Tank and value required.'); return false; }
+    const tankRef = RAW_TANKS.find(t => t.id === tid);
+    // Compute % full
+    let pct = null;
+    if(unit === 'pct') pct = val;
+    else if(unit === 'gal' && tankRef) pct = (val / tankRef.capacity_gal) * 100;
+    else if(unit === 'lbs' && tankRef){
+      // approx: assume 8 lbs/gal water; oils ~7.5 lbs/gal; coarse but OK for indicator
+      const approxLbsPerGal = (tankRef.material||'').toLowerCase().includes('water') ? 8.3 : 7.5;
+      pct = (val / (tankRef.capacity_gal * approxLbsPerGal)) * 100;
+    }
+    const reading = {
+      tank_id: tid,
+      material: tankRef ? tankRef.material : '',
+      value: val,
+      unit: unit,
+      pct_full: pct,
+      user: user,
+      notes: notes,
+      ts: new Date().toISOString()
+    };
+    const all = load(LS_TANKS, []);
+    all.push(reading);
+    save(LS_TANKS, all);
+    syncToBus();
+    renderAll();
+    return true;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MU BROWSER
+// ═══════════════════════════════════════════════════════════════════
+function renderMUs(){
+  let mus = load(LS_MUS, []).slice();
+  const search = (document.getElementById('mu-search').value || '').toLowerCase().trim();
+  const locFilter = document.getElementById('mu-loc-filter').value;
+  const ageFilter = document.getElementById('mu-age-filter').value;
+  const statusFilter = document.getElementById('mu-status-filter').value;
+  const now = Date.now();
+
+  if(search){
+    mus = mus.filter(m =>
+      (m.mu_id||'').toLowerCase().includes(search) ||
+      (m.sku||'').toLowerCase().includes(search) ||
+      (m.po||'').toLowerCase().includes(search) ||
+      (m.desc||'').toLowerCase().includes(search));
+  }
+  if(locFilter) mus = mus.filter(m => m.location === locFilter);
+  if(statusFilter) mus = mus.filter(m => m.status === statusFilter);
+  if(ageFilter){
+    mus = mus.filter(m => {
+      const ageDays = m.received_at ? (now - new Date(m.received_at).getTime()) / 86400000 : 0;
+      const expDays = m.expiry ? (new Date(m.expiry).getTime() - now) / 86400000 : null;
+      if(ageFilter === 'new')  return ageDays < 30;
+      if(ageFilter === 'mid')  return ageDays >= 30 && ageDays <= 90;
+      if(ageFilter === 'old')  return ageDays > 90;
+      if(ageFilter === 'expired') return expDays !== null && expDays < 0;
+      if(ageFilter === 'expiring') return expDays !== null && expDays >= 0 && expDays < 30;
+      return true;
+    });
+  }
+  // Sort FIFO (oldest first)
+  mus.sort((a,b) => (a.received_at||'').localeCompare(b.received_at||''));
+
+  // Populate location filter dropdown
+  const locSel = document.getElementById('mu-loc-filter');
+  const current = locSel.value;
+  const allLocs = [...new Set(load(LS_MUS, []).map(m => m.location).filter(Boolean))].sort();
+  locSel.innerHTML = '<option value="">All</option>' + allLocs.map(l => '<option value="'+l+'">'+l+'</option>').join('');
+  locSel.value = current;
+
+  document.getElementById('mu-count').textContent = mus.length;
+  const tbody = document.getElementById('mu-tbody');
+  if(!mus.length){
+    tbody.innerHTML = '<tr><td colspan="11" class="empty-state">No MUs match. Receive a PO to add MUs, or adjust filters.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = mus.map((m, i) => {
+    const ageDays = m.received_at ? Math.round((now - new Date(m.received_at).getTime()) / 86400000) : 0;
+    const expDays = m.expiry ? Math.round((new Date(m.expiry).getTime() - now) / 86400000) : null;
+    // FIFO flag: oldest available of this SKU = green; expired = red; expiring < 30 = amber
+    let fifoClass = 'p-grey', fifoLabel = '—';
+    const sameSkuActive = load(LS_MUS, []).filter(x => x.sku === m.sku && (x.status==='available'||x.status==='staged'));
+    sameSkuActive.sort((a,b) => (a.received_at||'').localeCompare(b.received_at||''));
+    if(expDays !== null && expDays < 0){ fifoClass = 'p-red'; fifoLabel = 'EXPIRED'; }
+    else if(expDays !== null && expDays < 30){ fifoClass = 'p-amb'; fifoLabel = 'EXPIRING'; }
+    else if(sameSkuActive[0] && sameSkuActive[0].mu_id === m.mu_id){ fifoClass = 'p-grn'; fifoLabel = 'PICK FIRST'; }
+    else { fifoClass = 'p-grey'; fifoLabel = 'wait'; }
+    const ageColor = ageDays > 90 ? 'var(--amber)' : ageDays > 180 ? 'var(--red)' : 'var(--text2)';
+    return `<tr>
+      <td><strong>${m.mu_id||''}</strong></td>
+      <td>${m.sku||''}</td>
+      <td style="color:var(--text2);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.desc||''}</td>
+      <td style="text-align:right">${m.qty ? Number(m.qty).toLocaleString() : '—'}</td>
+      <td>${m.location||''}</td>
+      <td style="color:var(--blue)">${m.po||''}</td>
+      <td style="color:var(--text3)">${m.received_at ? new Date(m.received_at).toLocaleDateString('en-US',{month:'numeric',day:'numeric'}) : '—'}</td>
+      <td style="text-align:right;color:${ageColor}">${ageDays}d</td>
+      <td style="color:${expDays!==null && expDays<30?'var(--amber)':'var(--text2)'}">${m.expiry ? new Date(m.expiry).toLocaleDateString('en-US',{month:'numeric',day:'numeric'}) : '—'}</td>
+      <td><span class="pill ${m.status==='available'?'p-grn':m.status==='staged'?'p-blu':m.status==='consumed'?'p-grey':'p-amb'}">${(m.status||'').toUpperCase()}</span></td>
+      <td><span class="pill ${fifoClass}">${fifoLabel}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RECEIVE PO
+// ═══════════════════════════════════════════════════════════════════
+let _rcvLineSeq = 0;
+function addReceiveLine(){
+  _rcvLineSeq++;
+  const ix = _rcvLineSeq;
+  const html = `<div class="rcv-line" id="rcv-line-${ix}" style="display:grid;grid-template-columns:1.2fr 2fr 80px 120px 120px auto;gap:6px;margin-bottom:6px;align-items:end">
+    <div><div class="field-label">SKU</div><input type="text" class="rcv-sku" placeholder="e.g. 7-1056"></div>
+    <div><div class="field-label">Description</div><input type="text" class="rcv-desc" placeholder="auto-fills"></div>
+    <div><div class="field-label">Qty</div><input type="number" class="rcv-qty" placeholder="0"></div>
+    <div><div class="field-label">MU # (supplier)</div><input type="text" class="rcv-mu" placeholder="MU-1234"></div>
+    <div><div class="field-label">Expiry</div><input type="date" class="rcv-expiry"></div>
+    <button class="btn btn-danger" onclick="removeReceiveLine(${ix})" style="padding:5px 8px;font-size:10px">×</button>
+  </div>`;
+  document.getElementById('rcv-lines').insertAdjacentHTML('beforeend', html);
+}
+
+function removeReceiveLine(ix){
+  const el = document.getElementById('rcv-line-'+ix);
+  if(el) el.remove();
+}
+
+function onReceivePoChange(){
+  // Future: lookup PO in hoc_purchase_orders to auto-fill supplier
+  const po = document.getElementById('rcv-po').value.trim();
+  if(!po) return;
+  fetch(SUPA_URL+'/rest/v1/hoc_purchase_orders?po_number=eq.'+encodeURIComponent(po)+'&select=*&limit=1', {headers:H()})
+    .then(r => r.ok ? r.json() : [])
+    .then(rows => {
+      if(rows.length && rows[0].supplier){
+        const supEl = document.getElementById('rcv-supplier');
+        if(!supEl.value) supEl.value = rows[0].supplier;
+      }
+    })
+    .catch(()=>{});
+}
+
+function clearReceiveForm(){
+  document.getElementById('rcv-po').value = '';
+  document.getElementById('rcv-supplier').value = '';
+  document.getElementById('rcv-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('rcv-lines').innerHTML = '';
+  _rcvLineSeq = 0;
+  addReceiveLine();
+}
+
+function collectReceiveForm(){
+  const po = document.getElementById('rcv-po').value.trim();
+  const supplier = document.getElementById('rcv-supplier').value.trim();
+  const date = document.getElementById('rcv-date').value || new Date().toISOString().slice(0,10);
+  if(!po){ alert('PO# is required.'); return null; }
+  const lines = [];
+  document.querySelectorAll('#rcv-lines .rcv-line').forEach(row => {
+    const sku = row.querySelector('.rcv-sku').value.trim();
+    const desc = row.querySelector('.rcv-desc').value.trim();
+    const qty = parseFloat(row.querySelector('.rcv-qty').value) || 0;
+    const muId = row.querySelector('.rcv-mu').value.trim();
+    const expiry = row.querySelector('.rcv-expiry').value || null;
+    if(sku && qty > 0){
+      lines.push({sku, desc, qty, mu_id: muId || ('MU-' + Date.now() + '-' + Math.floor(Math.random()*1000)), expiry});
+    }
+  });
+  if(!lines.length){ alert('Add at least one line with SKU and qty.'); return null; }
+  return {po, supplier, date, lines};
+}
+
+function _saveReceiveCore(){
+  const data = collectReceiveForm();
+  if(!data) return null;
+  const user = prompt('Your name (for receipt log):') || 'unknown';
+  const ts = new Date().toISOString();
+  const receipt = {po:data.po, supplier:data.supplier, date:data.date, ts, user, lines:data.lines};
+  const receipts = load(LS_RECEIPTS, []);
+  receipts.unshift(receipt);
+  save(LS_RECEIPTS, receipts.slice(0, 500));
+  // Create MUs for each line
+  const mus = load(LS_MUS, []);
+  data.lines.forEach(l => {
+    mus.push({
+      mu_id: l.mu_id,
+      sku: l.sku,
+      desc: l.desc,
+      qty: l.qty,
+      qty_remaining: l.qty,
+      location: '',  // will be assigned by warehouse later
+      po: data.po,
+      supplier: data.supplier,
+      received_at: data.date + 'T00:00:00.000Z',
+      expiry: l.expiry,
+      status: 'available',
+      created_at: ts,
+      created_by: user
+    });
+  });
+  save(LS_MUS, mus);
+  syncToBus();
+  return receipt;
+}
+
+function saveReceive(){
+  const r = _saveReceiveCore();
+  if(r){ alert('✓ Receipt saved · '+r.lines.length+' MUs created'); clearReceiveForm(); renderAll(); }
+}
+
+function saveReceiveAndPrint(){
+  const r = _saveReceiveCore();
+  if(!r) return;
+  printMULabels(r);
+  clearReceiveForm();
+  renderAll();
+}
+
+function printMULabels(receipt){
+  const w = window.open('', 'mulabels', 'width=900,height=700');
+  const labels = receipt.lines.map(l => `
+    <div class="lbl">
+      <div class="lbl-h">MU LABEL</div>
+      <div class="lbl-id">${l.mu_id}</div>
+      <table class="lbl-tbl">
+        <tr><td>SKU:</td><td><strong>${l.sku}</strong></td></tr>
+        <tr><td>Description:</td><td>${l.desc||''}</td></tr>
+        <tr><td>Qty:</td><td><strong>${Number(l.qty).toLocaleString()}</strong></td></tr>
+        <tr><td>PO:</td><td>${receipt.po}</td></tr>
+        <tr><td>Supplier:</td><td>${receipt.supplier||''}</td></tr>
+        <tr><td>Received:</td><td>${receipt.date}</td></tr>
+        <tr><td>Expiry:</td><td>${l.expiry||'—'}</td></tr>
+      </table>
+      <div class="lbl-ft">Warehouse to fill in pick location below:</div>
+      <div class="lbl-loc">_______________________</div>
+    </div>`).join('');
+  w.document.write('<!DOCTYPE html><html><head><title>MU Labels — '+receipt.po+'</title><style>'+
+    'body{font-family:Arial,sans-serif;padding:14px;background:#fff;color:#000}'+
+    '.lbl{border:2px solid #000;padding:12px 14px;margin-bottom:10px;page-break-inside:avoid;max-width:380px}'+
+    '.lbl-h{font-size:10px;font-weight:700;letter-spacing:.1em;color:#666}'+
+    '.lbl-id{font-size:22px;font-weight:700;margin:4px 0 8px 0;border-bottom:2px solid #000;padding-bottom:4px}'+
+    '.lbl-tbl{width:100%;font-size:11px;margin-bottom:8px}'+
+    '.lbl-tbl td{padding:2px 4px;vertical-align:top}'+
+    '.lbl-tbl td:first-child{color:#666;width:80px}'+
+    '.lbl-ft{font-size:9px;color:#666;margin-top:6px}'+
+    '.lbl-loc{font-size:14px;font-weight:700;margin-top:4px}'+
+    '@media print{.lbl{page-break-after:auto}}'+
+    '</style></head><body>'+labels+
+    '<script>window.onload=function(){setTimeout(function(){window.print();},250);};<\/script></body></html>');
+  w.document.close();
+}
+
+function renderRecentReceipts(){
+  const rs = load(LS_RECEIPTS, []).slice(0, 50);
+  document.getElementById('recent-recv-tbody').innerHTML = rs.length ? rs.map(r => {
+    const totalQty = r.lines.reduce((s,l)=>s+(parseFloat(l.qty)||0),0);
+    return '<tr><td style="color:var(--text3)">'+new Date(r.ts).toLocaleDateString('en-US',{month:'numeric',day:'numeric',year:'2-digit'})+'</td>' +
+      '<td><strong>'+r.po+'</strong></td>' +
+      '<td>'+(r.supplier||'—')+'</td>' +
+      '<td style="text-align:right">'+r.lines.length+'</td>' +
+      '<td style="text-align:right">'+totalQty.toLocaleString()+'</td>' +
+      '<td style="color:var(--text2)">'+(r.user||'—')+'</td></tr>';
+  }).join('') : '<tr><td colspan="6" class="empty-state">No receipts logged yet.</td></tr>';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// FIFO PICKER
+// ═══════════════════════════════════════════════════════════════════
+let _fifoCurrent = null;  // {sku, qty_needed, candidates}
+
+function onFifoSearch(){
+  const sku = document.getElementById('fifo-sku').value.trim();
+  const qty = parseFloat(document.getElementById('fifo-qty').value) || 0;
+  const result = document.getElementById('fifo-result');
+  if(!sku){ result.innerHTML = '<div class="empty-state">Enter SKU + qty to find FIFO picks.</div>'; return; }
+
+  const mus = load(LS_MUS, []).filter(m =>
+    m.sku === sku && (m.status === 'available' || m.status === 'staged') && (parseFloat(m.qty_remaining) > 0));
+  mus.sort((a,b) => (a.received_at||'').localeCompare(b.received_at||''));
+
+  if(!mus.length){
+    result.innerHTML = '<div class="card" style="border-color:var(--red)"><strong style="color:var(--red)">No available MUs for SKU '+sku+'</strong><br><span style="color:var(--text2)">Check spelling, or receive a PO for this SKU first.</span></div>';
+    return;
+  }
+
+  // Pick from oldest until qty satisfied
+  const picks = [];
+  let remaining = qty;
+  for(const m of mus){
+    if(remaining <= 0) break;
+    const take = Math.min(remaining, parseFloat(m.qty_remaining));
+    picks.push({mu: m, take});
+    remaining -= take;
+  }
+  const totalAvailable = mus.reduce((s,m)=>s+(parseFloat(m.qty_remaining)||0), 0);
+  _fifoCurrent = {sku, qty_needed: qty, candidates: mus, picks};
+
+  const now = Date.now();
+  let html = '<div class="card" style="border-color:'+(remaining>0?'var(--amber)':'var(--green)')+'">';
+  if(remaining > 0){
+    html += '<div style="color:var(--amber);font-weight:700;margin-bottom:6px">⚠ Insufficient inventory · short by '+remaining.toLocaleString()+' units</div>';
+    html += '<div style="font-size:10px;color:var(--text2);margin-bottom:8px">Available: '+totalAvailable.toLocaleString()+' · Needed: '+qty.toLocaleString()+'. Issue a PO or check incoming receipts.</div>';
+  } else {
+    html += '<div style="color:var(--green);font-weight:700;margin-bottom:6px">✓ '+picks.length+' MU(s) cover '+qty.toLocaleString()+' units</div>';
+  }
+  html += '<div class="tbl-wrap"><table><thead><tr><th>Order</th><th>MU#</th><th>Location</th><th>PO</th><th>Received</th><th>Age</th><th>Available</th><th>Take</th><th>Action</th></tr></thead><tbody>';
+  picks.forEach((p, i) => {
+    const ageDays = Math.round((now - new Date(p.mu.received_at).getTime()) / 86400000);
+    html += '<tr style="background:rgba(34,197,94,.05)"><td><span class="pill p-grn">'+(i+1)+'</span></td>' +
+      '<td><strong>'+p.mu.mu_id+'</strong></td>' +
+      '<td>'+(p.mu.location||'<em style="color:var(--text3)">unassigned</em>')+'</td>' +
+      '<td style="color:var(--blue)">'+p.mu.po+'</td>' +
+      '<td style="color:var(--text3)">'+new Date(p.mu.received_at).toLocaleDateString('en-US',{month:'numeric',day:'numeric'})+'</td>' +
+      '<td>'+ageDays+'d</td>' +
+      '<td style="text-align:right">'+Number(p.mu.qty_remaining).toLocaleString()+'</td>' +
+      '<td style="text-align:right;font-weight:700;color:var(--green)">'+p.take.toLocaleString()+'</td>' +
+      '<td><button class="btn btn-ok" onclick="confirmFifoPick(\''+p.mu.mu_id+'\','+p.take+')">Confirm Pick</button></td></tr>';
+  });
+  // Show next 5 candidates that AREN'T picked, with override warning
+  const notPicked = mus.filter(m => !picks.find(p => p.mu.mu_id === m.mu_id)).slice(0, 5);
+  notPicked.forEach((m, i) => {
+    const ageDays = Math.round((now - new Date(m.received_at).getTime()) / 86400000);
+    html += '<tr style="opacity:.6"><td><span class="pill p-grey">'+(picks.length+i+1)+'</span></td>' +
+      '<td>'+m.mu_id+'</td>' +
+      '<td>'+(m.location||'')+'</td>' +
+      '<td style="color:var(--text3)">'+m.po+'</td>' +
+      '<td style="color:var(--text3)">'+new Date(m.received_at).toLocaleDateString('en-US',{month:'numeric',day:'numeric'})+'</td>' +
+      '<td>'+ageDays+'d</td>' +
+      '<td style="text-align:right">'+Number(m.qty_remaining).toLocaleString()+'</td>' +
+      '<td style="text-align:right">—</td>' +
+      '<td><button class="btn btn-warn" onclick="requestOverride(\''+m.mu_id+'\')" style="font-size:9px">⚠ Override</button></td></tr>';
+  });
+  html += '</tbody></table></div></div>';
+  result.innerHTML = html;
+}
+
+function confirmFifoPick(muId, takeQty){
+  const mus = load(LS_MUS, []);
+  const mu = mus.find(m => m.mu_id === muId);
+  if(!mu){ alert('MU not found.'); return; }
+  const picker = prompt('Picker name:') || 'unknown';
+  mu.qty_remaining = Math.max(0, (parseFloat(mu.qty_remaining)||0) - takeQty);
+  if(mu.qty_remaining === 0){ mu.status = 'consumed'; mu.consumed_at = new Date().toISOString(); }
+  else mu.status = 'staged';
+  mu.last_pick_at = new Date().toISOString();
+  mu.last_picker = picker;
+  save(LS_MUS, mus);
+  syncToBus();
+  alert('✓ Picked '+takeQty+' from '+muId+' · remaining: '+mu.qty_remaining);
+  onFifoSearch();
+}
+
+// ── Override flow ────────────────────────────────────────────────
+let _overrideContext = null;
+function requestOverride(muId){
+  if(!_fifoCurrent){ alert('Search FIFO first.'); return; }
+  const mu = _fifoCurrent.candidates.find(m => m.mu_id === muId);
+  const expected = _fifoCurrent.picks[0] ? _fifoCurrent.picks[0].mu : null;
+  if(!expected){ alert('No expected pick on record.'); return; }
+  _overrideContext = {expected, requested: mu};
+  document.getElementById('fifo-modal-msg').innerHTML =
+    'You are picking <strong>'+mu.mu_id+'</strong> (received '+new Date(mu.received_at).toLocaleDateString()+') ' +
+    'instead of the FIFO-recommended <strong>'+expected.mu_id+'</strong> (received '+new Date(expected.received_at).toLocaleDateString()+'). ' +
+    'This requires supervisor approval. Action will be logged.';
+  document.getElementById('fifo-pin').value = '';
+  document.getElementById('fifo-reason').value = '';
+  document.getElementById('fifo-notes').value = '';
+  document.getElementById('fifo-modal').classList.add('open');
+}
+function closeFifoModal(){ document.getElementById('fifo-modal').classList.remove('open'); _overrideContext = null; }
+
+function approveFifoOverride(){
+  if(!_overrideContext) return;
+  const pin = document.getElementById('fifo-pin').value.trim();
+  const reason = document.getElementById('fifo-reason').value;
+  const notes = document.getElementById('fifo-notes').value.trim();
+  if(!pin || pin.length !== 4){ alert('Enter a 4-digit supervisor PIN.'); return; }
+  const pins = getPins();
+  if(!pins[pin]){ alert('Invalid PIN. Override rejected.'); return; }
+  if(!reason){ alert('Select a reason.'); return; }
+  const picker = prompt('Picker name (for audit):') || 'unknown';
+  const takeQty = parseFloat(prompt('Quantity to pick from '+_overrideContext.requested.mu_id+':')) || 0;
+  if(takeQty <= 0){ alert('Invalid qty.'); return; }
+  // Log override
+  const overrides = load(LS_OVERRIDES, []);
+  overrides.unshift({
+    ts: new Date().toISOString(),
+    picker, supervisor: pins[pin],
+    sku: _overrideContext.requested.sku,
+    expected_mu: _overrideContext.expected.mu_id,
+    picked_mu: _overrideContext.requested.mu_id,
+    qty: takeQty,
+    reason: reason + (notes ? ' — '+notes : '')
+  });
+  save(LS_OVERRIDES, overrides);
+  // Apply the pick
+  const mus = load(LS_MUS, []);
+  const mu = mus.find(m => m.mu_id === _overrideContext.requested.mu_id);
+  if(mu){
+    mu.qty_remaining = Math.max(0, (parseFloat(mu.qty_remaining)||0) - takeQty);
+    if(mu.qty_remaining === 0){ mu.status = 'consumed'; mu.consumed_at = new Date().toISOString(); }
+    else mu.status = 'staged';
+    mu.last_pick_at = new Date().toISOString();
+    mu.last_picker = picker;
+    save(LS_MUS, mus);
+  }
+  syncToBus();
+  closeFifoModal();
+  alert('Override approved & logged.');
+  onFifoSearch();
+}
+
+function renderOverrides(){
+  const overrides = load(LS_OVERRIDES, []).slice(0, 50);
+  document.getElementById('override-tbody').innerHTML = overrides.length ? overrides.map(o =>
+    '<tr><td style="color:var(--text3)">'+new Date(o.ts).toLocaleString('en-US',{month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'})+'</td>' +
+    '<td>'+o.picker+'</td>' +
+    '<td style="color:var(--amber)">'+o.supervisor+'</td>' +
+    '<td>'+o.sku+'</td>' +
+    '<td style="color:var(--text3)">'+o.expected_mu+'</td>' +
+    '<td style="color:var(--text)"><strong>'+o.picked_mu+'</strong></td>' +
+    '<td style="font-size:9px">'+o.reason+'</td></tr>'
+  ).join('') : '<tr><td colspan="7" class="empty-state">No overrides logged. Good FIFO discipline.</td></tr>';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PO ↔ MU TRACE
+// ═══════════════════════════════════════════════════════════════════
+function onTraceSearch(kind){
+  const po = document.getElementById('trace-po').value.trim();
+  const muQ = document.getElementById('trace-mu').value.trim();
+  const result = document.getElementById('trace-result');
+  const mus = load(LS_MUS, []);
+  if(kind === 'po' && po){
+    const matching = mus.filter(m => (m.po||'').toLowerCase().includes(po.toLowerCase()));
+    if(!matching.length){ result.innerHTML = '<div class="empty-state">No MUs found for PO matching "'+po+'".</div>'; return; }
+    const receipt = load(LS_RECEIPTS, []).find(r => r.po === matching[0].po);
+    let html = '<div class="card"><div class="card-title">PO '+matching[0].po+'</div>';
+    if(receipt){
+      html += '<div style="margin-bottom:10px;font-size:10px;color:var(--text2)"><strong>Supplier:</strong> '+(receipt.supplier||'—')+' · <strong>Received:</strong> '+receipt.date+' · <strong>By:</strong> '+(receipt.user||'—')+'</div>';
+    }
+    html += '<div class="tbl-wrap"><table><thead><tr><th>MU#</th><th>SKU</th><th>Description</th><th>Qty (orig / remain)</th><th>Location</th><th>Status</th></tr></thead><tbody>';
+    matching.forEach(m => {
+      html += '<tr><td><strong>'+m.mu_id+'</strong></td><td>'+m.sku+'</td><td style="color:var(--text2)">'+(m.desc||'')+'</td>' +
+        '<td>'+Number(m.qty).toLocaleString()+' / '+Number(m.qty_remaining||0).toLocaleString()+'</td>' +
+        '<td>'+(m.location||'<em style="color:var(--text3)">unassigned</em>')+'</td>' +
+        '<td><span class="pill '+(m.status==='available'?'p-grn':m.status==='staged'?'p-blu':'p-grey')+'">'+(m.status||'').toUpperCase()+'</span></td></tr>';
+    });
+    html += '</tbody></table></div></div>';
+    result.innerHTML = html;
+  } else if(kind === 'mu' && muQ){
+    const m = mus.find(x => (x.mu_id||'').toLowerCase() === muQ.toLowerCase());
+    if(!m){ result.innerHTML = '<div class="empty-state">No MU found matching "'+muQ+'".</div>'; return; }
+    const receipt = load(LS_RECEIPTS, []).find(r => r.po === m.po);
+    let html = '<div class="card"><div class="card-title">MU '+m.mu_id+'</div>';
+    html += '<table class="lbl-tbl" style="width:100%"><tbody>';
+    html += '<tr><td style="color:var(--text3);width:140px">SKU</td><td><strong>'+m.sku+'</strong></td></tr>';
+    html += '<tr><td style="color:var(--text3)">Description</td><td>'+(m.desc||'')+'</td></tr>';
+    html += '<tr><td style="color:var(--text3)">Qty (original)</td><td>'+Number(m.qty).toLocaleString()+'</td></tr>';
+    html += '<tr><td style="color:var(--text3)">Qty remaining</td><td><strong>'+Number(m.qty_remaining||0).toLocaleString()+'</strong></td></tr>';
+    html += '<tr><td style="color:var(--text3)">Location</td><td>'+(m.location||'<em>unassigned</em>')+'</td></tr>';
+    html += '<tr><td style="color:var(--text3)">PO</td><td style="color:var(--blue)"><strong>'+m.po+'</strong></td></tr>';
+    html += '<tr><td style="color:var(--text3)">Supplier</td><td>'+(m.supplier || (receipt && receipt.supplier) || '—')+'</td></tr>';
+    html += '<tr><td style="color:var(--text3)">Received</td><td>'+(m.received_at ? new Date(m.received_at).toLocaleDateString() : '—')+'</td></tr>';
+    html += '<tr><td style="color:var(--text3)">Expiry</td><td>'+(m.expiry || '—')+'</td></tr>';
+    html += '<tr><td style="color:var(--text3)">Status</td><td><span class="pill '+(m.status==='available'?'p-grn':m.status==='staged'?'p-blu':'p-grey')+'">'+(m.status||'').toUpperCase()+'</span></td></tr>';
+    if(m.last_pick_at){
+      html += '<tr><td style="color:var(--text3)">Last picked</td><td>'+new Date(m.last_pick_at).toLocaleString()+' by '+(m.last_picker||'—')+'</td></tr>';
+    }
+    html += '</tbody></table></div>';
+    result.innerHTML = html;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════════════════════
+function quickModal(title, bodyHtml, onConfirm){
+  // Reuse fifo-modal element
+  const m = document.getElementById('fifo-modal');
+  m.querySelector('.modal h3').textContent = title;
+  m.querySelector('.modal').innerHTML =
+    '<h3>'+title+'</h3>' +
+    '<div>'+bodyHtml+'</div>' +
+    '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">' +
+    '<button class="btn btn-ghost" id="qmodal-cancel">Cancel</button>' +
+    '<button class="btn btn-pri" id="qmodal-save">Save</button></div>';
+  m.classList.add('open');
+  document.getElementById('qmodal-cancel').onclick = function(){ m.classList.remove('open'); rebuildFifoModalDom(); };
+  document.getElementById('qmodal-save').onclick = function(){
+    const ok = onConfirm();
+    if(ok !== false){ m.classList.remove('open'); rebuildFifoModalDom(); }
+  };
+}
+function rebuildFifoModalDom(){
+  // Restore original FIFO override modal contents (in case quickModal overwrote it)
+  const m = document.getElementById('fifo-modal');
+  m.querySelector('.modal').innerHTML =
+    '<h3>⚠ FIFO Override — Supervisor PIN Required</h3>' +
+    '<p id="fifo-modal-msg"></p>' +
+    '<div class="field-label">Supervisor 4-digit PIN</div>' +
+    '<input type="password" class="pin-input" id="fifo-pin" maxlength="4" placeholder="••••" autocomplete="off">' +
+    '<div class="field-label" style="margin-top:8px">Reason for override</div>' +
+    '<select id="fifo-reason" style="width:100%"><option value="">— select reason —</option><option>Older MU quarantined</option><option>Older MU in inaccessible location</option><option>Customer/QC required specific lot</option><option>Older MU was wrong quantity</option><option>Other (explain in notes)</option></select>' +
+    '<input type="text" id="fifo-notes" placeholder="Optional notes" style="width:100%;margin-top:6px">' +
+    '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">' +
+    '<button class="btn btn-ghost" onclick="closeFifoModal()">Cancel</button>' +
+    '<button class="btn btn-warn" onclick="approveFifoOverride()">Approve Override</button></div>';
+}
+
+function renderAll(){
+  try { renderOverview(); } catch(e){ console.warn(e); }
+  try { renderTanks(); renderTankHistory(); } catch(e){}
+  try { renderMUs(); } catch(e){}
+  try { renderRecentReceipts(); } catch(e){}
+  try { renderOverrides(); } catch(e){}
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════════════
+document.getElementById('rcv-date').value = new Date().toISOString().slice(0,10);
+renderAll();
+pullFromBus();
+setInterval(pullFromBus, 20000);
+
+// ── URL params: ?tab=fifo&batch=MAIN063515 deep-links from other dashboards
+// Lets Warehouse Movement's Pick Queue jump straight to FIFO Picker for a batch.
+(function(){
+  try {
+    var u = new URL(window.location.href);
+    var tab = u.searchParams.get('tab');
+    var batch = u.searchParams.get('batch');
+    if(tab && ['overview','tankfarm','mus','receive','fifo','trace'].indexOf(tab) >= 0){
+      P(tab);
+    }
+    if(tab === 'fifo' && batch){
+      var bEl = document.getElementById('fifo-batch');
+      if(bEl) bEl.value = batch;
+    }
+  } catch(e){}
+})();
+
+// Help button
+document.body.insertAdjacentHTML('beforeend',
+  '<button onclick="window.location.href=\'HOC_Onboarding.html\'" title="Onboarding & operations guide" style="position:fixed;bottom:24px;right:24px;width:44px;height:44px;border-radius:50%;background:var(--blue);color:white;border:none;font-size:20px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(59,130,246,.4);z-index:998">?</button>');
+</script>
+<script src="hoc_events.js"></script>
+</body>
+</html>

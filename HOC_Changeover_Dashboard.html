@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HOC-OES · Changeover Dashboard</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root{
+  --bg:#0B0E17;--bg2:#141925;--bg3:#0f1419;--border:rgba(255,255,255,.08);
+  --text:#fff;--text2:#94a3b8;--text3:#64748b;
+  --blue:#3b82f6;--green:#10b981;--amber:#f59e0b;--red:#ef4444;--purple:#8b5cf6;--teal:#14b8a6;
+  --gray-l:rgba(255,255,255,.04);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg);color:var(--text);font-size:11px;min-height:100vh}
+.topbar{display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.brand{display:flex;align-items:center;gap:8px}
+.logo{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#f59e0b,#ef4444);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff}
+.brand-name{font-size:13px;font-weight:700}
+.brand-sub{font-size:9px;color:var(--text3)}
+.nav{display:flex;gap:0;margin-left:14px;flex-wrap:wrap}
+.nb{background:none;border:none;color:var(--text2);padding:4px 12px;font-size:11px;font-weight:600;cursor:pointer;border-bottom:2px solid transparent}
+.nb.active{color:var(--amber);border-bottom-color:var(--amber)}
+.badges{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+.badge{font-size:9px;font-weight:700;padding:3px 8px;border-radius:10px}
+.b-red{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.b-amb{background:rgba(245,158,11,.15);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.b-grn{background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.3)}
+.b-blu{background:rgba(59,130,246,.15);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.content{padding:12px 16px;max-width:1600px;margin:0 auto}
+.page{display:none}
+.page.active{display:block}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:12px}
+.card-title{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:12px}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:8px}
+.kl{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text2)}
+.kv{font-size:22px;font-weight:700;margin:2px 0;color:var(--text)}
+.ks{font-size:9px;color:var(--text3)}
+.btn{background:var(--bg3);color:var(--text);border:1px solid var(--border);padding:5px 12px;font-size:10px;font-weight:600;border-radius:6px;cursor:pointer;font-family:inherit}
+.btn-g{background:var(--green);color:#0a1814;border-color:transparent}
+.btn-a{background:var(--amber);color:#1a1207;border-color:transparent}
+.btn-r{background:var(--red);color:#fff;border-color:transparent}
+.btn:hover{filter:brightness(1.15)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.t3{color:var(--text3)}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:10px}
+th{text-align:left;padding:6px 8px;font-size:9px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border)}
+td{padding:6px 8px;border-bottom:1px solid var(--gray-l)}
+tr:hover td{background:rgba(255,255,255,.02)}
+.input,.select{background:var(--bg3);color:var(--text);border:1px solid var(--border);padding:4px 8px;font-size:10px;border-radius:5px;font-family:inherit}
+.form-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.form-row label{flex:0 0 110px;font-size:10px;color:var(--text2);font-weight:600}
+.form-row .input,.form-row .select{flex:1}
+.live-card{background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(239,68,68,.05));border:2px solid rgba(245,158,11,.3);border-radius:10px;padding:14px;margin-bottom:12px}
+.live-timer{font-size:42px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+.live-timer.warn{color:var(--amber)}
+.live-timer.over{color:var(--red);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+.smed-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
+.smed-col{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px}
+.smed-title{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
+.smed-title.int{color:var(--red)}
+.smed-title.ext{color:var(--green)}
+.task{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:4px;margin-bottom:3px;font-size:10px;cursor:pointer;transition:background .15s}
+.task:hover{background:rgba(255,255,255,.04)}
+.task.done{opacity:.5;text-decoration:line-through}
+.ready-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-top:8px}
+.ready-pill{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px;display:flex;align-items:center;gap:8px}
+.ready-pill.ok{border-color:rgba(16,185,129,.3);background:rgba(16,185,129,.05)}
+.ready-pill.no{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.05)}
+.ready-pill.unk{border-color:rgba(100,116,139,.3)}
+.ready-dot{width:10px;height:10px;border-radius:50%}
+.ready-dot.ok{background:var(--green)}
+.ready-dot.no{background:var(--red)}
+.ready-dot.unk{background:var(--text3)}
+tr.over td{background:rgba(239,68,68,.04)}
+tr.warn td{background:rgba(245,158,11,.04)}
+.score-cell{display:inline-block;padding:3px 6px;border-radius:4px;font-weight:700;min-width:42px;text-align:right;font-variant-numeric:tabular-nums}
+.score-low{background:rgba(16,185,129,.12);color:var(--green)}
+.score-mid{background:rgba(245,158,11,.12);color:var(--amber)}
+.score-high{background:rgba(239,68,68,.15);color:var(--red)}
+.score-extreme{background:rgba(239,68,68,.25);color:#fca5a5;font-weight:800}
+.empty{text-align:center;padding:24px;color:var(--text3);font-size:11px}
+.muted{color:var(--text3);font-weight:400}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--green);color:#0a1814;padding:10px 16px;border-radius:8px;font-weight:700;font-size:11px;z-index:200;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+.bar-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:10px}
+.bar-label{min-width:60px;font-weight:700}
+.bar-track{flex:1;height:16px;background:var(--bg3);border-radius:3px;overflow:hidden;display:flex}
+.bar-seg{height:100%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#0a1814}
+.verdict-pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.v-deteriorating{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.v-improving{background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.3)}
+.v-volatile{background:rgba(245,158,11,.15);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.v-stable{background:rgba(59,130,246,.15);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.alert-banner{background:linear-gradient(135deg,rgba(239,68,68,.12),rgba(245,158,11,.08));border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.alert-banner.warn{background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(245,158,11,.04));border-color:rgba(245,158,11,.3)}
+.alert-banner.good{background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(16,185,129,.04));border-color:rgba(16,185,129,.3)}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="index.html" style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text2);text-decoration:none;font-size:9px;font-weight:700">← HOC-OES</a>
+  <div class="brand">
+    <div class="logo">CO</div>
+    <div>
+      <div class="brand-name">Changeover Dashboard</div>
+      <div class="brand-sub">SMED tracking · Patch OEE trends · Cross-functional readiness</div>
+    </div>
+  </div>
+  <nav class="nav">
+    <button class="nb active" onclick="P('cmd', this)">Command Center</button>
+    <button class="nb" onclick="P('auto', this)">Auto-Detect</button>
+    <button class="nb" onclick="P('scorecard', this)">Line Scorecard</button>
+    <button class="nb" onclick="P('trends', this)">Monthly Trends</button>
+    <button class="nb" onclick="P('upcoming', this)">Upcoming</button>
+    <button class="nb" onclick="P('history', this)">Live History</button>
+    <button class="nb" onclick="P('library', this)">SMED Library</button>
+  </nav>
+  <div class="badges" id="badges"></div>
+</div>
+
+<div class="page active" id="page-cmd"><div class="content">
+  <div id="ytd-banner"></div>
+  <div class="kpi-grid" id="kpi-grid"></div>
+
+  <div class="card">
+    <div class="card-title">
+      <span>🤖 Auto-Detected Changeovers — Next 48h <span class="muted" id="auto-cmd-count"></span></span>
+      <span style="font-size:9px;color:var(--text3);font-weight:400">from Production Schedule + PS floor updates</span>
+    </div>
+    <div id="auto-cmd-list"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span>Manually-Tracked Changeovers <span class="muted" id="active-count">— none in progress —</span></span>
+      <button class="btn btn-g" onclick="openStart()">+ Start SMED Kaizen</button>
+    </div>
+    <div id="active-list"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Worst Performers — YTD (from Patch upload)</div>
+    <div id="worst-list"><div class="empty">No Patch data uploaded yet. Upload via Data Upload Hub.</div></div>
+  </div>
+</div></div>
+
+<!-- ─── AUTO-DETECT PAGE ─────────────────────────────────────────── -->
+<div class="page" id="page-auto"><div class="content">
+  <div class="card">
+    <div class="card-title">
+      <span>🤖 How Auto-Detection Works</span>
+    </div>
+    <div style="font-size:11px;color:var(--text2);line-height:1.6">
+      Every 30 seconds, this dashboard scans the Production Schedule + Production Supervisor floor updates and infers changeovers automatically:
+      <ul style="margin:8px 0 0 18px;padding:0">
+        <li><strong style="color:var(--blue)">Same formula + same size</strong> → label/lot change, skipped (not a real changeover)</li>
+        <li><strong style="color:var(--amber)">Same formula, different size/pack</strong> → CO[60m] medium changeover</li>
+        <li><strong style="color:var(--red)">Different formula entirely</strong> → CO[90m] full changeover</li>
+      </ul>
+      <div style="margin-top:8px"><strong>Actual duration is inferred</strong> when PS marks the previous batch COMPLETED and the next batch RUNNING — the time gap = actual changeover time. Overruns &gt;125% fire critical events automatically.</div>
+      <div style="margin-top:8px;color:var(--text3);font-size:10px">Manual SMED tracking is kept for kaizen workshops where teams want to track individual SMED tasks step-by-step.</div>
+      <div style="margin-top:6px;color:var(--text3);font-size:10px"><strong>Note:</strong> Auto-detect reflects the current uploaded schedule. For historical records and YTD analysis, see the Patch OEE upload (Line Scorecard tab).</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span>All Auto-Detected Changeovers <span class="muted" id="auto-all-count"></span></span></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr>
+        <th>Scheduled</th><th>Line</th><th>CO Type</th><th>From</th><th>To</th>
+        <th>Target</th><th>Inferred Actual</th><th>Δ</th><th>Status</th>
+      </tr></thead>
+      <tbody id="auto-tbody"></tbody>
+    </table></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Auto-Detected Summary by Line</div>
+    <div id="auto-by-line"></div>
+  </div>
+</div></div>
+
+<div class="page" id="page-scorecard"><div class="content">
+  <div class="card">
+    <div class="card-title">Main Filler Lines — YTD</div>
+    <div class="tbl-wrap"><table>
+      <thead><tr>
+        <th>Line</th><th style="text-align:right">OEE</th>
+        <th style="text-align:right">CO[10m]<br>events</th><th style="text-align:right">[10m]<br>loss</th>
+        <th style="text-align:right">CO[60m]<br>events</th><th style="text-align:right">[60m]<br>loss</th>
+        <th style="text-align:right">CO[90m]<br>events</th><th style="text-align:right">[90m]<br>loss</th>
+        <th style="text-align:right">Total<br>CO loss</th><th>Status</th><th>Verdict</th>
+      </tr></thead>
+      <tbody id="main-tbody"></tbody>
+    </table></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Component / Specialist Lines — YTD</div>
+    <div class="tbl-wrap"><table>
+      <thead><tr>
+        <th>Line</th><th style="text-align:right">OEE</th>
+        <th style="text-align:right">CO[10m]<br>events</th><th style="text-align:right">[10m]<br>loss</th>
+        <th style="text-align:right">CO[60m]<br>events</th><th style="text-align:right">[60m]<br>loss</th>
+        <th style="text-align:right">CO[90m]<br>events</th><th style="text-align:right">[90m]<br>loss</th>
+        <th style="text-align:right">Total<br>CO loss</th><th>Status</th>
+      </tr></thead>
+      <tbody id="comp-tbody"></tbody>
+    </table></div>
+  </div>
+</div></div>
+
+<div class="page" id="page-trends"><div class="content">
+  <div class="card">
+    <div class="card-title">Total CO Loss by Line — Monthly</div>
+    <div id="trends-totals"><div class="empty">Upload Changeover Tracker via Data Upload Hub to see trends</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">CO Type Breakdown by Line — stacked monthly view</div>
+    <div id="trends-stacked"></div>
+  </div>
+</div></div>
+
+<div class="page" id="page-upcoming"><div class="content">
+  <div class="card">
+    <div class="card-title">Upcoming Changeovers — Next 24h <span class="muted">detected from Production Schedule</span></div>
+    <div id="upcoming-list"><div class="empty">Loading schedule…</div></div>
+  </div>
+</div></div>
+
+<div class="page" id="page-history"><div class="content">
+  <div class="card">
+    <div class="card-title">Live Changeover History <span class="muted" id="history-count"></span></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr>
+        <th>Date</th><th>Line</th><th>From</th><th>To</th>
+        <th>Target</th><th>Actual</th><th>Δ</th><th>Crew</th><th>Reason if Over</th>
+      </tr></thead>
+      <tbody id="history-tbody"></tbody>
+    </table></div>
+  </div>
+</div></div>
+
+<div class="page" id="page-library"><div class="content">
+  <div class="card">
+    <div class="card-title">SMED Task Library <span class="muted">internal = line stopped · external = can do while running</span></div>
+    <div class="smed-cols">
+      <div class="smed-col"><div class="smed-title int">⛔ INTERNAL — Line Must Be Stopped</div><div id="lib-internal"></div></div>
+      <div class="smed-col"><div class="smed-title ext">✓ EXTERNAL — Can Do While Line Runs</div><div id="lib-external"></div></div>
+    </div>
+    <div style="margin-top:10px;font-size:10px;color:var(--text3)"><strong style="color:var(--amber)">SMED PRINCIPLE:</strong> Convert as many internal tasks to external as possible. Every minute moved from internal to external = a minute of line uptime recovered.</div>
+  </div>
+</div></div>
+
+<div id="start-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:18px;max-width:520px;width:90%;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:14px;font-weight:700">Start SMED Kaizen Tracking</div>
+      <button class="btn" onclick="closeStart()">✕</button>
+    </div>
+    <div class="form-row"><label>Line</label><select id="s-line" class="select"></select></div>
+    <div class="form-row"><label>From Product</label><input type="text" id="s-from" class="input" placeholder="e.g. AJ Knot On My Watch 12oz"></div>
+    <div class="form-row"><label>To Product</label><input type="text" id="s-to" class="input" placeholder="e.g. AJ Quench Leave-In 12oz"></div>
+    <div class="form-row"><label>CO Type</label>
+      <select id="s-cotype" class="select" onchange="document.getElementById('s-target').value=this.value">
+        <option value="10">CO [10m] — Short (same product family)</option>
+        <option value="60" selected>CO [60m] — Medium (size/pack change)</option>
+        <option value="90">CO [90m] — Full (full clean & swap)</option>
+      </select>
+    </div>
+    <div class="form-row"><label>Target (min)</label><input type="number" id="s-target" class="input" value="60" min="1" max="240"></div>
+    <div class="form-row"><label>Crew Lead</label><input type="text" id="s-lead" class="input" placeholder="Operator name"></div>
+    <div class="form-row"><label>Reason</label>
+      <select id="s-reason" class="select">
+        <option value="product_change">Product Change</option>
+        <option value="size_change">Size/Pack Change</option>
+        <option value="label_change">Label Change</option>
+        <option value="cleaning">Cleaning / Sanitation</option>
+        <option value="maintenance">Maintenance Swap</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-g" onclick="startChangeover()" style="flex:1">▶ START TIMER</button>
+      <button class="btn" onclick="closeStart()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var LINES = [1,2,3,4,5,6,8,10,11,14,15,16];
+var STORAGE_KEY = 'hoc_changeovers_v1';
+var CO_DATA_KEY = 'hoc_changeover_data_v1';
+
+var STD_TASKS = [
+  {id:'int_1', type:'int', label:'Stop line / lock-out tag-out'},
+  {id:'int_2', type:'int', label:'Drain product from fill heads'},
+  {id:'int_3', type:'int', label:'Disconnect filler from current tank'},
+  {id:'int_4', type:'int', label:'Swap fill head / nozzles for new size'},
+  {id:'int_5', type:'int', label:'Connect new tank to filler'},
+  {id:'int_6', type:'int', label:'Adjust conveyor & guide rails for new pack size'},
+  {id:'int_7', type:'int', label:'Load new label roll / verify barcode'},
+  {id:'int_8', type:'int', label:'Run first-piece, verify weight/fill level'},
+  {id:'int_9', type:'int', label:'QC first-piece release'},
+  {id:'ext_1', type:'ext', label:'Stage new compound tank (CC verified)'},
+  {id:'ext_2', type:'ext', label:'Stage new bottles/caps/labels at line (PC verified)'},
+  {id:'ext_3', type:'ext', label:'Pre-stage tools needed for changeover'},
+  {id:'ext_4', type:'ext', label:'Pre-print labels & verify artwork'},
+  {id:'ext_5', type:'ext', label:'Brief incoming crew on next product specs'},
+  {id:'ext_6', type:'ext', label:'Pre-clean spare fill heads'}
+];
+
+function getAll(){ try{return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]');}catch(e){return [];} }
+function setAll(a){ try{localStorage.setItem(STORAGE_KEY, JSON.stringify(a));}catch(e){} }
+function upsert(co){
+  var arr = getAll();
+  var i = arr.findIndex(function(x){ return x.id === co.id; });
+  if(i>=0) arr[i]=co; else arr.unshift(co);
+  setAll(arr.slice(0,500));
+}
+function getCOData(){
+  try { var r = localStorage.getItem(CO_DATA_KEY); if(r) return JSON.parse(r); } catch(e){}
+  try { var u = JSON.parse(localStorage.getItem('hoc_upload_v1')||'{}'); if(u.changeover) return u.changeover; } catch(e){}
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// ║ AUTO-DETECT ENGINE — Schedule + PS drive the dashboard              ║
+// ║ Reads hoc_upload_v1 (batches) and hoc_sync_v1 (PS floor updates)    ║
+// ║ Classifies CO type by comparing consecutive batches per line        ║
+// ║ Infers actual duration from PS RUNNING→COMPLETED→RUNNING transitions║
+// ═══════════════════════════════════════════════════════════════════════
+var AUTO_KEY = 'hoc_changeovers_auto_v1';
+
+// Parse item code like "1-693-12-1200" → {formula:693, size:'12', pack:'1200'}
+// or "MAIN063357" — fall back to using raw item/formula
+function parseItemCode(b){
+  var item = String(b.item || '').trim();
+  var formula = b.formula != null ? String(b.formula).trim() : '';
+  // Try the standard HOC code format: prefix-formula-size-pack
+  var m = item.match(/^[\dA-Z]+-([A-Z0-9]+)-(\d+)-(\d+)/i);
+  if(m) {
+    return { formula: m[1], size: m[2], pack: m[3], raw: item };
+  }
+  // Fall back to formula field
+  return { formula: formula || item, size: '', pack: '', raw: item };
+}
+
+// Classify CO type by comparing two consecutive batches on the same line
+// Returns {co_type:'10'|'60'|'90', target_min, reason}
+function classifyCOType(prev, curr){
+  var p = parseItemCode(prev);
+  var c = parseItemCode(curr);
+  // Same formula AND same size+pack → no real changeover (probably a label/lot change only)
+  if(p.formula === c.formula && p.size === c.size && p.pack === c.pack){
+    return { co_type:'10', target_min: 10, reason:'label_lot_change' };
+  }
+  // Same formula, different size/pack → CO[60m] medium
+  if(p.formula === c.formula){
+    return { co_type:'60', target_min: 60, reason:'size_change' };
+  }
+  // Different formula → CO[90m] full
+  return { co_type:'90', target_min: 90, reason:'product_change' };
+}
+
+// ── Detect ALL scheduled changeovers from the upload (forward + backward looking)
+function detectScheduledChangeovers(){
+  var out = [];
+  try {
+    var raw = localStorage.getItem('hoc_upload_v1');
+    if(!raw) return out;
+    var up = JSON.parse(raw);
+    var batches = (up && up.batches) ? up.batches : [];
+    if(!batches.length) return out;
+
+    // Group by line, sort each by date
+    var byLine = {};
+    batches.forEach(function(b){
+      if(!b.line || !b.date) return;
+      var ln = parseInt(b.line);
+      if(!byLine[ln]) byLine[ln] = [];
+      byLine[ln].push(b);
+    });
+
+    Object.keys(byLine).forEach(function(line){
+      var lb = byLine[line].sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+      for(var i=1; i<lb.length; i++){
+        var prev = lb[i-1], curr = lb[i];
+        var cls = classifyCOType(prev, curr);
+        // Skip "label_lot_change" — not a real changeover from operations standpoint
+        if(cls.reason === 'label_lot_change') continue;
+        // Stable ID for this scheduled CO so we don't duplicate on re-scan
+        var id = 'auto_L'+line+'_'+(prev.batch||'?')+'_to_'+(curr.batch||'?');
+        out.push({
+          id: id,
+          source: 'auto_schedule',
+          line: parseInt(line),
+          from: prev.desc || prev.item || prev.batch,
+          to: curr.desc || curr.item || curr.batch,
+          from_batch: prev.batch,
+          to_batch: curr.batch,
+          from_item: prev.item || prev.formula,
+          to_item: curr.item || curr.formula,
+          scheduled_date: curr.date,
+          co_type: cls.co_type,
+          target_min: cls.target_min,
+          reason: cls.reason,
+          // Lifecycle status — populated by inferActuals() when PS updates flow in
+          inferred_started_at: null,
+          inferred_completed_at: null,
+          inferred_actual_min: null,
+          inferred_status: 'scheduled' // scheduled | in_progress | completed
+        });
+      }
+    });
+  } catch(e){ console.warn('detectScheduledChangeovers failed:', e); }
+  return out;
+}
+
+// ── Infer actual changeover times from Production Supervisor floor updates
+//   When a batch flips RUNNING→COMPLETED and the NEXT batch on the same line
+//   flips NOT STARTED→RUNNING, the gap is the actual changeover duration.
+//   We use the PS sync bus `ts` field on each batch's `prod` update.
+function inferActualsForChangeovers(autos){
+  try {
+    var sync = JSON.parse(localStorage.getItem('hoc_sync_v1')||'{}');
+    autos.forEach(function(co){
+      var prev = sync[co.from_batch] && sync[co.from_batch].prod;
+      var curr = sync[co.to_batch]   && sync[co.to_batch].prod;
+      // The PS floor update writes ts only when something changes. Use that
+      // as a proxy for when the batch transitioned.
+      var prevCompleted = prev && prev.status === 'COMPLETED' ? prev.ts || prev.completed_at : null;
+      var currRunning   = curr && (curr.status === 'RUNNING' || curr.status === 'COMPLETED') ? curr.ts || curr.started_at : null;
+
+      if(prevCompleted && currRunning){
+        var deltaMs = new Date(currRunning) - new Date(prevCompleted);
+        // Sanity: must be positive and under 24h
+        if(deltaMs > 0 && deltaMs < 24*3600*1000){
+          co.inferred_started_at = prevCompleted;
+          co.inferred_completed_at = currRunning;
+          co.inferred_actual_min = Math.round(deltaMs/60000*10)/10;
+          co.inferred_status = 'completed';
+        }
+      } else if(prevCompleted && !currRunning){
+        // Prev batch done, next not yet running → changeover in progress
+        co.inferred_started_at = prevCompleted;
+        co.inferred_status = 'in_progress';
+      }
+    });
+  } catch(e){ console.warn('inferActuals failed:', e); }
+  return autos;
+}
+
+// ── Main auto-detect runner: builds the full set of auto-detected COs ──
+function runAutoDetect(){
+  var autos = detectScheduledChangeovers();
+  autos = inferActualsForChangeovers(autos);
+  try { localStorage.setItem(AUTO_KEY, JSON.stringify(autos)); } catch(e){}
+
+  // ── Fire events for newly-completed inferred changeovers ──────────
+  // Track which ones we've already fired so we don't spam
+  try {
+    var firedKey = 'hoc_changeover_auto_fired_v1';
+    var fired = {};
+    try { fired = JSON.parse(localStorage.getItem(firedKey)||'{}'); } catch(e){}
+    autos.forEach(function(co){
+      if(co.inferred_status !== 'completed' || !co.inferred_actual_min) return;
+      if(fired[co.id]) return;
+      fired[co.id] = co.inferred_completed_at;
+      try {
+        var sev = co.inferred_actual_min > co.target_min*1.25 ? 'critical' : co.inferred_actual_min > co.target_min ? 'warning' : 'info';
+        var ev = co.inferred_actual_min > co.target_min ? 'changeover_overrun' : 'changeover_complete';
+        HOC_EVENTS && HOC_EVENTS.fire(ev, {
+          batch: 'Line '+co.line+' CO['+co.co_type+'m] (auto)',
+          source: 'changeover_dashboard_auto',
+          message: 'AUTO-DETECTED: CO['+co.co_type+'m] Line '+co.line+' '+co.from_batch+' → '+co.to_batch+' inferred '+co.inferred_actual_min+'m (target '+co.target_min+'m)',
+          line: co.line, actual_min: co.inferred_actual_min, target_min: co.target_min,
+          co_type: co.co_type, inferred: true
+        }, sev, ['production_supervisor','leadership','continuous_improvement']);
+      } catch(e){}
+    });
+    localStorage.setItem(firedKey, JSON.stringify(fired));
+  } catch(e){}
+
+  return autos;
+}
+
+function getAutoChangeovers(){
+  try { return JSON.parse(localStorage.getItem(AUTO_KEY)||'[]'); } catch(e){ return []; }
+}
+
+function N(n){return typeof n==='number'?n.toLocaleString():(n||'—');}
+function fmtTime(ms){ var s=Math.floor(ms/1000), m=Math.floor(s/60), sec=s%60; return m+':'+(sec<10?'0':'')+sec; }
+function fmtDate(s){ if(!s)return'—'; try{return new Date(s).toLocaleString('en-US',{month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'});}catch(e){return s;} }
+function fmtDateShort(s){ if(!s)return'—'; try{return new Date(s).toLocaleDateString('en-US',{month:'numeric',day:'numeric'});}catch(e){return s;} }
+function pct(v,d){ if(v==null) return '—'; var p = Math.pow(10,d||1); return (Math.round(v*p)/p)+'%'; }
+function classifyLoss(v){ if(v==null)return''; if(v<=3)return'score-low'; if(v<=8)return'score-mid'; if(v<=15)return'score-high'; return'score-extreme'; }
+function toast(m){ var t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(function(){t.classList.remove('show');},2500); }
+
+function P(id, btn){
+  ['cmd','auto','scorecard','trends','upcoming','history','library'].forEach(function(k){
+    var el = document.getElementById('page-'+k);
+    if(el) el.classList.toggle('active', k===id);
+  });
+  document.querySelectorAll('.nb').forEach(function(b){ b.classList.remove('active'); });
+  if(btn) btn.classList.add('active');
+  if(id==='auto') renderAutoDetectPage();
+  if(id==='scorecard') renderScorecard();
+  if(id==='trends') renderTrends();
+  if(id==='history') renderHistory();
+  if(id==='library') renderLibrary();
+  if(id==='upcoming') renderUpcoming();
+}
+
+function openStart(){
+  var sel = document.getElementById('s-line');
+  sel.innerHTML = '<option value="">— select —</option>' + LINES.map(function(l){ return '<option value="'+l+'">Line '+l+'</option>'; }).join('');
+  var params = new URLSearchParams(location.search);
+  if(params.get('line')) sel.value = params.get('line');
+  if(params.get('from')) document.getElementById('s-from').value = params.get('from');
+  if(params.get('to'))   document.getElementById('s-to').value = params.get('to');
+  document.getElementById('start-modal').style.display = 'flex';
+}
+function closeStart(){ document.getElementById('start-modal').style.display = 'none'; }
+
+function startChangeover(){
+  var line = document.getElementById('s-line').value;
+  var from = document.getElementById('s-from').value.trim();
+  var to = document.getElementById('s-to').value.trim();
+  var coType = document.getElementById('s-cotype').value;
+  var target = parseInt(document.getElementById('s-target').value) || 60;
+  var lead = document.getElementById('s-lead').value.trim();
+  var reason = document.getElementById('s-reason').value;
+  if(!line || !from || !to){ alert('Line + From + To required'); return; }
+
+  var co = {
+    id: 'co_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+    line: parseInt(line), from: from, to: to,
+    co_type: coType, target_min: target,
+    crew_lead: lead, reason: reason,
+    started_at: new Date().toISOString(),
+    completed_at: null, actual_min: null,
+    tasks: STD_TASKS.map(function(t){ return Object.assign({}, t, {done:false, done_at:null}); }),
+    overrun_reason: ''
+  };
+  upsert(co);
+  try {
+    HOC_EVENTS && HOC_EVENTS.fire('changeover_started', {
+      batch:'Line '+line+' CO['+coType+'m]', source:'changeover_dashboard',
+      message:'CO['+coType+'m] start L'+line+': '+from+' → '+to+' (target '+target+'m)',
+      line:parseInt(line), from:from, to:to, target_min:target, co_type:coType
+    }, 'info', ['production_supervisor','compound_coordinator','preweigh_operator','production_coordinator','qc_team']);
+  } catch(e){}
+  closeStart();
+  renderAll();
+  toast('Changeover started — timer running');
+}
+
+function toggleTask(coId, taskId){
+  var co = getAll().find(function(x){ return x.id===coId; });
+  if(!co) return;
+  var t = co.tasks.find(function(x){ return x.id===taskId; });
+  if(!t) return;
+  t.done = !t.done;
+  t.done_at = t.done ? new Date().toISOString() : null;
+  upsert(co);
+  renderAll();
+}
+
+function completeChangeover(coId){
+  var co = getAll().find(function(x){ return x.id===coId; });
+  if(!co) return;
+  var now = new Date();
+  co.completed_at = now.toISOString();
+  co.actual_min = Math.round((now - new Date(co.started_at))/60000*10)/10;
+  if(co.actual_min > co.target_min){
+    var r = prompt('Changeover ran '+(co.actual_min - co.target_min).toFixed(1)+'m OVER target. Reason?', '');
+    co.overrun_reason = r || '';
+  }
+  upsert(co);
+  try {
+    var sev = co.actual_min > co.target_min*1.25 ? 'critical' : co.actual_min > co.target_min ? 'warning' : 'info';
+    var ev  = co.actual_min > co.target_min ? 'changeover_overrun' : 'changeover_complete';
+    HOC_EVENTS && HOC_EVENTS.fire(ev, {
+      batch:'Line '+co.line+' CO['+co.co_type+'m]', source:'changeover_dashboard',
+      message:'CO['+co.co_type+'m] '+co.from+' → '+co.to+' done in '+co.actual_min+'m (target '+co.target_min+')'+(co.overrun_reason?' · '+co.overrun_reason:''),
+      line:co.line, actual_min:co.actual_min, target_min:co.target_min,
+      overrun_reason:co.overrun_reason, co_type:co.co_type
+    }, sev, ['production_supervisor','leadership','continuous_improvement','maintenance']);
+  } catch(e){}
+  renderAll();
+  toast('Changeover completed: '+co.actual_min+'m');
+}
+
+function cancelChangeover(coId){
+  if(!confirm('Cancel this changeover? It will be removed from history.')) return;
+  setAll(getAll().filter(function(x){ return x.id !== coId; }));
+  renderAll();
+}
+
+function renderYTDBanner(){
+  var data = getCOData();
+  var el = document.getElementById('ytd-banner');
+  if(!data || !data.ytd_main || !data.ytd_main.length){
+    el.innerHTML = '<div class="alert-banner warn"><div style="font-size:18px">📥</div><div><div style="font-weight:700">No Patch OEE data uploaded</div><div style="color:var(--text3);font-size:10px">Upload the Changeover Tracker via Data Upload Hub to see YTD performance, trends, and verdicts.</div></div></div>';
+    return;
+  }
+  var main = data.ytd_main || [];
+  var comp = data.ytd_component || [];
+  var allLines = main.concat(comp);
+  var avgMainOEE = main.length ? main.reduce(function(s,l){return s+(l.oee||0);},0)/main.length : 0;
+  var avgCompOEE = comp.length ? comp.reduce(function(s,l){return s+(l.oee||0);},0)/comp.length : 0;
+  var atTarget = allLines.filter(function(l){ return (l.oee||0) >= 60; }).length;
+  var totalEvents = allLines.reduce(function(s,l){ return s+(l.co10_events||0)+(l.co60_events||0)+(l.co90_events||0); }, 0);
+  var deteriorating = 0, improving = 0;
+  if(data.verdicts){
+    Object.values(data.verdicts).forEach(function(v){
+      var vd = String(v.verdict||'').toLowerCase();
+      if(vd.indexOf('deter')>=0) deteriorating++;
+      if(vd.indexOf('improv')>=0) improving++;
+    });
+  }
+  var bannerClass = deteriorating > improving ? '' : (improving > deteriorating ? 'good' : 'warn');
+  var headline = deteriorating > improving
+    ? deteriorating+' line(s) deteriorating · '+improving+' improving'
+    : (improving > deteriorating ? improving+' line(s) improving · '+deteriorating+' deteriorating' : 'Mixed performance — no clear plant trend');
+  el.innerHTML = '<div class="alert-banner '+bannerClass+'">' +
+    '<div style="font-size:18px">📊</div>' +
+    '<div style="flex:1">' +
+      '<div style="font-weight:700">Plant-Wide YTD · '+headline+'</div>' +
+      '<div style="color:var(--text3);font-size:10px;margin-top:2px">' +
+        'Main avg OEE '+pct(avgMainOEE,1)+' · Component avg '+pct(avgCompOEE,1)+' · '+atTarget+'/'+allLines.length+' lines at 60% target · '+totalEvents+' CO events tracked' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function renderKPIs(){
+  var data = getCOData();
+  var live = getAll();
+  var autos = getAutoChangeovers();
+  var active = live.filter(function(c){ return !c.completed_at; });
+  var todayStr = new Date().toISOString().slice(0,10);
+
+  // ── Auto-detect counts ──
+  var autoToday = autos.filter(function(co){ return co.scheduled_date === todayStr; }).length;
+  var autoCompleted = autos.filter(function(co){ return co.inferred_status === 'completed'; });
+  var autoOverruns = autoCompleted.filter(function(co){ return co.inferred_actual_min > co.target_min; }).length;
+  var autoOverrunPct = autoCompleted.length ? Math.round(autoOverruns/autoCompleted.length*100) : 0;
+  var autoInProgress = autos.filter(function(co){ return co.inferred_status === 'in_progress'; }).length;
+
+  // ── Patch YTD ──
+  var totalEvents=0, totalLossSum=0, lineCount=0, worstLine=null, worstLoss=0;
+  if(data && data.ytd_main){
+    var allLines = (data.ytd_main||[]).concat(data.ytd_component||[]);
+    allLines.forEach(function(l){
+      totalEvents += (l.co10_events||0)+(l.co60_events||0)+(l.co90_events||0);
+      if(l.total_loss != null){ totalLossSum += l.total_loss; lineCount++; }
+      if((l.total_loss||0) > worstLoss){ worstLoss = l.total_loss; worstLine = l.line; }
+    });
+  }
+  var avgCOLoss = lineCount ? Math.round(totalLossSum/lineCount*10)/10 : 0;
+
+  document.getElementById('kpi-grid').innerHTML = [
+    {l:'Detected Today',  v:autoToday,              s:'From schedule',                c:autoToday?'var(--blue)':'var(--text3)'},
+    {l:'In Progress',     v:autoInProgress+active.length, s:'Auto + manual',         c:(autoInProgress+active.length)?'var(--amber)':'var(--text3)'},
+    {l:'Auto Overrun %',  v:autoOverrunPct+'%',     s:autoOverruns+'/'+autoCompleted.length+' over target', c:autoOverrunPct>=30?'var(--red)':autoOverrunPct>=15?'var(--amber)':'var(--green)'},
+    {l:'YTD Events (Patch)', v:N(totalEvents),      s:'Patch upload',                 c:'var(--blue)'},
+    {l:'YTD Avg CO Loss', v:avgCOLoss+'%',          s:'Across '+lineCount+' lines',   c:avgCOLoss>=10?'var(--red)':avgCOLoss>=5?'var(--amber)':'var(--green)'},
+    {l:'Worst Line',      v:worstLine?'L'+worstLine:'—', s:worstLine?worstLoss+'% CO loss':'—', c:worstLine?'var(--red)':'var(--text3)'}
+  ].map(function(k){ return '<div class="kpi"><div class="kl">'+k.l+'</div><div class="kv" style="color:'+k.c+'">'+k.v+'</div><div class="ks">'+k.s+'</div></div>'; }).join('');
+
+  document.getElementById('badges').innerHTML =
+    (autoInProgress?'<span class="badge b-amb">'+autoInProgress+' AUTO IN PROGRESS</span>':'')+
+    (active.length?'<span class="badge b-blu">'+active.length+' MANUAL</span>':'')+
+    (autos.length?'<span class="badge b-grn">'+autos.length+' AUTO-DETECTED</span>':'<span class="badge b-red">No schedule</span>')+
+    (data ? '<span class="badge b-blu">Patch loaded</span>':'');
+}
+
+function renderActive(){
+  var active = getAll().filter(function(c){ return !c.completed_at; });
+  var count = document.getElementById('active-count');
+  var el = document.getElementById('active-list');
+  if(!active.length){
+    count.textContent = '— none in progress —';
+    el.innerHTML = '<div class="empty">No manually-tracked changeovers in progress. Auto-detected changeovers show on the Command Center above. Hit "+ Start SMED Kaizen" to track an event in detail.</div>';
+    return;
+  }
+  count.textContent = '('+active.length+' running)';
+  el.innerHTML = active.map(function(co){
+    var elapsed_ms = Date.now() - new Date(co.started_at).getTime();
+    var elapsed_min = elapsed_ms/60000;
+    var pctv = (elapsed_min / co.target_min) * 100;
+    var timerCls = pctv > 100 ? 'over' : pctv > 80 ? 'warn' : '';
+    var readiness = computeReadiness(co);
+    var intTasks = co.tasks.filter(function(t){ return t.type==='int'; });
+    var extTasks = co.tasks.filter(function(t){ return t.type==='ext'; });
+    var intDone = intTasks.filter(function(t){ return t.done; }).length;
+    var extDone = extTasks.filter(function(t){ return t.done; }).length;
+    return '<div class="live-card">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">' +
+        '<div>' +
+          '<div style="font-size:14px;font-weight:700;color:var(--amber)">Line '+co.line+' · CO['+(co.co_type||'?')+'m] · '+co.from+' → '+co.to+'</div>' +
+          '<div style="font-size:10px;color:var(--text3);margin-top:2px">Started '+fmtDate(co.started_at)+' · Crew: '+(co.crew_lead||'—')+' · '+co.reason.replace(/_/g,' ')+'</div>' +
+        '</div>' +
+        '<div style="text-align:right">' +
+          '<div class="live-timer '+timerCls+'" data-started="'+co.started_at+'" data-target="'+co.target_min+'">'+fmtTime(elapsed_ms)+'</div>' +
+          '<div style="font-size:10px;color:var(--text3)">target '+co.target_min+'m '+(pctv>100?'· <span style="color:var(--red);font-weight:700">+'+(elapsed_min-co.target_min).toFixed(1)+'m OVER</span>':'')+'</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="ready-grid">' + readiness.map(function(r){
+        return '<div class="ready-pill '+r.status+'"><div class="ready-dot '+r.status+'"></div><div><div style="font-size:9px;font-weight:700;color:var(--text2);text-transform:uppercase">'+r.role+'</div><div style="font-size:10px;font-weight:600;color:var(--text)">'+r.label+'</div></div></div>';
+      }).join('') + '</div>' +
+      '<div class="smed-cols">' +
+        '<div class="smed-col"><div class="smed-title int">⛔ INTERNAL ('+intDone+'/'+intTasks.length+')</div>' +
+          intTasks.map(function(t){ return '<div class="task '+(t.done?'done':'')+'" onclick="toggleTask(\''+co.id+'\',\''+t.id+'\')"><input type="checkbox" '+(t.done?'checked':'')+'><span>'+t.label+'</span></div>'; }).join('') +
+        '</div>' +
+        '<div class="smed-col"><div class="smed-title ext">✓ EXTERNAL ('+extDone+'/'+extTasks.length+')</div>' +
+          extTasks.map(function(t){ return '<div class="task '+(t.done?'done':'')+'" onclick="toggleTask(\''+co.id+'\',\''+t.id+'\')"><input type="checkbox" '+(t.done?'checked':'')+'><span>'+t.label+'</span></div>'; }).join('') +
+        '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;margin-top:10px">' +
+        '<button class="btn btn-g" onclick="completeChangeover(\''+co.id+'\')">✓ Complete Changeover</button>' +
+        '<button class="btn" onclick="cancelChangeover(\''+co.id+'\')">Cancel</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function computeReadiness(co){
+  var out = [];
+  try {
+    var sync = JSON.parse(localStorage.getItem('hoc_sync_v1')||'{}');
+    var ccReady = Object.values(sync).some(function(s){ return s.cc && String(s.cc.status||'').toLowerCase().indexOf('verified')>=0; });
+    out.push({role:'Compound', label: ccReady?'Verified':'Not verified', status: ccReady?'ok':'unk'});
+  } catch(e){ out.push({role:'Compound', label:'Unknown', status:'unk'}); }
+  try {
+    var pw = JSON.parse(localStorage.getItem('hoc_pw_v1')||'{}');
+    out.push({role:'Pre-Weigh', label: Object.keys(pw).length?'Staged':'Not staged', status: Object.keys(pw).length?'ok':'unk'});
+  } catch(e){ out.push({role:'Pre-Weigh', label:'Unknown', status:'unk'}); }
+  out.push({role:'QC First-Piece', label:'Pending first sample', status:'unk'});
+  out.push({role:'Components', label:'Manual check', status:'unk'});
+  try {
+    var ls = JSON.parse(localStorage.getItem('hoc_line_status')||'{}');
+    var thisLine = (ls.lines||{})[co.line];
+    if(thisLine) out.push({role:'Line '+co.line, label: thisLine.signal||'Unknown', status: thisLine.signal && thisLine.signal.indexOf('CRITICAL')<0?'ok':'no'});
+  } catch(e){}
+  return out;
+}
+
+function renderWorst(){
+  var data = getCOData();
+  var el = document.getElementById('worst-list');
+  if(!data || !data.ytd_main){
+    el.innerHTML = '<div class="empty">No Patch data uploaded yet. Upload via Data Upload Hub.</div>';
+    return;
+  }
+  var all = (data.ytd_main || []).concat(data.ytd_component || []);
+  var top = all.filter(function(l){ return l.total_loss != null; }).sort(function(a,b){ return b.total_loss - a.total_loss; }).slice(0, 5);
+  if(!top.length){ el.innerHTML = '<div class="empty">No CO loss data found in upload</div>'; return; }
+  el.innerHTML = '<div class="tbl-wrap"><table>' +
+    '<thead><tr><th>Rank</th><th>Line</th><th>OEE</th><th>CO Loss</th><th>Biggest Driver</th><th>Verdict</th></tr></thead>' +
+    '<tbody>' + top.map(function(l, i){
+      var drivers = [
+        {k:'CO[10m]', v:l.co10_loss||0, ev:l.co10_events||0},
+        {k:'CO[60m]', v:l.co60_loss||0, ev:l.co60_events||0},
+        {k:'CO[90m]', v:l.co90_loss||0, ev:l.co90_events||0}
+      ];
+      drivers.sort(function(a,b){ return b.v - a.v; });
+      var biggest = drivers[0];
+      var verdict = data.verdicts && data.verdicts[l.line] ? data.verdicts[l.line].verdict : (l.status||'—');
+      var vcls = String(verdict).toLowerCase().indexOf('deter')>=0 ? 'v-deteriorating'
+              : String(verdict).toLowerCase().indexOf('improv')>=0 ? 'v-improving'
+              : String(verdict).toLowerCase().indexOf('volat')>=0 ? 'v-volatile'
+              : 'v-stable';
+      return '<tr>' +
+        '<td style="font-weight:700;color:var(--red)">#'+(i+1)+'</td>' +
+        '<td style="font-weight:700;color:var(--amber)">L'+l.line+'</td>' +
+        '<td>'+pct(l.oee,1)+'</td>' +
+        '<td><span class="score-cell '+classifyLoss(l.total_loss)+'">'+pct(l.total_loss,1)+'</span></td>' +
+        '<td>'+biggest.k+' · '+biggest.ev+' events · '+pct(biggest.v,1)+' loss</td>' +
+        '<td><span class="verdict-pill '+vcls+'">'+verdict+'</span></td>' +
+      '</tr>';
+    }).join('') + '</tbody></table></div>';
+}
+
+function renderScorecard(){
+  var data = getCOData();
+  var bodyMain = document.getElementById('main-tbody');
+  var bodyComp = document.getElementById('comp-tbody');
+  if(!data || !data.ytd_main){
+    bodyMain.innerHTML = '<tr><td colspan="11" class="empty">Upload Changeover Tracker via Data Upload Hub</td></tr>';
+    bodyComp.innerHTML = '<tr><td colspan="10" class="empty">Upload Changeover Tracker via Data Upload Hub</td></tr>';
+    return;
+  }
+  function rowFor(l, withVerdict){
+    var verdict = withVerdict && data.verdicts && data.verdicts[l.line] ? data.verdicts[l.line].verdict : '';
+    var vcls = String(verdict).toLowerCase().indexOf('deter')>=0 ? 'v-deteriorating'
+            : String(verdict).toLowerCase().indexOf('improv')>=0 ? 'v-improving'
+            : String(verdict).toLowerCase().indexOf('volat')>=0 ? 'v-volatile'
+            : 'v-stable';
+    var statusCls = (l.status||'').toLowerCase().indexOf('high')>=0 ? 'b-red'
+                  : (l.status||'').toLowerCase().indexOf('monit')>=0 ? 'b-amb'
+                  : (l.status||'').toLowerCase().indexOf('track')>=0 ? 'b-grn'
+                  : 'b-blu';
+    return '<tr>' +
+      '<td style="font-weight:700;color:var(--amber)">Line '+l.line+'</td>' +
+      '<td style="text-align:right;font-weight:700">'+pct(l.oee,1)+'</td>' +
+      '<td style="text-align:right">'+(l.co10_events||'—')+'</td>' +
+      '<td style="text-align:right"><span class="score-cell '+classifyLoss(l.co10_loss)+'">'+pct(l.co10_loss,1)+'</span></td>' +
+      '<td style="text-align:right">'+(l.co60_events||'—')+'</td>' +
+      '<td style="text-align:right"><span class="score-cell '+classifyLoss(l.co60_loss)+'">'+pct(l.co60_loss,1)+'</span></td>' +
+      '<td style="text-align:right">'+(l.co90_events||'—')+'</td>' +
+      '<td style="text-align:right"><span class="score-cell '+classifyLoss(l.co90_loss)+'">'+pct(l.co90_loss,1)+'</span></td>' +
+      '<td style="text-align:right"><span class="score-cell '+classifyLoss(l.total_loss)+'">'+pct(l.total_loss,1)+'</span></td>' +
+      '<td><span class="badge '+statusCls+'">'+(l.status||'—')+'</span></td>' +
+      (withVerdict ? '<td>'+(verdict?'<span class="verdict-pill '+vcls+'">'+verdict+'</span>':'—')+'</td>' : '') +
+    '</tr>';
+  }
+  bodyMain.innerHTML = (data.ytd_main||[]).map(function(l){ return rowFor(l, true); }).join('') || '<tr><td colspan="11" class="empty">No main lines</td></tr>';
+  bodyComp.innerHTML = (data.ytd_component||[]).map(function(l){ return rowFor(l, false); }).join('') || '<tr><td colspan="10" class="empty">No component lines</td></tr>';
+}
+
+function renderTrends(){
+  var data = getCOData();
+  var totalsEl = document.getElementById('trends-totals');
+  var stackedEl = document.getElementById('trends-stacked');
+  if(!data || !data.monthly || !data.months || !data.months.length){
+    totalsEl.innerHTML = '<div class="empty">Upload Changeover Tracker via Data Upload Hub to see trends</div>';
+    stackedEl.innerHTML = '';
+    return;
+  }
+  var months = data.months;
+  var lines = Object.keys(data.monthly).map(Number).sort(function(a,b){return a-b;});
+
+  totalsEl.innerHTML = '<div class="tbl-wrap"><table>' +
+    '<thead><tr><th>Line</th>' + months.map(function(m){ return '<th style="text-align:right">'+m+'</th>'; }).join('') + '<th style="text-align:right">Trend</th></tr></thead>' +
+    '<tbody>' + lines.map(function(ln){
+      var totals = data.monthly[ln].total || {};
+      var vals = months.map(function(m){ return totals[m] != null ? totals[m] : null; });
+      var firstV = vals.find(function(v){ return v != null; });
+      var lastV = null;
+      for(var i=vals.length-1; i>=0; i--){ if(vals[i] != null){ lastV = vals[i]; break; } }
+      var trendArrow = '—';
+      if(firstV != null && lastV != null){
+        var delta = lastV - firstV;
+        trendArrow = delta > 1 ? '<span style="color:var(--red);font-weight:700">↑ '+delta.toFixed(1)+'pp</span>'
+                  : delta < -1 ? '<span style="color:var(--green);font-weight:700">↓ '+Math.abs(delta).toFixed(1)+'pp</span>'
+                  : '<span style="color:var(--text3)">≈ stable</span>';
+      }
+      return '<tr>' +
+        '<td style="font-weight:700;color:var(--amber)">Line '+ln+'</td>' +
+        vals.map(function(v){ return '<td style="text-align:right"><span class="score-cell '+classifyLoss(v)+'">'+(v!=null?v.toFixed(1)+'%':'—')+'</span></td>'; }).join('') +
+        '<td style="text-align:right">'+trendArrow+'</td>' +
+      '</tr>';
+    }).join('') + '</tbody></table></div>';
+
+  stackedEl.innerHTML = lines.map(function(ln){
+    var lineData = data.monthly[ln];
+    return '<div style="margin-bottom:14px">' +
+      '<div style="font-size:11px;font-weight:700;color:var(--amber);margin-bottom:6px">Line '+ln+'</div>' +
+      months.map(function(m){
+        var v10 = (lineData.co10||{})[m] || 0;
+        var v60 = (lineData.co60||{})[m] || 0;
+        var v90 = (lineData.co90||{})[m] || 0;
+        var total = v10+v60+v90;
+        var maxScale = 25;
+        var w10 = Math.min(100, v10/maxScale*100);
+        var w60 = Math.min(100, v60/maxScale*100);
+        var w90 = Math.min(100, v90/maxScale*100);
+        return '<div class="bar-row">' +
+          '<span class="bar-label">'+m.replace(' 2026','')+'</span>' +
+          '<div class="bar-track">' +
+            (v10>0?'<div class="bar-seg" style="background:#fbbf24;width:'+w10+'%" title="CO[10m]: '+v10+'%">'+(w10>8?v10.toFixed(1):'')+'</div>':'') +
+            (v60>0?'<div class="bar-seg" style="background:#f59e0b;width:'+w60+'%" title="CO[60m]: '+v60+'%">'+(w60>8?v60.toFixed(1):'')+'</div>':'') +
+            (v90>0?'<div class="bar-seg" style="background:#dc2626;width:'+w90+'%" title="CO[90m]: '+v90+'%">'+(w90>8?v90.toFixed(1):'')+'</div>':'') +
+          '</div>' +
+          '<span style="min-width:48px;text-align:right;font-weight:700;color:'+(total<=5?'var(--green)':total<=10?'var(--amber)':'var(--red)')+'">'+total.toFixed(1)+'%</span>' +
+        '</div>';
+      }).join('') +
+    '</div>';
+  }).join('') +
+  '<div style="display:flex;gap:14px;margin-top:8px;font-size:10px;color:var(--text3)">' +
+    '<span><span style="display:inline-block;width:10px;height:10px;background:#fbbf24;vertical-align:middle;margin-right:4px"></span>CO[10m] Short</span>' +
+    '<span><span style="display:inline-block;width:10px;height:10px;background:#f59e0b;vertical-align:middle;margin-right:4px"></span>CO[60m] Medium</span>' +
+    '<span><span style="display:inline-block;width:10px;height:10px;background:#dc2626;vertical-align:middle;margin-right:4px"></span>CO[90m] Full</span>' +
+  '</div>';
+}
+
+function renderUpcoming(){
+  var el = document.getElementById('upcoming-list');
+  try {
+    var raw = localStorage.getItem('hoc_upload_v1');
+    if(!raw){ el.innerHTML = '<div class="empty">No schedule loaded. Upload Production Tracker in Data Upload Hub.</div>'; return; }
+    var up = JSON.parse(raw);
+    var batches = (up && up.batches) ? up.batches : [];
+    var todayStr = new Date().toISOString().slice(0,10);
+    var tomorrowStr = new Date(Date.now()+86400000).toISOString().slice(0,10);
+    var byLine = {};
+    batches.forEach(function(b){
+      if(!b.line || !b.date) return;
+      if(b.date < todayStr || b.date > tomorrowStr) return;
+      if(!byLine[b.line]) byLine[b.line] = [];
+      byLine[b.line].push(b);
+    });
+    var transitions = [];
+    Object.keys(byLine).forEach(function(line){
+      var lb = byLine[line].sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+      for(var i=1; i<lb.length; i++){
+        var prev = lb[i-1], curr = lb[i];
+        if((prev.formula||prev.item) !== (curr.formula||curr.item)){
+          transitions.push({ line:line, date:curr.date, from:prev.desc||prev.item||'?', to:curr.desc||curr.item||'?' });
+        }
+      }
+    });
+    if(!transitions.length){ el.innerHTML = '<div class="empty">No product changes detected in next 24h. ✓</div>'; return; }
+    el.innerHTML = '<div class="tbl-wrap"><table>' +
+      '<thead><tr><th>When</th><th>Line</th><th>From</th><th>To</th><th>Action</th></tr></thead>' +
+      '<tbody>' + transitions.map(function(t){
+        return '<tr>' +
+          '<td>'+fmtDateShort(t.date)+'</td>' +
+          '<td style="font-weight:700;color:var(--amber)">L'+t.line+'</td>' +
+          '<td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+t.from+'</td>' +
+          '<td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+t.to+'</td>' +
+          '<td><button class="btn btn-a" onclick="prefillStart('+t.line+',\''+String(t.from).replace(/'/g,"\\'")+'\',\''+String(t.to).replace(/'/g,"\\'")+'\')">Prep</button></td>' +
+        '</tr>';
+      }).join('') + '</tbody></table></div>';
+  } catch(e){ el.innerHTML = '<div class="empty">Error: '+e.message+'</div>'; }
+}
+
+function prefillStart(line, from, to){
+  openStart();
+  document.getElementById('s-line').value = line;
+  document.getElementById('s-from').value = from;
+  document.getElementById('s-to').value = to;
+}
+
+function renderHistory(){
+  var all = getAll().filter(function(c){ return c.completed_at; }).sort(function(a,b){
+    return (b.completed_at||'').localeCompare(a.completed_at||'');
+  });
+  document.getElementById('history-count').textContent = '('+all.length+' total)';
+  if(!all.length){
+    document.getElementById('history-tbody').innerHTML = '<tr><td colspan="9" class="empty">No live-tracked changeovers yet</td></tr>';
+    return;
+  }
+  document.getElementById('history-tbody').innerHTML = all.slice(0,100).map(function(c){
+    var delta = c.actual_min - c.target_min;
+    var deltaColor = delta<=0 ? 'var(--green)' : 'var(--red)';
+    var cls = c.actual_min > c.target_min*1.25 ? 'over' : c.actual_min > c.target_min ? 'warn' : '';
+    return '<tr class="'+cls+'">' +
+      '<td>'+fmtDate(c.completed_at)+'</td>' +
+      '<td style="font-weight:700;color:var(--amber)">L'+c.line+'</td>' +
+      '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+c.from+'</td>' +
+      '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+c.to+'</td>' +
+      '<td style="text-align:right">'+c.target_min+'m</td>' +
+      '<td style="text-align:right;font-weight:700">'+c.actual_min+'m</td>' +
+      '<td style="text-align:right;color:'+deltaColor+';font-weight:700">'+(delta>=0?'+':'')+delta.toFixed(1)+'m</td>' +
+      '<td>'+(c.crew_lead||'—')+'</td>' +
+      '<td style="font-size:9px;color:var(--text3);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(c.overrun_reason||'—')+'</td>' +
+    '</tr>';
+  }).join('');
+}
+
+function renderLibrary(){
+  var intT = STD_TASKS.filter(function(t){ return t.type==='int'; });
+  var extT = STD_TASKS.filter(function(t){ return t.type==='ext'; });
+  document.getElementById('lib-internal').innerHTML = intT.map(function(t){ return '<div class="task"><span style="color:var(--red);font-weight:700;margin-right:6px">●</span><span>'+t.label+'</span></div>'; }).join('');
+  document.getElementById('lib-external').innerHTML = extT.map(function(t){ return '<div class="task"><span style="color:var(--green);font-weight:700;margin-right:6px">●</span><span>'+t.label+'</span></div>'; }).join('');
+}
+
+// ═══ AUTO-DETECT RENDER FUNCTIONS ═══════════════════════════════════════
+function coTypeChip(co_type){
+  var col = co_type==='10'?'#fbbf24':co_type==='60'?'#f59e0b':'#dc2626';
+  return '<span style="background:'+col+'22;color:'+col+';border:1px solid '+col+'55;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:700">CO['+co_type+'m]</span>';
+}
+
+function statusChip(status){
+  if(status === 'completed') return '<span class="badge b-grn">DETECTED</span>';
+  if(status === 'in_progress') return '<span class="badge b-amb">IN PROGRESS</span>';
+  return '<span class="badge b-blu">SCHEDULED</span>';
+}
+
+function renderAutoCmdList(){
+  var el = document.getElementById('auto-cmd-list');
+  var count = document.getElementById('auto-cmd-count');
+  var autos = getAutoChangeovers();
+  if(!autos.length){
+    el.innerHTML = '<div class="empty">No auto-detected changeovers. Upload a Production Schedule via Data Upload Hub to start.</div>';
+    count.textContent = '— 0 in window —';
+    return;
+  }
+  // Show next 48h window: in_progress + scheduled within 48h + completed in last 24h
+  var now = Date.now();
+  var inWindow = autos.filter(function(co){
+    if(co.inferred_status === 'in_progress') return true;
+    if(co.inferred_status === 'completed') {
+      var dt = co.inferred_completed_at ? new Date(co.inferred_completed_at).getTime() : 0;
+      return (now - dt) < 24*3600*1000;
+    }
+    // scheduled in next 48h
+    if(co.scheduled_date) {
+      var sd = new Date(co.scheduled_date + 'T00:00:00').getTime();
+      return sd - now < 48*3600*1000 && sd - now > -24*3600*1000;
+    }
+    return false;
+  });
+  // Sort: in_progress first, then completed (most recent), then scheduled
+  inWindow.sort(function(a,b){
+    var sOrd = {in_progress:0, completed:1, scheduled:2};
+    var d = sOrd[a.inferred_status] - sOrd[b.inferred_status];
+    if(d !== 0) return d;
+    return (a.scheduled_date||'').localeCompare(b.scheduled_date||'');
+  });
+
+  count.textContent = '('+inWindow.length+' in 48h window)';
+  el.innerHTML = '<div class="tbl-wrap"><table>' +
+    '<thead><tr><th>When</th><th>Line</th><th>Type</th><th>From → To</th><th>Target</th><th>Actual</th><th>Status</th></tr></thead>' +
+    '<tbody>' + inWindow.slice(0,20).map(function(co){
+      var actualHtml = '—';
+      var cls = '';
+      if(co.inferred_actual_min != null){
+        var delta = co.inferred_actual_min - co.target_min;
+        var col = delta <= 0 ? 'var(--green)' : delta < co.target_min*0.25 ? 'var(--amber)' : 'var(--red)';
+        actualHtml = '<span style="color:'+col+';font-weight:700">'+co.inferred_actual_min+'m</span>' +
+                     '<span style="color:'+col+';font-size:9px;margin-left:4px">('+(delta>=0?'+':'')+delta.toFixed(1)+')</span>';
+        cls = delta > co.target_min*0.25 ? 'over' : delta > 0 ? 'warn' : '';
+      } else if(co.inferred_status === 'in_progress' && co.inferred_started_at){
+        var elapsed = (Date.now() - new Date(co.inferred_started_at).getTime())/60000;
+        actualHtml = '<span style="color:var(--amber);font-weight:700">'+elapsed.toFixed(1)+'m</span> <span style="color:var(--text3);font-size:9px">running</span>';
+      }
+      return '<tr class="'+cls+'">' +
+        '<td>'+fmtDateShort(co.scheduled_date)+'</td>' +
+        '<td style="font-weight:700;color:var(--amber)">L'+co.line+'</td>' +
+        '<td>'+coTypeChip(co.co_type)+'</td>' +
+        '<td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px">'+co.from+' → '+co.to+'</td>' +
+        '<td style="text-align:right">'+co.target_min+'m</td>' +
+        '<td style="text-align:right">'+actualHtml+'</td>' +
+        '<td>'+statusChip(co.inferred_status)+'</td>' +
+      '</tr>';
+    }).join('') + '</tbody></table></div>';
+}
+
+function renderAutoDetectPage(){
+  var autos = getAutoChangeovers();
+  var tbody = document.getElementById('auto-tbody');
+  var countEl = document.getElementById('auto-all-count');
+  var byLineEl = document.getElementById('auto-by-line');
+
+  if(!autos.length){
+    tbody.innerHTML = '<tr><td colspan="9" class="empty">No auto-detected changeovers yet. Upload a Production Schedule via Data Upload Hub.</td></tr>';
+    byLineEl.innerHTML = '<div class="empty">—</div>';
+    countEl.textContent = '— 0 detected —';
+    return;
+  }
+
+  countEl.textContent = '('+autos.length+' detected)';
+
+  // Sort by scheduled date desc so latest is first
+  var sorted = autos.slice().sort(function(a,b){
+    var ad = a.scheduled_date || '';
+    var bd = b.scheduled_date || '';
+    return bd.localeCompare(ad);
+  });
+
+  tbody.innerHTML = sorted.slice(0,200).map(function(co){
+    var actualHtml = '—';
+    var cls = '';
+    var deltaHtml = '—';
+    if(co.inferred_actual_min != null){
+      var delta = co.inferred_actual_min - co.target_min;
+      var col = delta <= 0 ? 'var(--green)' : delta < co.target_min*0.25 ? 'var(--amber)' : 'var(--red)';
+      actualHtml = '<span style="color:'+col+';font-weight:700">'+co.inferred_actual_min+'m</span>';
+      deltaHtml = '<span style="color:'+col+';font-weight:700">'+(delta>=0?'+':'')+delta.toFixed(1)+'m</span>';
+      cls = delta > co.target_min*0.25 ? 'over' : delta > 0 ? 'warn' : '';
+    } else if(co.inferred_status === 'in_progress'){
+      actualHtml = '<span style="color:var(--amber)">in progress</span>';
+    }
+    return '<tr class="'+cls+'">' +
+      '<td>'+fmtDateShort(co.scheduled_date)+'</td>' +
+      '<td style="font-weight:700;color:var(--amber)">L'+co.line+'</td>' +
+      '<td>'+coTypeChip(co.co_type)+'</td>' +
+      '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px">'+co.from+'</td>' +
+      '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px">'+co.to+'</td>' +
+      '<td style="text-align:right">'+co.target_min+'m</td>' +
+      '<td style="text-align:right">'+actualHtml+'</td>' +
+      '<td style="text-align:right">'+deltaHtml+'</td>' +
+      '<td>'+statusChip(co.inferred_status)+'</td>' +
+    '</tr>';
+  }).join('');
+
+  // ── By-line aggregation ──
+  var byLine = {};
+  autos.forEach(function(co){
+    if(!byLine[co.line]) byLine[co.line] = {line:co.line, total:0, co10:0, co60:0, co90:0, completed:0, overruns:0, total_actual:0, total_target:0};
+    byLine[co.line].total++;
+    if(co.co_type === '10') byLine[co.line].co10++;
+    if(co.co_type === '60') byLine[co.line].co60++;
+    if(co.co_type === '90') byLine[co.line].co90++;
+    if(co.inferred_actual_min != null){
+      byLine[co.line].completed++;
+      byLine[co.line].total_actual += co.inferred_actual_min;
+      byLine[co.line].total_target += co.target_min;
+      if(co.inferred_actual_min > co.target_min) byLine[co.line].overruns++;
+    }
+  });
+  var lineRows = Object.values(byLine).sort(function(a,b){ return b.total - a.total; });
+  byLineEl.innerHTML = '<div class="tbl-wrap"><table>' +
+    '<thead><tr><th>Line</th><th style="text-align:right">Total CO</th><th style="text-align:right">CO[10m]</th><th style="text-align:right">CO[60m]</th><th style="text-align:right">CO[90m]</th><th style="text-align:right">Completed</th><th style="text-align:right">Overruns</th><th style="text-align:right">Avg Actual</th><th style="text-align:right">Avg Target</th></tr></thead>' +
+    '<tbody>' + lineRows.map(function(l){
+      var avgA = l.completed ? (l.total_actual/l.completed).toFixed(1) : '—';
+      var avgT = l.completed ? (l.total_target/l.completed).toFixed(1) : '—';
+      var overrunPct = l.completed ? Math.round(l.overruns/l.completed*100) : 0;
+      var ovCol = overrunPct >= 40 ? 'var(--red)' : overrunPct >= 20 ? 'var(--amber)' : 'var(--green)';
+      return '<tr>' +
+        '<td style="font-weight:700;color:var(--amber)">Line '+l.line+'</td>' +
+        '<td style="text-align:right;font-weight:700">'+l.total+'</td>' +
+        '<td style="text-align:right">'+l.co10+'</td>' +
+        '<td style="text-align:right">'+l.co60+'</td>' +
+        '<td style="text-align:right">'+l.co90+'</td>' +
+        '<td style="text-align:right">'+l.completed+'</td>' +
+        '<td style="text-align:right;color:'+ovCol+';font-weight:700">'+l.overruns+(l.completed?' ('+overrunPct+'%)':'')+'</td>' +
+        '<td style="text-align:right">'+avgA+'m</td>' +
+        '<td style="text-align:right;color:var(--text3)">'+avgT+'m</td>' +
+      '</tr>';
+    }).join('') + '</tbody></table></div>';
+}
+
+function renderAll(){
+  runAutoDetect(); // ← Run the auto-detect engine every render
+  renderYTDBanner();
+  renderKPIs();
+  renderActive();
+  renderAutoCmdList();
+  renderWorst();
+}
+
+setInterval(function(){
+  document.querySelectorAll('.live-timer[data-started]').forEach(function(el){
+    var startedAt = el.getAttribute('data-started');
+    var target = parseInt(el.getAttribute('data-target')) || 60;
+    var elapsed_ms = Date.now() - new Date(startedAt).getTime();
+    el.textContent = fmtTime(elapsed_ms);
+    var pctv = (elapsed_ms/60000 / target) * 100;
+    el.className = 'live-timer ' + (pctv > 100 ? 'over' : pctv > 80 ? 'warn' : '');
+  });
+}, 1000);
+
+setInterval(renderAll, 30000);
+
+window.addEventListener('storage', function(e){
+  if(e.key === STORAGE_KEY || e.key === CO_DATA_KEY || e.key === 'hoc_upload_v1' || e.key === 'hoc_sync_v1' || e.key === 'hoc_line_status'){
+    renderAll();
+  }
+});
+
+renderAll();
+
+(function(){
+  var params = new URLSearchParams(location.search);
+  if(params.get('start') === '1'){ setTimeout(openStart, 200); }
+})();
+</script>
+
+<script src="hoc_events.js"></script>
+</body>
+</html>

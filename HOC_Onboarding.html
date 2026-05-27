@@ -1,0 +1,1603 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HOC OES — Onboarding & Operations</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B0E17">
+<style>
+:root{
+  --bg:#0B0E17; --bg2:#121826; --bg3:#1a2233; --border:#1f2937;
+  --text:#E5E7EB; --text2:#9CA3AF; --text3:#6B7280;
+  --blue:#3B82F6; --green:#10B981; --amber:#F59E0B; --red:#EF4444;
+  --purple:#8B5CF6; --pink:#EC4899; --teal:#14B8A6;
+  --gray-l:#2a3447;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font:14px/1.55 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
+a{color:var(--blue);text-decoration:none}
+button{font:inherit;cursor:pointer}
+
+/* Header */
+.top{background:linear-gradient(180deg,#0F1623 0,var(--bg) 100%);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-mark{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#3B82F6,#8B5CF6);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:14px}
+.brand-name{font-weight:700;font-size:15px;letter-spacing:.02em}
+.brand-sub{font-size:10px;color:var(--text3);margin-top:1px}
+.top-nav{display:flex;gap:6px}
+.top-nav a{padding:6px 14px;border-radius:6px;font-size:11px;color:var(--text2);border:1px solid transparent;transition:all .15s}
+.top-nav a:hover{background:rgba(255,255,255,.04);color:var(--text);border-color:var(--border)}
+.top-nav .home{background:rgba(59,130,246,.1);color:#60A5FA;border-color:rgba(59,130,246,.3)}
+
+/* Main layout */
+.main{display:grid;grid-template-columns:280px 1fr;min-height:calc(100vh - 70px)}
+.sidebar{background:#0d1320;border-right:1px solid var(--border);padding:18px 14px;overflow-y:auto}
+.content{padding:24px 32px;overflow-y:auto;max-height:calc(100vh - 70px)}
+
+/* Sidebar nav */
+.nav-title{font-size:9px;letter-spacing:.12em;color:var(--text3);font-weight:700;text-transform:uppercase;padding:4px 12px 8px;margin-top:10px}
+.nav-title:first-child{margin-top:0}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;font-size:12px;color:var(--text2);cursor:pointer;transition:all .12s;margin-bottom:2px;border:1px solid transparent;position:relative}
+.nav-item:hover{background:rgba(255,255,255,.03);color:var(--text)}
+.nav-item.active{background:rgba(59,130,246,.12);color:#60A5FA;border-color:rgba(59,130,246,.25)}
+.nav-item .ic{width:22px;text-align:center;font-size:14px;opacity:.85}
+.nav-item .lab{flex:1}
+.nav-item .badge{font-size:9px;background:rgba(245,158,11,.15);color:#F59E0B;padding:1px 6px;border-radius:8px;font-weight:700}
+.nav-item.completed::after{content:"✓";color:var(--green);font-size:11px;font-weight:700;margin-left:6px}
+
+/* Content sections */
+.section{display:none;animation:fadein .25s ease}
+.section.active{display:block}
+@keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+.h1{font-size:24px;font-weight:700;letter-spacing:-.01em;margin-bottom:6px}
+.h1-sub{font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.6}
+.h2{font-size:16px;font-weight:700;margin:24px 0 10px;letter-spacing:.01em}
+.h3{font-size:13px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;margin:18px 0 8px}
+p{margin-bottom:10px;color:var(--text2);line-height:1.7}
+strong{color:var(--text);font-weight:600}
+
+/* Step card */
+.step{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin-bottom:14px;display:flex;gap:16px;align-items:flex-start}
+.step-num{flex-shrink:0;width:32px;height:32px;border-radius:50%;background:rgba(59,130,246,.15);color:#60A5FA;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;border:1px solid rgba(59,130,246,.3)}
+.step-body{flex:1}
+.step-title{font-weight:700;font-size:14px;margin-bottom:6px;color:var(--text)}
+.step-desc{font-size:12.5px;color:var(--text2);line-height:1.65}
+.step-desc code{background:rgba(255,255,255,.06);padding:1px 6px;border-radius:4px;font-size:11px;color:#A78BFA;font-family:'SF Mono',Menlo,monospace}
+
+/* Cards */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin-bottom:12px}
+.callout{border-left:3px solid var(--blue);background:rgba(59,130,246,.06);padding:12px 16px;border-radius:6px;margin:12px 0;font-size:12.5px;color:var(--text2);line-height:1.65}
+.callout.warn{border-color:var(--amber);background:rgba(245,158,11,.06)}
+.callout.crit{border-color:var(--red);background:rgba(239,68,68,.06)}
+.callout.good{border-color:var(--green);background:rgba(16,185,129,.06)}
+.callout strong{display:block;color:var(--text);font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
+
+/* Quick links grid */
+.quick-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:14px 0}
+.quick-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;transition:all .15s;cursor:pointer}
+.quick-card:hover{transform:translateY(-2px);border-color:rgba(59,130,246,.5);background:#1a2233}
+.quick-card .qct{font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px}
+.quick-card .qcd{font-size:11px;color:var(--text2);line-height:1.5}
+
+/* Role cards */
+.role-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:16px 0}
+.role-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:18px 20px;text-decoration:none;color:var(--text);display:block;transition:all .15s}
+.role-card:hover{transform:translateY(-2px);border-color:var(--blue);background:#1a2233}
+.role-card .rl{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.role-card .rt{font-size:15px;font-weight:700;margin-bottom:6px}
+.role-card .rd{font-size:12px;color:var(--text2);line-height:1.5}
+.role-card.purple .rl{color:#A78BFA}
+.role-card.amber .rl{color:#F59E0B}
+.role-card.blue .rl{color:#60A5FA}
+.role-card.green .rl{color:#4ADE80}
+.role-card.teal .rl{color:#5EEAD4}
+.role-card.pink .rl{color:#F472B6}
+
+/* Table */
+.tbl{width:100%;border-collapse:collapse;margin:12px 0;background:var(--bg2);border-radius:8px;overflow:hidden}
+.tbl th{background:#0F1623;color:var(--text3);font-size:10px;letter-spacing:.08em;text-transform:uppercase;text-align:left;padding:10px 14px;border-bottom:1px solid var(--border);font-weight:700}
+.tbl td{padding:10px 14px;border-bottom:1px solid var(--border);font-size:12.5px;color:var(--text2);line-height:1.55}
+.tbl tr:last-child td{border-bottom:none}
+.tbl strong{color:var(--text)}
+
+/* Glossary */
+.gl{display:flex;gap:14px;padding:10px 16px;border-bottom:1px solid var(--border)}
+.gl:last-child{border-bottom:none}
+.gl-term{flex-shrink:0;width:160px;font-weight:700;font-size:12.5px;color:#60A5FA}
+.gl-def{flex:1;font-size:12.5px;color:var(--text2);line-height:1.65}
+
+/* Buttons */
+.btn{background:var(--blue);color:white;border:none;padding:9px 18px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;display:inline-block;margin:4px 4px 4px 0;transition:all .15s}
+.btn:hover{background:#2563EB;transform:translateY(-1px)}
+.btn.secondary{background:rgba(255,255,255,.06);color:var(--text);border:1px solid var(--border)}
+.btn.secondary:hover{background:rgba(255,255,255,.1)}
+
+/* Progress */
+.progress-bar{background:#0F1623;border-radius:6px;height:8px;overflow:hidden;margin:12px 0 18px;border:1px solid var(--border)}
+.progress-fill{background:linear-gradient(90deg,#3B82F6,#10B981);height:100%;transition:width .4s ease}
+
+/* Quiz */
+.quiz{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin:14px 0}
+.quiz-q{font-weight:700;font-size:13px;margin-bottom:10px}
+.quiz-opts{display:flex;flex-direction:column;gap:6px}
+.quiz-opt{background:#0F1623;border:1px solid var(--border);border-radius:6px;padding:9px 13px;font-size:12px;color:var(--text2);cursor:pointer;text-align:left;transition:all .12s}
+.quiz-opt:hover{background:#1a2233;border-color:var(--blue)}
+.quiz-opt.correct{background:rgba(16,185,129,.12);border-color:var(--green);color:#4ADE80}
+.quiz-opt.wrong{background:rgba(239,68,68,.12);border-color:var(--red);color:#FCA5A5}
+.quiz-feedback{margin-top:10px;font-size:11.5px;color:var(--text2);padding:8px 12px;border-radius:5px;display:none}
+.quiz-feedback.show{display:block}
+
+/* Footer ribbon */
+.footer-bar{margin-top:32px;padding-top:18px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;color:var(--text3);font-size:11px}
+
+/* Mobile */
+@media (max-width:780px){
+  .main{grid-template-columns:1fr}
+  .sidebar{position:fixed;left:-280px;top:70px;height:calc(100vh - 70px);width:280px;transition:left .25s;z-index:50}
+  .sidebar.open{left:0;box-shadow:6px 0 20px rgba(0,0,0,.4)}
+  .content{padding:18px 18px}
+  .mobile-toggle{display:block !important}
+}
+.mobile-toggle{display:none;background:none;border:1px solid var(--border);color:var(--text);width:36px;height:36px;border-radius:6px;font-size:18px}
+</style>
+</head><body>
+
+<div class="top">
+  <div style="display:flex;align-items:center;gap:14px">
+    <button class="mobile-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+    <div class="brand">
+      <div class="brand-mark">📚</div>
+      <div>
+        <div class="brand-name">HOC OES — Onboarding</div>
+        <div class="brand-sub">Operations Engagement System · Learning Center</div>
+      </div>
+    </div>
+  </div>
+  <div class="top-nav">
+    <a href="index.html" class="home">← Back to Hub</a>
+    <a href="HOC_System_Diagnostics.html">Diagnostics</a>
+  </div>
+</div>
+
+<div class="main">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="nav-title">Getting Started</div>
+    <div class="nav-item active" data-target="welcome"><span class="ic">👋</span><span class="lab">Welcome</span></div>
+    <div class="nav-item" data-target="overview"><span class="ic">🗺️</span><span class="lab">System Overview</span></div>
+    <div class="nav-item" data-target="quickstart"><span class="ic">⚡</span><span class="lab">5-Min Quick Start</span></div>
+
+    <div class="nav-title">Role-Based Guides</div>
+    <div class="nav-item" data-target="role-planner"><span class="ic">📋</span><span class="lab">Planner / Scheduler</span></div>
+    <div class="nav-item" data-target="role-supervisor"><span class="ic">⚙️</span><span class="lab">Shift Supervisor</span></div>
+    <div class="nav-item" data-target="role-compound"><span class="ic">🧪</span><span class="lab">Compound Team</span></div>
+    <div class="nav-item" data-target="role-qc"><span class="ic">🔬</span><span class="lab">QC Team</span></div>
+    <div class="nav-item" data-target="role-fg"><span class="ic">📦</span><span class="lab">FG / Warehouse</span></div>
+    <div class="nav-item" data-target="role-leadership"><span class="ic">📊</span><span class="lab">Leadership</span></div>
+    <div class="nav-item" data-target="role-tank"><span class="ic">🏭</span><span class="lab">Compound Manager</span></div>
+    <div class="nav-item" data-target="role-sales"><span class="ic">💼</span><span class="lab">Sales / Account Mgmt</span></div>
+
+    <div class="nav-title">How-To Guides</div>
+    <div class="nav-item" data-target="howto-upload"><span class="ic">📤</span><span class="lab">Daily Upload</span></div>
+    <div class="nav-item" data-target="howto-install"><span class="ic">📱</span><span class="lab">Install on Tablet</span></div>
+    <div class="nav-item" data-target="howto-sync"><span class="ic">🔄</span><span class="lab">Cross-Device Sync</span></div>
+    <div class="nav-item" data-target="howto-troubleshoot"><span class="ic">🔧</span><span class="lab">Troubleshooting</span></div>
+
+    <div class="nav-title">Reference</div>
+    <div class="nav-item" data-target="glossary"><span class="ic">📖</span><span class="lab">Glossary</span></div>
+    <div class="nav-item" data-target="kpis"><span class="ic">📈</span><span class="lab">KPI Definitions</span></div>
+    <div class="nav-item" data-target="dataflow"><span class="ic">🌊</span><span class="lab">Data Flow Map</span></div>
+    <div class="nav-item" data-target="quiz"><span class="ic">🎓</span><span class="lab">Knowledge Check</span></div>
+  </aside>
+
+  <main class="content">
+
+<!-- ════════════════════ WELCOME ════════════════════ -->
+<div id="sec-welcome" class="section active">
+  <div class="h1">👋 Welcome to HOC OES</div>
+  <div class="h1-sub">The Operations Engagement System connects every team — compound, fill, QC, production, FG, warehouse — to live floor data through a single shared view.</div>
+
+  <div class="callout good">
+    <strong>What this guide does</strong>
+    Walks you through how HOC OES works for your specific role, with step-by-step instructions, real examples from the floor, and quick reference for daily operations. Most people are productive within 15 minutes.
+  </div>
+
+  <div class="h2">Pick your starting point</div>
+  <div class="role-grid">
+    <div class="role-card purple" onclick="go('role-planner')">
+      <div class="rl">📋 PLANNERS</div>
+      <div class="rt">Planner / Scheduler</div>
+      <div class="rd">Daily upload routine · Goal Source Data · forecasts</div>
+    </div>
+    <div class="role-card amber" onclick="go('role-supervisor')">
+      <div class="rl">⚙️ FLOOR LEADS</div>
+      <div class="rt">Shift Supervisor</div>
+      <div class="rd">Production Supervisor · live OEE · downtime logging</div>
+    </div>
+    <div class="role-card blue" onclick="go('role-compound')">
+      <div class="rl">🧪 COMPOUND</div>
+      <div class="rt">Compound Team</div>
+      <div class="rd">Compound Coordinator · batch verification · scheduling</div>
+    </div>
+    <div class="role-card green" onclick="go('role-qc')">
+      <div class="rl">🔬 QUALITY</div>
+      <div class="rt">QC Team</div>
+      <div class="rd">Quality Lab · pending tests · release decisions · holds</div>
+    </div>
+    <div class="role-card teal" onclick="go('role-fg')">
+      <div class="rl">📦 FG / WAREHOUSE</div>
+      <div class="rt">FG Reconciliation</div>
+      <div class="rd">FG Recon · warehouse movement · yield variance</div>
+    </div>
+    <div class="role-card pink" onclick="go('role-leadership')">
+      <div class="rl">📊 LEADERSHIP</div>
+      <div class="rt">Plant Leadership</div>
+      <div class="rd">Control Tower · KPI rollup · risk monitoring · trends</div>
+    </div>
+    <div class="role-card pink" onclick="go('role-tank')">
+      <div class="rl">🏭 COMPOUND MANAGER</div>
+      <div class="rt">Tank Assignment</div>
+      <div class="rd">Tank Board · batch-to-tank · CIP status · capacity</div>
+    </div>
+    <div class="role-card amber" onclick="go('role-prodcoord')">
+      <div class="rl">📋 PROD COORDINATOR</div>
+      <div class="rt">Production Coordinator</div>
+      <div class="rd">Component check · staging placards · alerts</div>
+    </div>
+    <div class="role-card pink" onclick="go('role-sales')">
+      <div class="rl">💼 SALES</div>
+      <div class="rt">Sales / Account Mgmt</div>
+      <div class="rd">Customer orders · fill rate · at-risk · ship pipeline</div>
+    </div>
+  </div>
+
+  <div class="h2">Or learn the basics first</div>
+  <div class="quick-grid">
+    <div class="quick-card" onclick="go('overview')">
+      <div class="qct">🗺️ System Overview</div>
+      <div class="qcd">What HOC OES is, what it isn't, how data flows</div>
+    </div>
+    <div class="quick-card" onclick="go('quickstart')">
+      <div class="qct">⚡ 5-Minute Quick Start</div>
+      <div class="qcd">From zero to your first dashboard in 5 minutes</div>
+    </div>
+    <div class="quick-card" onclick="go('howto-install')">
+      <div class="qct">📱 Install on Tablet</div>
+      <div class="qcd">PWA install · home screen · offline mode</div>
+    </div>
+    <div class="quick-card" onclick="go('quiz')">
+      <div class="qct">🎓 Knowledge Check</div>
+      <div class="qcd">Quick quiz to verify you've got the basics</div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>Need help during a shift?</strong>
+    Look for the <code>?</code> button in the bottom-right corner of any dashboard. Or open <a href="HOC_System_Diagnostics.html">System Diagnostics</a> to check if the issue is with the system or a specific tablet.
+  </div>
+</div>
+
+<!-- ════════════════════ OVERVIEW ════════════════════ -->
+<div id="sec-overview" class="section">
+  <div class="h1">🗺️ System Overview</div>
+  <div class="h1-sub">HOC OES is a connected dashboard system that gives every team — from compound to warehouse — a live view of what's happening on the floor.</div>
+
+  <div class="h2">What HOC OES is</div>
+  <p>It's a <strong>web-based operations system</strong> that runs on any tablet, phone, or computer with a browser. There's no software to install — you open a URL and you're in. Data flows between teams automatically: when the planner uploads tomorrow's schedule, every dashboard updates within seconds.</p>
+
+  <div class="h3">The core idea</div>
+  <p>Production data lives in <strong>one shared source of truth</strong> (the Supabase database). Every dashboard reads from it. Every action a user takes — marking a batch complete, flagging a quality issue, recording a changeover — writes back to it. Everyone sees the same numbers at the same time.</p>
+
+  <div class="h2">What HOC OES is NOT</div>
+  <table class="tbl">
+    <tr><th>Not...</th><th>Because...</th></tr>
+    <tr><td><strong>An ERP system</strong></td><td>It doesn't replace Vicinity, manage purchase orders, or do accounting</td></tr>
+    <tr><td><strong>A WMS</strong></td><td>It doesn't track every pallet location — FasTrak still does that</td></tr>
+    <tr><td><strong>The OEE source</strong></td><td>Patch OEE is still the official OEE system; HOC OES displays Patch data, doesn't replace it</td></tr>
+    <tr><td><strong>A replacement for the planner</strong></td><td>The planner still drives the schedule in Excel; HOC OES surfaces that schedule to the floor</td></tr>
+  </table>
+
+  <div class="h2">The data flow (top to bottom)</div>
+  <div class="card">
+    <p style="margin:0"><strong>Step 1 — Planner uploads.</strong> Every morning, the planner exports the Production Tracker from Excel and uploads it via the Data Upload Hub. This is the single source of truth for "what should run today."</p>
+  </div>
+  <div class="card">
+    <p style="margin:0"><strong>Step 2 — Floor teams see their work.</strong> Compound sees what to mix, pre-weigh sees what to stage, QC sees what to test, production sees what to fill. Each dashboard filters the shared schedule to that team's responsibility.</p>
+  </div>
+  <div class="card">
+    <p style="margin:0"><strong>Step 3 — Floor teams update status.</strong> Mark a batch as RUNNING, log a downtime, flag a quality hold, record a changeover. Each click writes to Supabase.</p>
+  </div>
+  <div class="card">
+    <p style="margin:0"><strong>Step 4 — Leadership sees rollup.</strong> Control Tower aggregates everything: how many batches are running, how many are blocked, what risks exist, what OEE looks like across the plant.</p>
+  </div>
+  <div class="card">
+    <p style="margin:0"><strong>Step 5 — Reforecast and feedback.</strong> If yield drops or capacity slips, Schedule Reforecast flags it back to the planner for the next day's adjustments.</p>
+  </div>
+
+  <div class="callout warn">
+    <strong>Important: garbage in, garbage out</strong>
+    If the planner uploads the wrong file, or floor teams forget to mark batches complete, the data goes stale fast. The system is only as good as the discipline behind it. We've added safety checks (staleness warnings, file validation, sanity checks on monthly numbers) but they don't replace good habits.
+  </div>
+
+  <div class="h2">The 21 dashboards at a glance</div>
+  <table class="tbl">
+    <tr><th>Group</th><th>Dashboards</th></tr>
+    <tr><td><strong>Floor execution</strong></td><td>Compound Coordinator · PreWeigh Scheduler · Quality Lab · Production Coordinator · Production Supervisor · FG Reconciliation · Warehouse Movement</td></tr>
+    <tr><td><strong>Planning</strong></td><td>Production Schedule · Compound Scheduler · Demand Planning Hub · Schedule Reforecast</td></tr>
+    <tr><td><strong>Operations</strong></td><td>Roll Call · Changeover Dashboard · Maintenance · Procurement · Event Engine</td></tr>
+    <tr><td><strong>Quality / improvement</strong></td><td>Continuous Improvement · 5S Connected · Gemba Tracker</td></tr>
+    <tr><td><strong>Leadership</strong></td><td>Leadership Control Tower</td></tr>
+    <tr><td><strong>Admin</strong></td><td>Data Upload Hub · System Diagnostics</td></tr>
+  </table>
+</div>
+
+<!-- ════════════════════ QUICKSTART ════════════════════ -->
+<div id="sec-quickstart" class="section">
+  <div class="h1">⚡ 5-Minute Quick Start</div>
+  <div class="h1-sub">Get from "never used this" to "I know what to click" in under 5 minutes.</div>
+
+  <div class="progress-bar"><div class="progress-fill" style="width:0%" id="qs-progress"></div></div>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-title">Open HOC OES on your device</div>
+      <div class="step-desc">Navigate to <code>hocoperations1.github.io/Hoc-OES/</code>. Bookmark it, or better — add to your tablet's home screen (see <a href="#" onclick="go('howto-install')">Install on Tablet</a>).</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-title">Notice the freshness banner at the top</div>
+      <div class="step-desc"><strong>Green</strong> = data is fresh (uploaded today). <strong>Amber</strong> = data is more than 7 days old, you should re-upload. <strong>Red</strong> = no data has ever been uploaded. If you see amber or red, find the planner.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-title">Open the dashboard for your role</div>
+      <div class="step-desc">From the index hub, find the dashboard that matches what you do. <strong>Compound = Compound Coordinator</strong>, <strong>fill operator = Production Supervisor</strong>, <strong>QC = Quality Lab</strong>, etc. See <a href="#" onclick="go('welcome')">Role Guides</a>.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <div class="step-title">Click on a KPI tile or batch row</div>
+      <div class="step-desc">Every number and row in HOC OES is clickable. Click an "Overdue" KPI to jump to Compound Coordinator. Click a RUNNING batch row to jump to Production Supervisor. The system routes you to the place where you can <em>act</em> on what you're looking at.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-body">
+      <div class="step-title">Look for the <code>?</code> button</div>
+      <div class="step-desc">Every page has a blue <code>?</code> button in the bottom-right corner. Tap it to bring back the Quick Start guide or jump to this onboarding tool. It's your safety net.</div>
+    </div>
+  </div>
+
+  <div class="callout good" style="margin-top:24px">
+    <strong>That's it — you're operational</strong>
+    Everything else is learning the details of your specific role. Pick your role guide next: <a href="#" onclick="go('welcome')">Back to role selection →</a>
+  </div>
+</div>
+
+<!-- ════════════════════ ROLE: PLANNER ════════════════════ -->
+<div id="sec-role-planner" class="section">
+  <div class="h1">📋 Planner / Scheduler Guide</div>
+  <div class="h1-sub">You're the data engine. Your morning upload drives every dashboard for every team. This guide covers your daily routine plus the troubleshooting essentials.</div>
+
+  <div class="callout crit">
+    <strong>Your job is the most important one for HOC OES</strong>
+    If your upload doesn't happen, the floor team sees stale data and trust in the system erodes within days. The system has fallbacks and warnings, but nothing replaces the daily upload.
+  </div>
+
+  <div class="h2">Your daily 60-second routine</div>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-title">Update the Production Tracker in Excel</div>
+      <div class="step-desc">Do your normal planner work — update batch dates, statuses, quantities. The dashboard's May Cases / Case Goal pulls from the <strong>monthly master's MTD summary</strong> (the Scheduled row's "Total # of Planned Cases" and "Total # of Completed Cases" cells). OEE % and Attainment % are now <strong>entered manually</strong> on Data Upload Hub — no Excel rows needed.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-title">Save the file</div>
+      <div class="step-desc">File name doesn't matter, but it must be <code>.xlsx</code> format and contain the <strong>CLEAN_ DATA</strong> tab (note the space) and <strong>Goal Source Data</strong> tab.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-title">Open HOC OES → <a href="HOC_Data_Upload_Hub.html">Data Upload Hub</a></div>
+      <div class="step-desc">It's in the top action row (orange/red icon). On the desktop you can drag-and-drop; on tablet tap the upload zone.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <div class="step-title">Drop file in <strong>slot 1 (Production Tracker)</strong></div>
+      <div class="step-desc">Watch the right-side progress log. You're looking for these green checkmarks:
+        <br>• ✓ Parsed CLEAN_ DATA: 170+ rows
+        <br>• ✓ Goals: actual=… goal=…
+        <br>• ✓ Auto-detected XX changeovers
+        <br>• ✓ Saved to Supabase
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-body">
+      <div class="step-title">Verify on Production Supervisor</div>
+      <div class="step-desc">Click over to <a href="HOC_Production_Supervisor.html">Production Supervisor</a> and confirm the May Cases / Case Goal numbers match what you'd expect. If they don't, the file may have a column shift — see Troubleshooting.</div>
+    </div>
+  </div>
+
+  <div class="h2">What's in the file</div>
+  <table class="tbl">
+    <tr><th>Tab name</th><th>What it feeds</th><th>Critical?</th></tr>
+    <tr><td><strong>CLEAN_ DATA</strong></td><td>Every batch on every dashboard</td><td>YES — without this, no dashboard shows data</td></tr>
+    <tr><td><strong>Goal Source Data</strong></td><td>Monthly cases (row 20), per-line OEE/Att (rows 4-9)</td><td>YES — drives all KPIs</td></tr>
+    <tr><td><strong>Production Goals Dashboard</strong></td><td>Fallback for OEE if Goal Source missing</td><td>Optional</td></tr>
+    <tr><td><strong>COMPOUND_STATUS_FEED</strong></td><td>Compound batch statuses if present</td><td>Optional — auto-detected from data otherwise</td></tr>
+  </table>
+
+  <div class="h2">If something goes wrong</div>
+  <table class="tbl">
+    <tr><th>Symptom</th><th>Most likely cause</th><th>Fix</th></tr>
+    <tr><td>Upload "stuck" with no green checkmarks</td><td>File format issue or column shift</td><td>Verify <code>CLEAN_ DATA</code> tab exists with normal columns; try re-saving as .xlsx</td></tr>
+    <tr><td>Numbers way too small (e.g., 96 cases)</td><td>Wrong file uploaded</td><td>System will reject and show warning; re-upload the right file</td></tr>
+    <tr><td>OEE shows "—"</td><td>Goal Source Data row 4-9 empty</td><td>Paste Patch values into Goal Source Data tab as decimals (0.513 not 51.3)</td></tr>
+    <tr><td>Numbers correct on PS but wrong on Leadership</td><td>Browser cache issue</td><td>Refresh the Leadership tab (Ctrl+Shift+R)</td></tr>
+  </table>
+
+  <div class="h2">Other uploads you might do</div>
+  <table class="tbl">
+    <tr><th>Slot</th><th>File</th><th>How often</th></tr>
+    <tr><td>2 (Planning Data)</td><td>Vicinity export</td><td>When new POs come in</td></tr>
+    <tr><td>3 (Changeover Tracker)</td><td>Patch OEE export with changeover data</td><td>Weekly, when you want to refresh changeover history</td></tr>
+    <tr><td>4 (Fill Labor Extract)</td><td>Vicinity fill labor standards</td><td>Quarterly — these don't change often</td></tr>
+  </table>
+
+  <div class="callout">
+    <strong>Pro tip</strong>
+    Bookmark the Data Upload Hub directly so you don't have to navigate from the index every morning. The URL is <code>hocoperations1.github.io/Hoc-OES/HOC_Data_Upload_Hub.html</code>
+  </div>
+</div>
+
+<!-- ════════════════════ ROLE: SUPERVISOR ════════════════════ -->
+<div id="sec-role-supervisor" class="section">
+  <div class="h1">⚙️ Shift Supervisor Guide</div>
+  <div class="h1-sub">You're watching live production. Your primary dashboard is <a href="HOC_Production_Supervisor.html">Production Supervisor</a> — it shows what's running, what's stopped, and where you need to act.</div>
+
+  <div class="h2">Your shift start checklist (5 minutes)</div>
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-title">Check the freshness banner</div>
+      <div class="step-desc">If amber/red, the planner hasn't uploaded — find them before you go any further.</div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-title">Open Production Supervisor</div>
+      <div class="step-desc">Top row shows: May Cases, Case Balance, Open Batches, Running Now, Completed, OEE, Attainment, Case Goal. <strong>Memorize where each one lives</strong> — you'll glance at this row 50 times today.</div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-title">Scan the Line Status table</div>
+      <div class="step-desc">Each line shows: total batches today, completed, running, pending, remaining minutes, available hours, gap. <strong>Red gap = behind schedule, green gap = ahead.</strong> Click a line row to drill into batch detail.</div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <div class="step-title">Review Capacity Forecast</div>
+      <div class="step-desc">Click "Capacity Forecast" in the nav. Shows next 14-30 days of batches. <strong>1 MUST</strong> = overdue/running now. <strong>4 SHOULD</strong> = scheduled this period. Load % over 100 = overcommitted.</div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-body">
+      <div class="step-title">Note any red KPIs and act</div>
+      <div class="step-desc">Click any red number — it routes you to the dashboard where you can fix it. Compound overdue? Goes to Compound Coordinator. Low yield? Goes to FG Reconciliation.</div>
+    </div>
+  </div>
+
+  <div class="h2">Common actions during shift</div>
+  <table class="tbl">
+    <tr><th>When you see...</th><th>Do this</th></tr>
+    <tr><td>Batch RUNNING but compound not ready</td><td>Click batch row → opens Compound Coordinator to expedite</td></tr>
+    <tr><td>Line down (no movement for 30+ min)</td><td>Open <a href="HOC_Event_Engine.html">Event Engine</a> to log downtime</td></tr>
+    <tr><td>Major changeover happening</td><td>Open <a href="HOC_Changeover_Dashboard.html">Changeover Dashboard</a> to track time</td></tr>
+    <tr><td>Yield looks off</td><td>Open <a href="HOC_FG_Reconciliation.html">FG Reconciliation</a> to investigate batch-level variance</td></tr>
+    <tr><td>QC has a hold</td><td>Open <a href="HOC_Quality_Lab.html">Quality Lab</a> to see what's blocked and why</td></tr>
+  </table>
+
+  <div class="h2">Reading the KPIs honestly</div>
+  <div class="callout">
+    <strong>OEE shows "—"?</strong>
+    That means Patch data hasn't been uploaded today. It's NOT a bug — it's the system telling you it doesn't have data. Tell the planner.
+  </div>
+  <div class="callout warn">
+    <strong>May Cases looks too small or too big?</strong>
+    The number comes from Goal Source Data row 20. If it's wrong, the source file is wrong. Don't trust the number until the source is verified.
+  </div>
+</div>
+
+<!-- ════════════════════ ROLE: COMPOUND ════════════════════ -->
+<div id="sec-role-compound" class="section">
+  <div class="h1">🧪 Compound Team Guide</div>
+  <div class="h1-sub">Compound is the bottleneck — if compound isn't ready, fill can't run. Your primary dashboards are <a href="HOC_Compound_Coordinator.html">Compound Coordinator</a> (resolve issues) and <a href="HOC_Compound_Scheduler_v3.html">Compound Scheduler</a> (plan ahead).</div>
+
+  <div class="h2">Compound Coordinator — your hourly check</div>
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-title">Look at the alert strip at top</div>
+      <div class="step-desc">Red boxes = OVERDUE (compound should be done, isn't). Orange = CRITICAL (due today). Yellow = AT RISK (due in 1-3 days). Always work red first.</div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-title">Click a batch row to open Verification Detail</div>
+      <div class="step-desc">Shows: formula, lbs needed, batches needed, current status, shortage if any. From here you can mark batches in progress, complete, on hold, etc.</div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-title">Mark verifications as you finish them</div>
+      <div class="step-desc">When you complete a batch, save the verification. This pushes the status to Supabase. Fill team sees it within seconds.</div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <div class="step-title">Alert other teams when stuck</div>
+      <div class="step-desc">Each section has "Alert [Team]" buttons. Use them. They fire events into the Event Engine and notify the relevant team.</div>
+    </div>
+  </div>
+
+  <div class="h2">Compound Scheduler — your daily planning view</div>
+  <p>The Scheduler shows the next 5 days of compound work plus the full backlog. Use it to plan tank assignments, prioritize batches, and spot capacity issues.</p>
+
+  <div class="quick-grid">
+    <div class="quick-card" onclick="window.location.href='HOC_Compound_Scheduler_v3.html'">
+      <div class="qct">5-Day Must-Complete forecast</div>
+      <div class="qcd">Click any batch card → opens it in Compound Coordinator</div>
+    </div>
+    <div class="quick-card" onclick="window.location.href='HOC_Compound_Scheduler_v3.html'">
+      <div class="qct">By Line view</div>
+      <div class="qcd">See what each fill line needs, in date order — now with <strong>PB Status column</strong></div>
+    </div>
+    <div class="quick-card" onclick="window.location.href='HOC_Compound_Scheduler_v3.html'">
+      <div class="qct">Cycle Time Intelligence <span style="font-size:8px;font-weight:700;color:#3B82F6;background:rgba(59,130,246,.2);padding:1px 5px;border-radius:5px;margin-left:3px">NEW</span></div>
+      <div class="qcd">Override tracker cycle times with actual averages from 162 batch sheets</div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>New: Pre-Batch Status column in Schedule by Line</strong>
+    Each batch row in the Schedule by Line tab now shows a PB Status pill (PW Complete · PW In Progress · Queued · Assigned: [name] · or —). The pill updates live from PreWeigh Scheduler — when a pre-batcher stamps Start, you see "PW In Progress" within ~30 seconds.
+  </div>
+
+  <div class="callout">
+    <strong>New: Smart Tank dropdown</strong>
+    The Tank field on each batch's detail panel is now a dropdown showing all 14 tanks with capacity, status, and ⚠ warning if the tank is too small for the batch's lbs. Tanks that fit the batch sort first. Status pulled live from Compound Tank Board.
+  </div>
+
+  <div class="callout">
+    <strong>New: Cycle Time Intelligence tab</strong>
+    Built from 162 handwritten compound batch sheets. Shows 10 formulas where tracker cycle time differs from actuals (e.g. F.560 Therapy JBCO: tracker says 5h, actual avg is 2h). Click "Apply" per formula or "Apply All" to use real data in planning math. Formula Standards tab shows a blue "✓ from data" badge next to overridden cycle times.
+  </div>
+
+  <div class="h2">Pre-Weigh / Staging team (uses PreWeigh Scheduler)</div>
+  <p>Pre-batchers (Eli Coley, Robert Peoples) use <a href="HOC_PreWeigh_Scheduler.html">PreWeigh Scheduler</a> to track raw material pulls.</p>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-title">Open the batch from your queue</div>
+      <div class="step-desc">PreWeigh Scheduler shows batches that need pre-weighing. Click one to open the detail panel.</div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-title">Stamp Start when you begin pulling materials <span style="font-size:9px;font-weight:700;color:#3B82F6;background:rgba(59,130,246,.15);padding:2px 6px;border-radius:6px;margin-left:4px">NEW</span></div>
+      <div class="step-desc">Click "⏱ Stamp Start" — captures the exact minute. Pull all the raw materials per the BOM.</div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-title">Stamp Complete when staging is done</div>
+      <div class="step-desc">Click "Stamp Complete" — the system calculates actual pull duration in hours, color-coded vs the formula standard (green within 0.5h, amber within 1.5h, red if over). This data feeds future pull-time analytics.</div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <div class="step-title">Log shortages if you run out of a material</div>
+      <div class="step-desc">Use the Short Item / Short Qty fields. Save. Compound Coordinator and Procurement see the shortage automatically.</div>
+    </div>
+  </div>
+
+  <div class="h2">Status definitions</div>
+  <table class="tbl">
+    <tr><th>Status</th><th>Means</th><th>Action</th></tr>
+    <tr><td><strong style="color:#EF4444">COMPOUND OVERDUE</strong></td><td>Should have been ready by now, fill is waiting</td><td>Top priority — make it now</td></tr>
+    <tr><td><strong style="color:#F59E0B">COMPOUND CRITICAL</strong></td><td>Due today (0 days)</td><td>Must complete this shift</td></tr>
+    <tr><td><strong style="color:#FCD34D">COMPOUND AT RISK</strong></td><td>Due in 1-3 days</td><td>Schedule for next shift</td></tr>
+    <tr><td><strong style="color:#10B981">COMPOUND ON TRACK</strong></td><td>Plenty of time</td><td>Plan ahead</td></tr>
+    <tr><td><strong style="color:#6B7280">NO COMPOUND STD</strong></td><td>No standard exists for this formula</td><td>R&D needs to provide one</td></tr>
+    <tr><td><strong style="color:#10B981">FILLING COMPLETE</strong></td><td>Done, in storage</td><td>No action</td></tr>
+  </table>
+</div>
+
+<!-- ════════════════════ ROLE: QC ════════════════════ -->
+<div id="sec-role-qc" class="section">
+  <div class="h1">🔬 QC Team Guide</div>
+  <div class="h1-sub">QC controls flow between compound and fill. Your primary dashboard is <a href="HOC_Quality_Lab.html">Quality Lab</a>.</div>
+
+  <div class="h2">Daily QC workflow</div>
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-title">Check "Pending QC" count at top</div>
+      <div class="step-desc">Each batch awaiting test shows lab waiting time. Long waits hold up fill.</div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-title">Open a batch's QC record</div>
+      <div class="step-desc">Enter viscosity, density, pH. Mark in-process or final. Add notes if results are borderline.</div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-title">Release or hold</div>
+      <div class="step-desc">Click <strong>RELEASE</strong> to clear the batch for fill, or <strong>HOLD</strong> if results are out of spec. Holds trigger an alert to production.</div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <div class="step-title">Attach the release PDF</div>
+      <div class="step-desc">If you've generated a release certificate, upload it via the PDF attachment button. Lives in the qc-release-pdfs Supabase bucket.</div>
+    </div>
+  </div>
+
+  <div class="h2">What QC sees from other teams</div>
+  <table class="tbl">
+    <tr><th>From...</th><th>You see...</th></tr>
+    <tr><td>Compound</td><td>Which batches are ready for QC pickup</td></tr>
+    <tr><td>Production</td><td>Batches that need QC release before fill can start</td></tr>
+    <tr><td>R&D</td><td>QC specifications for each formula (viscosity range, pH range, etc.)</td></tr>
+  </table>
+</div>
+
+<!-- ════════════════════ ROLE: FG ════════════════════ -->
+<div id="sec-role-fg" class="section">
+  <div class="h1">📦 FG / Warehouse Guide</div>
+  <div class="h1-sub">After production fills a batch, it lands in your area. Your dashboards are <a href="HOC_FG_Reconciliation.html">FG Reconciliation</a> and <a href="HOC_Warehouse_Movement.html">Warehouse Movement</a>.</div>
+
+  <div class="h2">FG Reconciliation</div>
+  <p>Compares what production says they made vs what you actually received. Variance = yield loss + counting errors + damages.</p>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-title">Review variance KPIs at top</div>
+      <div class="step-desc">Avg Yield, Low Yield count, Overfill count. Click any to drill into the flagged batches.</div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-title">Verify counts on incoming pallets</div>
+      <div class="step-desc">Compare your physical count to the actual qty in Production Supervisor. Flag discrepancies in the batch row.</div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-title">Mark short-shipped or damaged units</div>
+      <div class="step-desc">Adjusts the case balance for the month. Helps the planner understand true output.</div>
+    </div>
+  </div>
+
+  <div class="h2">Warehouse Movement</div>
+  <p>Tracks pallet movement between staging, QC hold, FG storage, and ship. Right now this is a planning view — FasTrak is still the official WMS until that integration is wired up.</p>
+</div>
+
+<!-- ════════════════════ ROLE: LEADERSHIP ════════════════════ -->
+<div id="sec-role-leadership" class="section">
+  <div class="h1">📊 Leadership Guide</div>
+  <div class="h1-sub">Your single landing page is <a href="HOC_Leadership_Control_Tower.html">Leadership Control Tower</a> — it aggregates the full system into one screen.</div>
+
+  <div class="h2">What the Control Tower shows</div>
+  <table class="tbl">
+    <tr><th>Section</th><th>What it tells you</th></tr>
+    <tr><td><strong>Command Center KPIs</strong> (top 8 tiles)</td><td>Plant OEE, May Cases, Case Balance, Blocked Batches, etc. — the plant in 8 numbers</td></tr>
+    <tr><td><strong>KPI Dashboard</strong> (13 tiles)</td><td>Detailed breakdowns: yield, attainment, changeover loss YTD, downtime hours</td></tr>
+    <tr><td><strong>Pipeline Flow</strong> (8 boxes)</td><td>How many batches at each stage: CC→PW→CMPD→QC→PC→Prod→FG→WH</td></tr>
+    <tr><td><strong>Active Risks</strong></td><td>Live list of what's blocked and why (raw shortage, QC hold, etc.)</td></tr>
+    <tr><td><strong>Pipeline Batches</strong></td><td>Top 20 batches in flight, with state and bottleneck</td></tr>
+    <tr><td><strong>Worst Lines YTD</strong></td><td>Lines underperforming on OEE — coaching targets</td></tr>
+  </table>
+
+  <div class="h2">How to use it day-to-day</div>
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-title">Open it once a morning</div>
+      <div class="step-desc">5 min before your morning huddle. The 8 Command Center KPIs are your talking points.</div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-title">Click red Active Risks</div>
+      <div class="step-desc">Each one routes you to the resolver dashboard. Don't just report a risk — go to where it gets fixed.</div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-title">Use Worst Lines YTD for coaching</div>
+      <div class="step-desc">If L10 has 36% OEE while L3 has 74%, that's a coaching conversation, not a tool problem.</div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>Don't expect daily perfect data</strong>
+    The Control Tower is only as accurate as the upstream uploads and floor inputs. If the planner forgot to upload today, you'll see stale numbers. If compound forgot to mark a batch complete, the pipeline will show a phantom batch. Trust the system, but verify on the floor.
+  </div>
+</div>
+
+<!-- ════════════════════ ROLE: COMPOUND MANAGER (Tank Board) ════════════════════ -->
+<div id="sec-role-tank" class="section">
+  <div class="h1">🏭 Compound Manager Guide</div>
+  <div class="h1-sub">Your job is matching batches to tanks based on capacity, capability, and category. Your primary dashboard is <a href="HOC_Tank_Board.html">Compound Tank Board</a> — it tracks all 14 mixing tanks and lets you assign verified batches.</div>
+
+  <div class="callout">
+    <strong>This role is distinct from Compound Coordinator and Compound Scheduler</strong>
+    Coordinator handles raw material verification. Scheduler handles formula sequencing. <strong>You handle which tank each batch goes into.</strong> Three roles, three different decisions, three different dashboards.
+  </div>
+
+  <div class="h2">First-time setup (do this once)</div>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-title">Open Tank Config tab</div>
+      <div class="step-desc">From the top nav of Tank Board, click "Tank Config". You'll see all 14 tanks pre-loaded from the master spreadsheet with their physical specs (capacity, heated, double-motion sweep, homogenizer).</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-title">Set each tank's category</div>
+      <div class="step-desc">Categories: <strong>All-Purpose</strong>, <strong>Base</strong>, <strong>Cold Thinner</strong>, <strong>Oil &amp; Thin</strong>, <strong>Gel</strong>, <strong>Other</strong>. Use the dropdown next to each tank. Per the master sheet, MT-18 is the typical Gel tank (homogenizer). MT-1 and MT-2 are usually All-Purpose (no heat). The rest depends on your operations.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-title">Add notes (optional)</div>
+      <div class="step-desc">Notes field is for things like "requires special seal", "outside vendor cleaning required between gel batches", etc. Visible only on the Config tab — not on the main Tank Board.</div>
+    </div>
+  </div>
+
+  <div class="h2">Daily routine</div>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-title">Open Tank Board</div>
+      <div class="step-desc">From HOC-OES hub, click the teal "TB" card. Or direct URL: <code>HOC_Tank_Board.html</code>.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-title">Scan the KPI strip</div>
+      <div class="step-desc">7 tiles at top: <strong>Total Tanks</strong>, <strong>Available</strong>, <strong>In Use</strong>, <strong>Cleaning</strong>, <strong>Offline</strong>, <strong>Pending Assign</strong>, <strong>Total Capacity</strong>. "Pending Assign" is the one to watch — if it's not zero, batches are waiting for you.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-title">Click "Assign Batches" tab</div>
+      <div class="step-desc">Shows the list of batches awaiting a tank. Each row has Compound Coordinator verification status (Verified ✓ or Pending). Click "Assign tank →" to open the picker.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <div class="step-title">Pick a compatible tank</div>
+      <div class="step-desc">The picker shows ONLY tanks that are (a) currently Available status, and (b) large enough for the batch (approx 1 gal ≈ 8 lbs). Sorted smallest-fit-first. Each tank shows capacity + category + capabilities. Click "Assign →" to confirm.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-body">
+      <div class="step-title">Update tank status as work happens</div>
+      <div class="step-desc">Click any tank on the Tank Board to update: <strong>Filling</strong> (compound mixing now), <strong>Full</strong> (mixed, awaiting fill), <strong>Draining</strong> (being emptied to fill line), <strong>Cleaning</strong> (CIP in progress), <strong>Available</strong> (ready for next batch).</div>
+    </div>
+  </div>
+
+  <div class="h2">Tank capability rules</div>
+  <p>Capacity check is built in (won't let you assign a 3000-gal batch to MT-9). But other rules you should know:</p>
+  <table class="tbl">
+    <tr><th>Capability</th><th>Which tanks</th><th>Required for</th></tr>
+    <tr><td>Heated</td><td>MT-3 through MT-13, MT-18 (all except MT-1, MT-2)</td><td>Most compounds that need temperature</td></tr>
+    <tr><td>Double-motion sweep</td><td>MT-5 through MT-8, MT-10 through MT-13, MT-18</td><td>Thick / viscous compounds</td></tr>
+    <tr><td>Homogenizer (built-in)</td><td>MT-18 only</td><td>Gel batches (others need external homogenizer)</td></tr>
+  </table>
+
+  <div class="h2">Tank status colors</div>
+  <p>The colored bar on the left of each tank card tells you status at a glance:</p>
+  <ul style="margin:8px 0 12px 20px;color:var(--text2);font-size:12.5px;line-height:1.7">
+    <li><strong style="color:#34D399">Green</strong> = Available (ready for next batch)</li>
+    <li><strong style="color:#60A5FA">Blue</strong> = Filling (compound mixing now)</li>
+    <li><strong style="color:#A78BFA">Purple</strong> = Full (mixed, waiting to be drained)</li>
+    <li><strong style="color:#FBBF24">Amber</strong> = Draining (transferring to fill line)</li>
+    <li><strong style="color:#FDBA74">Orange</strong> = Cleaning (CIP in progress)</li>
+    <li><strong style="color:#9CA3AF">Gray</strong> = Offline (out of service)</li>
+  </ul>
+
+  <div class="h2">Dwell time alerts</div>
+  <p>When a tank is in Full or Draining status, the card shows "<em>In tank: 2d 4h</em>" — how long the batch has been sitting. Color-coded:</p>
+  <table class="tbl">
+    <tr><th>Color</th><th>Dwell time</th><th>Action</th></tr>
+    <tr><td>White/normal</td><td>&lt; 24 hr</td><td>OK</td></tr>
+    <tr><td>Amber</td><td>1-3 days</td><td>Check soon — material aging</td></tr>
+    <tr><td>Red</td><td>&gt; 3 days</td><td>Investigate — may need re-test or re-work</td></tr>
+  </table>
+
+  <div class="h2">Recent Activity tab</div>
+  <p>The Activity tab logs every status change and assignment for the last 50 actions. Useful for end-of-shift review or troubleshooting "what happened to this batch yesterday".</p>
+
+  <div class="callout warn">
+    <strong>Tank assignments sync to other dashboards</strong>
+    When you assign a batch to a tank, that info flows to Compound Coordinator (verification screen) and Compound Scheduler so the rest of the team knows where each batch lives. Don't bypass the dashboard — manual sticky notes break the sync.
+  </div>
+
+  <div class="h2">What you can't do (yet)</div>
+  <table class="tbl">
+    <tr><th>Need</th><th>Where to get it</th></tr>
+    <tr><td>Tank cleaning history (CIP records)</td><td>Not yet in HOC OES — track in your CIP logbook for now</td></tr>
+    <tr><td>Auto-suggest best tank for a batch</td><td>Future feature — current version is manual picker only</td></tr>
+    <tr><td>Real-time tank temperature / pressure</td><td>Read from physical tank gauges — HOC OES doesn't have IOT yet</td></tr>
+    <tr><td>Cross-shift handoff notes</td><td>Use the per-tank "Notes" field in the update modal</td></tr>
+  </table>
+</div>
+
+<!-- ════════════════════ ROLE: PRODUCTION COORDINATOR ════════════════════ -->
+<div id="sec-role-prodcoord" class="section">
+  <div class="h1">📋 Production Coordinator Guide</div>
+  <div class="h1-sub">Your job is making sure each scheduled batch has every component (caps, jars, labels, shippers) ready before the line needs them, and that materials get staged correctly. Your primary dashboard is <a href="HOC_Production_Coordinator.html">Production Coordinator</a>.</div>
+
+  <div class="callout">
+    <strong>What this dashboard does for you</strong>
+    Five workspaces: Command Center (open batches at a glance), Component Check (verify components for each batch), Inventory (live QOH for caps/jars/labels/shippers), Alerts &amp; Escalations (multi-component shortage logging), and <strong>Staging Placard</strong> (new — generate printable LG-010-00 placards for material handlers).
+  </div>
+
+  <div class="h2">Your daily routine</div>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-title">Open Production Coordinator</div>
+      <div class="step-desc">From index hub → amber "Production Coordinator" card. Or direct URL: <code>HOC_Production_Coordinator.html</code>.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-title">Run Component Check on today's batches</div>
+      <div class="step-desc">Click "Component Check" tab. For each batch starting today/tomorrow, verify: caps · jars · labels · shippers · inner packs all have sufficient QOH. Mark ✓ if clear or log shortage if not.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-title">Log multi-component shortages (if any)</div>
+      <div class="step-desc">Click "Alerts &amp; Escalations" tab. Use the multi-shortage entry to add multiple low components for a single batch — select from dropdown of low-inventory items, enter qty needed, click + Add. Notifies procurement &amp; planning automatically.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <div class="step-title">Generate Staging Placard for material handlers <span style="font-size:9px;font-weight:700;color:#3B82F6;background:rgba(59,130,246,.15);padding:2px 6px;border-radius:6px;margin-left:4px">NEW</span></div>
+      <div class="step-desc">Click "Staging Placard" tab. Select a batch from the dropdown → click "Generate Placard". A printable LG-010-00 form pre-fills with Item Number, Batch Number, Line Number from the batch. Add up to 10 components: type/select SKU (autocompletes from warehouse inventory), enter Qty Needed, enter Pick Location (system suggests locations from past placards for this SKU). Click "🖨 Print Placard" — only the placard prints, not the rest of the dashboard. Material Handler then uses the FASCOR scan gun process to pull each item, signs off, hands placard back to Line Operator.</div>
+    </div>
+  </div>
+
+  <div class="h2">About the Staging Placard</div>
+
+  <div class="callout">
+    <strong>Built from LG-010-00 Logistic Lines Staging Process SOP (issued Jan 21, 2026)</strong>
+    The paper placard you used to fill in by hand is now generated. Material Handler runs the FASCOR scan gun process: Moveable Units → Inquiry Move → Date Inquiry → Scan SKU → Loc-to-Loc to line (e.g. IPRD010001). Both Material Handler and Operator initial each line; Supervisor initials when item count exceeds 3 pallets of jars/bottles or 20,000 labels.
+  </div>
+
+  <div class="h2">Tips</div>
+
+  <table class="tip-table">
+    <tr><td><strong>Pick locations get smarter over time</strong></td><td>First time you generate a placard for a SKU, type the location manually. Next time the same SKU appears, the system suggests it. After a few weeks, almost every SKU autocompletes.</td></tr>
+    <tr><td><strong>Print only the placard</strong></td><td>The print CSS hides nav, header, and all dashboard chrome — only the placard form prints. Works in Edge, Chrome, Safari.</td></tr>
+    <tr><td><strong>Up to 10 items per placard</strong></td><td>Per SOP. If a batch needs more than 10 components, generate a second placard.</td></tr>
+    <tr><td><strong>Audit trail</strong></td><td>Every printed placard is saved to localStorage (last 100). To pull history, ask Claude to query <code>hoc_placards_v1</code>.</td></tr>
+  </table>
+
+  <div class="h2">What this dashboard does NOT do (yet)</div>
+  <table class="tip-table">
+    <tr><td>Auto-populate components from BOM</td><td>You enter the SKU + qty manually. BOM auto-fill is future work.</td></tr>
+    <tr><td>Track placard completion / sign-off digitally</td><td>Signatures still happen on the printed paper. Digital signature capture is future work.</td></tr>
+    <tr><td>FASCOR scan-gun integration</td><td>Material handler still uses the scan gun manually per LG-010-00. We don't have a FASCOR API yet.</td></tr>
+  </table>
+</div>
+
+<!-- ════════════════════ ROLE: SALES ════════════════════ -->
+<div id="sec-role-sales" class="section">
+  <div class="h1">💼 Sales / Account Management Guide</div>
+  <div class="h1-sub">Your job is keeping customers informed and ahead of issues. Your primary dashboard is <a href="HOC_Sales_Dashboard.html">Sales &amp; Customer View</a> — it translates production data into customer-facing terms.</div>
+
+  <div class="callout">
+    <strong>What this dashboard does for you</strong>
+    Takes the raw production schedule (compound, fill, QC, FG) and reorganizes it by <em>customer</em> instead of by line. So instead of "L10 has 15 batches running," you see "AJ has 8,400 cases planned this month, 60% fill rate so far, 3 orders at risk."
+  </div>
+
+  <div class="h2">Your daily 5-minute routine</div>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-title">Open Sales &amp; Customer View</div>
+      <div class="step-desc">From index hub → pink "Sales &amp; Customer View" card. Or direct URL: <code>HOC_Sales_Dashboard.html</code>.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-title">Scan the 7 KPI tiles at top</div>
+      <div class="step-desc"><strong>Active Customers</strong>, <strong>Cases Shipped</strong>, <strong>Cases Planned</strong>, <strong>Fill Rate</strong>, <strong>In Production</strong>, <strong>Completed</strong>, <strong>At-Risk Orders</strong>. The At-Risk number is the one you most want to be low. If it's red, you have proactive calls to make.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-title">Review "Top Customers This Month"</div>
+      <div class="step-desc">Top 5 by case volume. Each row shows planned, shipped, fill %, at-risk count. Fill % under 80% = red — that's a customer who's frustrated. Click any row to filter the Orders tab to that customer.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <div class="step-title">Check "At-Risk Orders"</div>
+      <div class="step-desc">Shows which customers have orders in trouble. Click <strong>"View all risks"</strong> to see the full at-risk list with "what to tell the customer" text for each one.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-body">
+      <div class="step-title">Glance at the 6-month trend</div>
+      <div class="step-desc">Cases shipped per month, last 6 months. Flat or rising = good. Sharp drop = ask why (lost customer? capacity issue?).</div>
+    </div>
+  </div>
+
+  <div class="h2">Customer detail view</div>
+  <p>On the <strong>Customers</strong> tab, every customer has a card showing batches, planned cases, fill %, and at-risk count. Click any card to open the detail modal — full batch list for that customer with status pills and dates.</p>
+  <p>Use this when you're about to call a customer. "I see you have 8 batches scheduled this month, 5 are complete, 2 are running now, 1 is on QC hold for review — I'll have an update on that one by tomorrow."</p>
+
+  <div class="h2">Order pipeline</div>
+  <p>The <strong>Order Pipeline</strong> tab is your full order book for the month. Filter by customer, status, or month. Most useful for:</p>
+  <ul style="margin:8px 0 12px 20px;color:var(--text2);font-size:12.5px;line-height:1.7">
+    <li>Pulling a customer's full order list before a meeting</li>
+    <li>Spotting orders that haven't started yet (Status = NOT STARTED)</li>
+    <li>Confirming what's ready to ship today (Status = COMPLETED)</li>
+  </ul>
+
+  <div class="h2">At-risk orders</div>
+  <p>The <strong>At-Risk</strong> tab shows everything that's behind, on hold, or hasn't started yet. Each row has a "What To Tell Customer" hint:</p>
+  <table class="tbl">
+    <tr><th>Status</th><th>What to tell customer</th></tr>
+    <tr><td>COMPOUND OVERDUE</td><td>"Production delayed; new ETA pending"</td></tr>
+    <tr><td>COMPOUND CRITICAL</td><td>"On critical path; risk to ship date"</td></tr>
+    <tr><td>QC HOLD</td><td>"Quality review in progress"</td></tr>
+    <tr><td>NOT STARTED</td><td>"Scheduled but not yet started"</td></tr>
+  </table>
+
+  <div class="h2">How customer is determined</div>
+  <p>HOC OES doesn't have an explicit "customer" field — it derives the customer from the batch description. So <code>"AJ Quench Lv-In Cnd, 12 oz, 12ea"</code> → customer = <strong>AJ (African Pride)</strong>. <code>"Hair Mayo 1.5oz packet"</code> → customer = <strong>Hair Mayo</strong>.</p>
+  <p>If you see "Unknown" customers in the list, that means the description didn't match any of the known brand patterns. Tell the planner so we can add that brand to the recognition list.</p>
+
+  <div class="h2">What you can't do (yet)</div>
+  <table class="tbl">
+    <tr><th>Need</th><th>Where to get it instead</th></tr>
+    <tr><td>Customer-level revenue $</td><td>Vicinity ERP (HOC OES tracks cases, not dollars)</td></tr>
+    <tr><td>Shipping address / lot history</td><td>FasTrak WMS</td></tr>
+    <tr><td>PO / order numbers</td><td>Vicinity (HOC OES tracks batches)</td></tr>
+    <tr><td>Customer complaints / returns</td><td>Not yet in HOC OES — coming later</td></tr>
+  </table>
+
+  <div class="callout warn">
+    <strong>Trust but verify before customer-facing communication</strong>
+    Sales dashboard is a coordination tool, not a system of record. Before you commit a ship date to a customer, verify with the planner or production team. The dashboard tells you what <em>should</em> happen — reality on the floor may differ.
+  </div>
+</div>
+
+<!-- ════════════════════ HOWTO: UPLOAD ════════════════════ -->
+<div id="sec-howto-upload" class="section">
+  <div class="h1">📤 Daily Upload Guide</div>
+  <div class="h1-sub">The single most important routine for HOC OES. Takes 60 seconds when it goes smoothly.</div>
+
+  <div class="h2">Who does it</div>
+  <p>The <strong>planner</strong> is the primary uploader. The <strong>shift lead</strong> is the backup if the planner is out. <strong>Anyone</strong> can do it in an emergency.</p>
+
+  <div class="h2">When to do it</div>
+  <p>Every morning by 7:00 AM. Also: any time the planner makes a significant schedule change during the day.</p>
+
+  <div class="h2">Step-by-step</div>
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-title">Save the Production Tracker as .xlsx</div>
+      <div class="step-desc">If it's open in Excel, hit Ctrl+S. Make sure no other user has it locked.</div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-title">Open <a href="HOC_Data_Upload_Hub.html">Data Upload Hub</a></div>
+      <div class="step-desc">Either from the index hub (top action row, orange/red icon) or by direct URL.</div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-title">Drag the file into slot 1 (Production Tracker)</div>
+      <div class="step-desc">On tablet: tap the slot, browse to the file. On desktop: drag-drop. Each slot has a colored border showing which file goes where.</div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <div class="step-title">Watch the progress log</div>
+      <div class="step-desc">Green checkmarks = good. Red errors = problem. The log tells you exactly what parsed, what didn't, and how many rows.</div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-body">
+      <div class="step-title">Verify on Production Supervisor</div>
+      <div class="step-desc">Confirm May Cases / Case Goal look right. If they're way off, the upload picked up wrong data — rollback and try again with the right file.</div>
+    </div>
+  </div>
+
+  <div class="h2">What "good" looks like</div>
+  <div class="callout good">
+    <strong>Successful upload checklist</strong>
+    ✓ Green "Parsed CLEAN_ DATA: ~170 rows"<br>
+    ✓ Green "Goals: actual=85,097 goal=186,112"<br>
+    ✓ Green "Auto-detected 83 changeovers"<br>
+    ✓ Green "Saved to Supabase"<br>
+    ✓ Production Supervisor shows real numbers within 5 seconds
+  </div>
+</div>
+
+<!-- ════════════════════ HOWTO: INSTALL ════════════════════ -->
+<div id="sec-howto-install" class="section">
+  <div class="h1">📱 Install on Tablet</div>
+  <div class="h1-sub">HOC OES is a PWA (Progressive Web App). Install it like a native app — no app store needed.</div>
+
+  <div class="h2">Why install instead of just bookmark</div>
+  <table class="tbl">
+    <tr><th>Browser bookmark</th><th>Installed PWA</th></tr>
+    <tr><td>Opens in Chrome with address bar</td><td>Opens fullscreen, looks like an app</td></tr>
+    <tr><td>Needs Chrome to be open first</td><td>Tap from home screen directly</td></tr>
+    <tr><td>Doesn't work offline if you clear cookies</td><td>Persistent offline cache</td></tr>
+    <tr><td>Slower cold start</td><td>Faster — files cached locally</td></tr>
+  </table>
+
+  <div class="h2">On Android tablet (Chrome)</div>
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body"><div class="step-title">Open hocoperations1.github.io/Hoc-OES/ in Chrome</div></div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body"><div class="step-title">Tap the three-dot menu (⋮) in top right</div></div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body"><div class="step-title">Tap "Add to Home screen" or "Install app"</div></div>
+  </div>
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body"><div class="step-title">Tap "Add" — icon appears on home screen</div></div>
+  </div>
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-body"><div class="step-title">Tap the new icon — opens fullscreen</div></div>
+  </div>
+
+  <div class="h2">On iPad (Safari)</div>
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body"><div class="step-title">Open hocoperations1.github.io/Hoc-OES/ in Safari</div></div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body"><div class="step-title">Tap the share button (square with up arrow)</div></div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body"><div class="step-title">Scroll down → "Add to Home Screen"</div></div>
+  </div>
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body"><div class="step-title">Tap "Add"</div></div>
+  </div>
+
+  <div class="h2">On Windows tablet (Edge)</div>
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body"><div class="step-title">Open in Edge</div></div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body"><div class="step-title">Click the three-dot menu</div></div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body"><div class="step-title">Apps → "Install this site as an app"</div></div>
+  </div>
+
+  <div class="callout">
+    <strong>Test offline mode after installing</strong>
+    Once installed, put your tablet in airplane mode and tap the HOC OES icon. The dashboards should still load (from cache). Turn airplane mode back on after testing.
+  </div>
+</div>
+
+<!-- ════════════════════ HOWTO: SYNC ════════════════════ -->
+<div id="sec-howto-sync" class="section">
+  <div class="h1">🔄 Cross-Device Sync</div>
+  <div class="h1-sub">When you make a change on one tablet, every other tablet sees it within 15-30 seconds. Here's how that works and how to verify.</div>
+
+  <div class="h2">How sync works</div>
+  <p>Every action (mark batch complete, log downtime, update QC) writes to Supabase. Every dashboard polls Supabase every 15 seconds for updates. So your change shows up on other tablets within one poll cycle.</p>
+
+  <div class="h2">How to verify it's working</div>
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-title">Look for "LIVE · cross-device sync: 15s" indicator</div>
+      <div class="step-desc">Most dashboards show this in the header. Green dot = healthy. Red = sync down.</div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-title">Test on two tablets at once</div>
+      <div class="step-desc">Tablet A: open Production Supervisor. Tablet B: open the same dashboard. On A, click a batch and make a change. Wait 30 seconds. B should reflect it.</div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-title">If sync fails, check System Diagnostics</div>
+      <div class="step-desc">Go to <a href="HOC_System_Diagnostics.html">Diagnostics</a> → "Run All Checks". Look for the Supabase row.</div>
+    </div>
+  </div>
+
+  <div class="h2">What's synced vs what's not</div>
+  <table class="tbl">
+    <tr><th>Synced cross-device</th><th>Local only (per tablet)</th></tr>
+    <tr><td>Schedule data (the upload)</td><td>UI preferences (collapsed sections)</td></tr>
+    <tr><td>Floor updates (batch status)</td><td>Onboarding "seen" flag</td></tr>
+    <tr><td>QC tests + holds</td><td>Welcome banner dismissed</td></tr>
+    <tr><td>Events (downtime, alerts)</td><td>Service worker cache</td></tr>
+    <tr><td>Changeover history</td><td>Browser history</td></tr>
+  </table>
+</div>
+
+<!-- ════════════════════ HOWTO: TROUBLESHOOT ════════════════════ -->
+<div id="sec-howto-troubleshoot" class="section">
+  <div class="h1">🔧 Troubleshooting Guide</div>
+  <div class="h1-sub">When something looks wrong, work through these checks in order.</div>
+
+  <div class="h2">Symptom: Dashboard shows "—" everywhere</div>
+  <p><strong>Most likely:</strong> No upload has happened, or upload failed.</p>
+  <p><strong>Fix:</strong> Open Data Upload Hub. Look at the freshness line. If it says "—" or "never", do an upload. If it says a date from days ago, do a fresh upload.</p>
+
+  <div class="h2">Symptom: Numbers look way off (too small or too big)</div>
+  <p><strong>Most likely:</strong> Wrong file uploaded, or column shift in Excel.</p>
+  <p><strong>Fix:</strong> Open the Production Tracker Excel. Verify the <code>CLEAN_ DATA</code> tab has standard columns (Date, Line, Batch, Item, Description, etc.). Re-save and re-upload.</p>
+
+  <div class="h2">Symptom: One tablet works, another doesn't</div>
+  <p><strong>Most likely:</strong> Cache issue on the broken tablet, or the broken tablet has no internet.</p>
+  <p><strong>Fix:</strong></p>
+  <p>1. Check tablet's WiFi is connected<br>
+  2. Hard refresh: pull down on the page in Chrome to refresh<br>
+  3. Clear cache: Chrome → Settings → Site settings → hocoperations1.github.io → Clear data<br>
+  4. Re-open the URL fresh</p>
+
+  <div class="h2">Symptom: Sync delay is over a minute</div>
+  <p><strong>Most likely:</strong> Network issue, or Supabase free tier rate-limit.</p>
+  <p><strong>Fix:</strong> Check System Diagnostics → Supabase row. If green, give it another minute. If red, escalate.</p>
+
+  <div class="h2">Symptom: Dashboard won't load at all</div>
+  <p><strong>Most likely:</strong> Service worker cache is corrupt, or GitHub Pages is having an outage.</p>
+  <p><strong>Fix:</strong></p>
+  <p>1. Check if other websites work (test wifi)<br>
+  2. Try opening hocoperations1.github.io/Hoc-OES/ in a different browser<br>
+  3. If still broken, the issue is on our side — wait 10 minutes, try again<br>
+  4. If still broken after 10 min, contact the System Admin</p>
+
+  <div class="h2">Symptom: PWA install option missing</div>
+  <p><strong>Most likely:</strong> Wrong browser or wrong device mode.</p>
+  <p><strong>Fix:</strong> Make sure you're using Chrome (Android) or Safari (iPad), not an in-app browser like the Outlook app's web view. Open the URL in a real browser.</p>
+
+  <div class="h2">When to escalate</div>
+  <table class="tbl">
+    <tr><th>Issue</th><th>Who to tell</th></tr>
+    <tr><td>Upload failed multiple tries</td><td>System Admin</td></tr>
+    <tr><td>Numbers consistently wrong on a specific dashboard</td><td>System Admin</td></tr>
+    <tr><td>Sync broken for multiple users</td><td>System Admin (immediately)</td></tr>
+    <tr><td>Whole system down</td><td>System Admin (immediately)</td></tr>
+    <tr><td>Tablet hardware issue</td><td>IT (not System Admin)</td></tr>
+  </table>
+</div>
+
+<!-- ════════════════════ GLOSSARY ════════════════════ -->
+<div id="sec-glossary" class="section">
+  <div class="h1">📖 Glossary</div>
+  <div class="h1-sub">Every acronym and term in HOC OES, defined plainly.</div>
+
+  <div class="card">
+    <div class="gl"><div class="gl-term">Attainment</div><div class="gl-def">% of planned cases that were actually produced. Goal: 90%. Measured from Goal Source Data.</div></div>
+    <div class="gl"><div class="gl-term">Batch</div><div class="gl-def">A single production run of one item. Each batch has a unique MAIN###### batch number.</div></div>
+    <div class="gl"><div class="gl-term">Case</div><div class="gl-def">A case of finished product (e.g., 12ea bottles). The standard unit HOC plans by.</div></div>
+    <div class="gl"><div class="gl-term">Case pack</div><div class="gl-def">How many eaches are in one case (e.g., 12). Used to convert cases ↔ eaches.</div></div>
+    <div class="gl"><div class="gl-term">Changeover</div><div class="gl-def">The time between two different batches on the same line. Formula change = 90 min, size change = 60 min, pack change = 30 min.</div></div>
+    <div class="gl"><div class="gl-term">Compound</div><div class="gl-def">The pre-fill mixing step. Compound team makes the bulk product before fill team puts it in containers.</div></div>
+    <div class="gl"><div class="gl-term">Eaches</div><div class="gl-def">Individual units. 12 eaches per case (typically). What customers see on the shelf.</div></div>
+    <div class="gl"><div class="gl-term">FG</div><div class="gl-def">Finished Goods. Product that's filled, sealed, palletized, and ready to ship.</div></div>
+    <div class="gl"><div class="gl-term">Formula</div><div class="gl-def">The recipe ID for what's being made (e.g., F.698 = AJ Knot On My Watch Detangler).</div></div>
+    <div class="gl"><div class="gl-term">Item</div><div class="gl-def">The SKU code (e.g., 1-698-12-1200 = formula 698, 12oz, 12-pack, product ID 1200).</div></div>
+    <div class="gl"><div class="gl-term">KPI</div><div class="gl-def">Key Performance Indicator. The numbers shown at the top of each dashboard.</div></div>
+    <div class="gl"><div class="gl-term">Line</div><div class="gl-def">A production line. HOC has lines 1-5, 8, 10, 11, 14, 15, 16.</div></div>
+    <div class="gl"><div class="gl-term">OEE</div><div class="gl-def">Overall Equipment Effectiveness = Availability × Performance × Quality. Goal: 60%. Comes from Patch.</div></div>
+    <div class="gl"><div class="gl-term">Origqty</div><div class="gl-def">Original Quantity. How many cases the planner intended to make.</div></div>
+    <div class="gl"><div class="gl-term">Patch</div><div class="gl-def">Patch Production Monitoring — the OEE system that monitors fill line speed and downtime.</div></div>
+    <div class="gl"><div class="gl-term">Pre-Weigh</div><div class="gl-def">The step before compound where raw materials are measured out per batch recipe.</div></div>
+    <div class="gl"><div class="gl-term">PWA</div><div class="gl-def">Progressive Web App. A website that installs like an app and works offline.</div></div>
+    <div class="gl"><div class="gl-term">QC</div><div class="gl-def">Quality Control. Tests viscosity, density, pH, etc. before fill is approved.</div></div>
+    <div class="gl"><div class="gl-term">Reforecast</div><div class="gl-def">Adjusting the schedule when yield or capacity changes. Triggered by Schedule Reforecast dashboard.</div></div>
+    <div class="gl"><div class="gl-term">RLS</div><div class="gl-def">Row Level Security. Supabase's permission system. HOC OES has it set to "open" (anyone with the URL can read/write).</div></div>
+    <div class="gl"><div class="gl-term">Service Worker</div><div class="gl-def">A browser tech that caches HOC OES files locally so it works offline. Updates whenever the cache version bumps.</div></div>
+    <div class="gl"><div class="gl-term">Supabase</div><div class="gl-def">The cloud database HOC OES uses. Stores schedule, batches, sync events. Free tier currently.</div></div>
+    <div class="gl"><div class="gl-term">Vicinity</div><div class="gl-def">HOC's ERP. The source of compound standards and fill labor data.</div></div>
+    <div class="gl"><div class="gl-term">WMS</div><div class="gl-def">Warehouse Management System. HOC uses FasTrak — not yet integrated with HOC OES.</div></div>
+    <div class="gl"><div class="gl-term">Yield</div><div class="gl-def">Actual cases ÷ planned cases. 100% = exactly hit plan. <95% = underfill. >102% = overfill.</div></div>
+  </div>
+</div>
+
+<!-- ════════════════════ KPIS ════════════════════ -->
+<div id="sec-kpis" class="section">
+  <div class="h1">📈 KPI Definitions</div>
+  <div class="h1-sub">Every KPI in HOC OES — what it measures, how it's calculated, where it comes from.</div>
+
+  <table class="tbl">
+    <tr><th>KPI</th><th>Calculation</th><th>Source</th><th>Goal</th></tr>
+    <tr><td><strong>May Cases</strong></td><td>Total cases produced this month</td><td>Monthly master MTD summary · Scheduled row · "Total # of Completed Cases"</td><td>—</td></tr>
+    <tr><td><strong>Case Goal</strong></td><td>Total cases planned this month</td><td>Monthly master MTD summary · Scheduled row · "Total # of Planned Cases"</td><td>—</td></tr>
+    <tr><td><strong>Case Balance</strong></td><td>May Cases − Case Goal</td><td>Calculated</td><td>≥ 0 (green)</td></tr>
+    <tr><td><strong>Attainment</strong></td><td>Operator-entered value (manual KPI entry on Data Upload Hub)</td><td>Manual entry → falls back to attainment paste plant % → Patch lines</td><td>≥ 90%</td></tr>
+    <tr><td><strong>OEE</strong></td><td>Operator-entered value (manual KPI entry on Data Upload Hub)</td><td>Manual entry → falls back to Patch lines avg</td><td>≥ 60%</td></tr>
+    <tr><td><strong>Open Batches</strong></td><td>Count of NOT STARTED batches in current month</td><td>CLEAN_ DATA Reason Code</td><td>—</td></tr>
+    <tr><td><strong>Running Now</strong></td><td>Count of RUNNING batches in current month</td><td>CLEAN_ DATA Reason Code</td><td>—</td></tr>
+    <tr><td><strong>Completed</strong></td><td>Count of COMPLETED batches in current month</td><td>CLEAN_ DATA Reason Code</td><td>—</td></tr>
+    <tr><td><strong>Yield %</strong></td><td>Actual Qty ÷ Original Qty × 100, per batch</td><td>CLEAN_ DATA</td><td>95-102%</td></tr>
+    <tr><td><strong>Compound Overdue</strong></td><td>Batches where compound due date is past but compound not done</td><td>Calculated from cmpd_due + cmpd_actual</td><td>0</td></tr>
+    <tr><td><strong>Pipeline Flow</strong></td><td>Count of batches at each stage (CC, PW, CMPD, QC, PC, Prod, FG, WH)</td><td>Calculated by status</td><td>balanced flow</td></tr>
+    <tr><td><strong>Active Risks</strong></td><td>Live count of risk events: raw shortage, QC hold, etc.</td><td>Events from Event Engine</td><td>0</td></tr>
+  </table>
+
+  <div class="callout warn">
+    <strong>If a KPI shows "—"</strong>
+    The source data is missing. "—" is the honest representation. It's not a bug — it's the system telling you it doesn't have the data to compute that number.
+  </div>
+</div>
+
+<!-- ════════════════════ DATA FLOW ════════════════════ -->
+<div id="sec-dataflow" class="section">
+  <div class="h1">🌊 Data Flow Map</div>
+  <div class="h1-sub">Where data enters HOC OES, how it moves between dashboards, where it ends up.</div>
+
+  <div class="h2">Inputs (where data comes from)</div>
+  <table class="tbl">
+    <tr><th>Source</th><th>Frequency</th><th>Slot</th><th>Status</th></tr>
+    <tr><td>Production Tracker (Excel)</td><td>Daily morning</td><td>1</td><td>✅ Live</td></tr>
+    <tr><td>Planning Data (Vicinity)</td><td>Weekly</td><td>2</td><td>⚠️ Manual upload</td></tr>
+    <tr><td>Changeover Tracker</td><td>Weekly</td><td>3</td><td>⚠️ Manual upload</td></tr>
+    <tr><td>Fill Labor Extract (Vicinity)</td><td>Quarterly</td><td>4</td><td>⚠️ Manual upload</td></tr>
+    <tr><td>Patch OEE</td><td>Real-time on Patch / pasted daily</td><td>Goal Source Data</td><td>⚠️ Manual paste (next: Power BI)</td></tr>
+    <tr><td>FasTrak WMS</td><td>—</td><td>—</td><td>⏳ Future</td></tr>
+    <tr><td>Limble CMMS</td><td>—</td><td>—</td><td>⏳ Future</td></tr>
+  </table>
+
+  <div class="h2">Storage (where data lives)</div>
+  <table class="tbl">
+    <tr><th>Table</th><th>Contains</th></tr>
+    <tr><td><code>hoc_schedule</code></td><td>The current schedule blob (entire upload as JSON)</td></tr>
+    <tr><td><code>hoc_batches</code></td><td>Per-batch floor updates (status, QC, notes)</td></tr>
+    <tr><td><code>hoc_qc_tests</code></td><td>QC test results per batch</td></tr>
+    <tr><td><code>hoc_qc_specs</code></td><td>QC specifications per formula</td></tr>
+    <tr><td><code>hoc_events</code></td><td>Downtime, alerts, escalations</td></tr>
+    <tr><td><code>hoc_event_config</code></td><td>Email subscription list (who gets which alerts)</td></tr>
+    <tr><td><code>hoc_sync_bus</code></td><td>Cross-device sync notifications</td></tr>
+  </table>
+
+  <div class="h2">Outputs (where dashboards read from)</div>
+  <p>Every dashboard reads from <code>hoc_schedule</code> + <code>hoc_batches</code> on load, then polls Supabase every 15 seconds for updates. Some dashboards also read from <code>hoc_events</code> (Event Engine, Leadership Control Tower) or <code>hoc_qc_tests</code> (Quality Lab, Compound Coordinator).</p>
+
+  <div class="h2">Local storage (per-tablet)</div>
+  <table class="tbl">
+    <tr><th>Key</th><th>Purpose</th></tr>
+    <tr><td><code>hoc_upload_v1</code></td><td>Local mirror of the schedule (fast load when Supabase is slow)</td></tr>
+    <tr><td><code>hoc_oes_goals_v1</code></td><td>OEE/Attainment goals from Leadership Goals page</td></tr>
+    <tr><td><code>hoc_user_role</code></td><td>This tablet's role (Compound, QC, etc.) — affects which alerts show</td></tr>
+    <tr><td><code>hoc_onboard_dismissed</code></td><td>"Don't show me the welcome banner" flag</td></tr>
+    <tr><td><code>hoc_quickstart_seen</code></td><td>"Don't auto-show the Quick Start" flag</td></tr>
+  </table>
+</div>
+
+<!-- ════════════════════ QUIZ ════════════════════ -->
+<div id="sec-quiz" class="section">
+  <div class="h1">🎓 Knowledge Check</div>
+  <div class="h1-sub">8 quick questions to verify you've got the basics. Takes about 3 minutes.</div>
+
+  <div class="progress-bar"><div class="progress-fill" id="quiz-progress" style="width:0%"></div></div>
+
+  <div class="quiz" data-correct="0">
+    <div class="quiz-q">1. Who's responsible for the daily upload?</div>
+    <div class="quiz-opts">
+      <button class="quiz-opt" onclick="answer(this,0)">The planner (with shift lead as backup)</button>
+      <button class="quiz-opt" onclick="answer(this,1)">Whoever opens HOC OES first</button>
+      <button class="quiz-opt" onclick="answer(this,2)">Leadership</button>
+      <button class="quiz-opt" onclick="answer(this,3)">It happens automatically</button>
+    </div>
+    <div class="quiz-feedback"></div>
+  </div>
+
+  <div class="quiz" data-correct="2">
+    <div class="quiz-q">2. The OEE tile shows "—" — what does that mean?</div>
+    <div class="quiz-opts">
+      <button class="quiz-opt" onclick="answer(this,0)">OEE is 0%</button>
+      <button class="quiz-opt" onclick="answer(this,1)">The system is broken</button>
+      <button class="quiz-opt" onclick="answer(this,2)">No Patch data has been uploaded yet</button>
+      <button class="quiz-opt" onclick="answer(this,3)">The line is down</button>
+    </div>
+    <div class="quiz-feedback"></div>
+  </div>
+
+  <div class="quiz" data-correct="1">
+    <div class="quiz-q">3. What's the single source of truth for May Cases?</div>
+    <div class="quiz-opts">
+      <button class="quiz-opt" onclick="answer(this,0)">Summed from individual batches in CLEAN_ DATA</button>
+      <button class="quiz-opt" onclick="answer(this,1)">Goal Source Data tab, row 20</button>
+      <button class="quiz-opt" onclick="answer(this,2)">Patch dashboard</button>
+      <button class="quiz-opt" onclick="answer(this,3)">Vicinity ERP</button>
+    </div>
+    <div class="quiz-feedback"></div>
+  </div>
+
+  <div class="quiz" data-correct="3">
+    <div class="quiz-q">4. You click "COMPOUND OVERDUE" on Compound Coordinator. What happens?</div>
+    <div class="quiz-opts">
+      <button class="quiz-opt" onclick="answer(this,0)">Nothing — KPIs are not clickable</button>
+      <button class="quiz-opt" onclick="answer(this,1)">It exports a CSV</button>
+      <button class="quiz-opt" onclick="answer(this,2)">It opens an email to compound team</button>
+      <button class="quiz-opt" onclick="answer(this,3)">It routes you to where you can resolve the issue</button>
+    </div>
+    <div class="quiz-feedback"></div>
+  </div>
+
+  <div class="quiz" data-correct="1">
+    <div class="quiz-q">5. Cross-device sync — how long between an update on tablet A and seeing it on tablet B?</div>
+    <div class="quiz-opts">
+      <button class="quiz-opt" onclick="answer(this,0)">Instant (real-time)</button>
+      <button class="quiz-opt" onclick="answer(this,1)">15-30 seconds</button>
+      <button class="quiz-opt" onclick="answer(this,2)">1-2 minutes</button>
+      <button class="quiz-opt" onclick="answer(this,3)">Next morning</button>
+    </div>
+    <div class="quiz-feedback"></div>
+  </div>
+
+  <div class="quiz" data-correct="2">
+    <div class="quiz-q">6. The freshness banner is amber. What does that tell you?</div>
+    <div class="quiz-opts">
+      <button class="quiz-opt" onclick="answer(this,0)">The system is broken</button>
+      <button class="quiz-opt" onclick="answer(this,1)">Patch is offline</button>
+      <button class="quiz-opt" onclick="answer(this,2)">The upload is more than 7 days old — re-upload</button>
+      <button class="quiz-opt" onclick="answer(this,3)">There are unresolved alerts</button>
+    </div>
+    <div class="quiz-feedback"></div>
+  </div>
+
+  <div class="quiz" data-correct="0">
+    <div class="quiz-q">7. What's the right action when you see a red Active Risk on the Control Tower?</div>
+    <div class="quiz-opts">
+      <button class="quiz-opt" onclick="answer(this,0)">Click it — it routes to where the risk gets resolved</button>
+      <button class="quiz-opt" onclick="answer(this,1)">Email leadership</button>
+      <button class="quiz-opt" onclick="answer(this,2)">Wait for the system to clear it automatically</button>
+      <button class="quiz-opt" onclick="answer(this,3)">Ignore it — they're usually false alarms</button>
+    </div>
+    <div class="quiz-feedback"></div>
+  </div>
+
+  <div class="quiz" data-correct="2">
+    <div class="quiz-q">8. The numbers on your tablet look wrong, but a coworker's tablet shows different numbers. What's most likely?</div>
+    <div class="quiz-opts">
+      <button class="quiz-opt" onclick="answer(this,0)">Supabase is broken</button>
+      <button class="quiz-opt" onclick="answer(this,1)">You're looking at the wrong dashboard</button>
+      <button class="quiz-opt" onclick="answer(this,2)">Cache issue on one tablet — hard refresh and try again</button>
+      <button class="quiz-opt" onclick="answer(this,3)">Coworker is making it up</button>
+    </div>
+    <div class="quiz-feedback"></div>
+  </div>
+
+  <div id="quiz-result" style="margin-top:20px;display:none">
+    <div class="callout good" id="quiz-result-good" style="display:none">
+      <strong>Nice work</strong>
+      You've got the basics. Bookmark this onboarding tool for reference, and reach out to the System Admin if you run into anything weird.
+    </div>
+    <div class="callout warn" id="quiz-result-warn" style="display:none">
+      <strong>Worth reviewing</strong>
+      Take another pass through your role guide and the Glossary. Then re-try the quiz.
+    </div>
+    <div style="margin-top:12px">
+      <a href="#" class="btn" onclick="resetQuiz();return false">Try again</a>
+      <a href="#" class="btn secondary" onclick="go('welcome');return false">Back to start</a>
+    </div>
+  </div>
+</div>
+
+  </main>
+</div>
+
+<script>
+// Section navigation
+function go(target){
+  document.querySelectorAll('.section').forEach(function(s){ s.classList.remove('active'); });
+  document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
+  var sec = document.getElementById('sec-'+target);
+  var nav = document.querySelector('.nav-item[data-target="'+target+'"]');
+  if(sec) sec.classList.add('active');
+  if(nav) nav.classList.add('active');
+  // Mark as visited
+  try {
+    var visited = JSON.parse(localStorage.getItem('hoc_onboard_visited') || '[]');
+    if(visited.indexOf(target) < 0){
+      visited.push(target);
+      localStorage.setItem('hoc_onboard_visited', JSON.stringify(visited));
+    }
+    // Update completed badges
+    visited.forEach(function(t){
+      var n = document.querySelector('.nav-item[data-target="'+t+'"]');
+      if(n && t !== 'welcome' && t !== 'quiz') n.classList.add('completed');
+    });
+  } catch(e){}
+  // Scroll to top
+  document.querySelector('.content').scrollTo({top:0,behavior:'smooth'});
+  // Close sidebar on mobile
+  document.getElementById('sidebar').classList.remove('open');
+}
+
+// Wire up sidebar clicks
+document.querySelectorAll('.nav-item').forEach(function(n){
+  n.addEventListener('click', function(){
+    go(n.dataset.target);
+  });
+});
+
+// Restore visited state on load
+(function(){
+  try {
+    var visited = JSON.parse(localStorage.getItem('hoc_onboard_visited') || '[]');
+    visited.forEach(function(t){
+      var n = document.querySelector('.nav-item[data-target="'+t+'"]');
+      if(n && t !== 'welcome' && t !== 'quiz') n.classList.add('completed');
+    });
+  } catch(e){}
+})();
+
+// Quiz logic
+function answer(btn, choice){
+  var quiz = btn.closest('.quiz');
+  var correct = parseInt(quiz.dataset.correct);
+  var feedback = quiz.querySelector('.quiz-feedback');
+  // Disable all opts
+  quiz.querySelectorAll('.quiz-opt').forEach(function(o,i){
+    o.disabled = true;
+    if(i === correct) o.classList.add('correct');
+    if(i === choice && choice !== correct) o.classList.add('wrong');
+  });
+  if(choice === correct){
+    feedback.textContent = '✓ Correct';
+    feedback.style.color = '#4ADE80';
+  } else {
+    var correctText = quiz.querySelectorAll('.quiz-opt')[correct].textContent;
+    feedback.textContent = '✗ Correct answer: ' + correctText;
+    feedback.style.color = '#FCA5A5';
+  }
+  feedback.classList.add('show');
+  // Update progress
+  updateQuizProgress();
+}
+
+function updateQuizProgress(){
+  var total = document.querySelectorAll('.quiz').length;
+  var answered = document.querySelectorAll('.quiz .quiz-opt:disabled').length / 4; // 4 opts each
+  var correct = document.querySelectorAll('.quiz .correct').length;
+  var pct = (answered/total*100);
+  document.getElementById('quiz-progress').style.width = pct + '%';
+  if(answered >= total){
+    var result = document.getElementById('quiz-result');
+    result.style.display = 'block';
+    if(correct >= 6){
+      document.getElementById('quiz-result-good').style.display = 'block';
+      document.getElementById('quiz-result-warn').style.display = 'none';
+    } else {
+      document.getElementById('quiz-result-warn').style.display = 'block';
+      document.getElementById('quiz-result-good').style.display = 'none';
+    }
+  }
+}
+
+function resetQuiz(){
+  document.querySelectorAll('.quiz .quiz-opt').forEach(function(o){
+    o.disabled = false;
+    o.classList.remove('correct','wrong');
+  });
+  document.querySelectorAll('.quiz-feedback').forEach(function(f){
+    f.classList.remove('show');
+    f.textContent = '';
+  });
+  document.getElementById('quiz-progress').style.width = '0%';
+  document.getElementById('quiz-result').style.display = 'none';
+}
+</script>
+
+</body></html>

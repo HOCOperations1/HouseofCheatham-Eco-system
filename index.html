@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="theme-color" content="#0B0E17">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="HOC-OES">
+<link rel="manifest" href="manifest.json">
+<title>HOC-OES</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0B0E17;--bg2:#111520;--bg3:#161C28;--border:#1E293B;
+  --text:#DDE4F0;--text2:#8A97B4;--text3:#4A5570;
+  --green:#22C55E;--blue:#3B82F6;--amber:#F59E0B;
+  --red:#EF4444;--teal:#10B981;--purple:#8B5CF6;
+  font-family:ui-monospace,"Cascadia Code","Fira Code",monospace;
+}
+html,body{min-height:100%;background:var(--bg);color:var(--text)}
+
+/* ── TOP BAR ── */
+.topbar{
+  height:52px;background:var(--bg2);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:12px;padding:0 20px;
+  position:sticky;top:0;z-index:100;
+}
+.tb-logo{
+  width:34px;height:34px;border-radius:9px;
+  background:linear-gradient(135deg,#3B82F6,#8B5CF6);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;color:#fff;flex-shrink:0;
+}
+.tb-title{font-size:13px;font-weight:700}
+.tb-sub{font-size:9px;color:var(--text3);margin-top:1px}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.sync-pill{
+  display:flex;align-items:center;gap:5px;
+  padding:4px 10px;border-radius:12px;
+  background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.25);
+  font-size:9px;font-weight:700;color:var(--purple);cursor:pointer;
+}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--purple)}
+.install-btn{
+  font-size:9px;font-weight:700;padding:4px 10px;border-radius:12px;
+  background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);
+  color:var(--green);cursor:pointer;display:none;
+}
+.install-btn.show{display:block}
+
+/* ── MAIN ── */
+.main{padding:20px;max-width:1400px;margin:0 auto}
+
+.section-title{
+  font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--text3);margin-bottom:10px;display:flex;align-items:center;gap:8px;
+}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── KPIS ── */
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:20px}
+.kpi{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.kv{font-size:20px;font-weight:700;line-height:1.1}
+.kl{font-size:8px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:3px}
+.ks{font-size:9px;color:var(--text3);margin-top:2px}
+
+/* ── TOOL GRID ── */
+.tool-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  gap:8px;
+  margin-bottom:20px;
+}
+.tool-card{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;border-radius:10px;
+  background:var(--bg3);border:1px solid var(--border);
+  cursor:pointer;transition:border-color .12s, background .12s;
+}
+.tool-card:hover{background:var(--bg2)}
+.tc-logo{
+  width:36px;height:36px;border-radius:9px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;flex-shrink:0;
+}
+.tc-body{flex:1;min-width:0}
+.tc-name{font-size:11px;font-weight:700;margin-bottom:2px}
+.tc-desc{font-size:9px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tc-arrow{font-size:16px;color:var(--text3);flex-shrink:0}
+
+/* ── SYNC STATUS ── */
+.sync-panel{
+  background:var(--bg3);border:1px solid var(--border);border-radius:10px;
+  padding:14px;margin-bottom:20px;
+}
+.sync-entries{margin-top:8px;font-size:10px;color:var(--text2)}
+.sync-entry{
+  padding:4px 8px;margin-bottom:3px;border-radius:5px;
+  background:var(--bg2);border-left:3px solid var(--purple);
+}
+
+/* ── SETUP NOTICE ── */
+.notice{
+  background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.2);
+  border-radius:10px;padding:14px;margin-bottom:20px;font-size:10px;color:var(--text2);
+  line-height:1.7;
+}
+.notice b{color:var(--blue)}
+.notice code{
+  background:var(--bg3);padding:2px 6px;border-radius:4px;
+  font-family:monospace;font-size:9px;color:var(--teal);
+}
+
+/* ── STEP FLOW ── */
+.flow{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:20px}
+.flow-step{
+  padding:5px 10px;border-radius:6px;font-size:9px;font-weight:700;
+  border:1px solid;cursor:pointer;text-decoration:none;transition:opacity .12s;
+}
+.flow-step:hover{opacity:.8}
+.flow-arr{color:var(--text3);font-size:14px;flex-shrink:0}
+</style>
+
+<script>
+// v6.34g: Version stamp + badge. Bump on every deploy.
+var HOC_OES_VERSION = 'v6.34g-20260527';
+var HOC_OES_BUILD_TS = '1779870000';
+if(localStorage.getItem('hoc_oes_version') !== HOC_OES_VERSION){
+  localStorage.setItem('hoc_oes_version', HOC_OES_VERSION);
+  console.log('[HOC-OES] Version updated to ' + HOC_OES_VERSION);
+}
+</script>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="tb-logo">HC</div>
+  <div>
+    <div class="tb-title">HOC-OES</div>
+    <div class="tb-sub">House of Cheatham Operational Ecosystem · May 2026 · <span id="ver-badge" style="background:rgba(34,197,94,.15);color:#22C55E;padding:1px 6px;border-radius:4px;font-weight:700;font-family:ui-monospace;font-size:9px;letter-spacing:.05em">v6.34g</span> · <a href="reset.html" style="color:#8899AA;font-size:9px;text-decoration:underline;margin-left:6px">reset cache</a></div>
+  </div>
+  <div class="tb-right">
+    <div class="sync-pill" onclick="toggleSync()">
+      <div class="sync-dot" id="sync-dot"></div>
+      <span id="sync-label">Sync</span>
+    </div>
+    <button class="install-btn" id="install-btn" onclick="installPWA()">⊕ Install App</button>
+  </div>
+</div>
+
+
+<div class="main">
+
+  <!-- QUICK START GUIDE (shows on first visit, always available via help button) -->
+  <div id="quickstart-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.75);z-index:9999;align-items:center;justify-content:center;padding:20px">
+    <div style="background:var(--bg2);border:1px solid rgba(59,130,246,.4);border-radius:12px;max-width:680px;width:100%;max-height:90vh;overflow-y:auto;padding:24px 28px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:12px">
+        <div style="font-size:18px;font-weight:700;color:#3B82F6">👋 Welcome to HOC OES</div>
+        <button onclick="closeQuickStart()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:22px;padding:0 6px">×</button>
+      </div>
+
+      <div style="font-size:13px;color:var(--text);line-height:1.6;margin-bottom:18px">
+        The <b>Operations Engagement System</b> connects every team to live production data. Pick where to start based on your role:
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-bottom:18px">
+        <a href="HOC_Roll_Call.html" style="background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.3);border-radius:8px;padding:12px;text-decoration:none;color:var(--text);transition:background .15s" onmouseover="this.style.background='rgba(124,58,237,.2)'" onmouseout="this.style.background='rgba(124,58,237,.1)'">
+          <div style="font-size:12px;font-weight:700;color:#A78BFA;margin-bottom:4px">👥 SHIFT LEADS / SUPERVISORS</div>
+          <div style="font-size:11px;color:var(--text2)">Start with <b>Employee Roll Call</b> — take attendance, track points</div>
+        </a>
+        <a href="HOC_Data_Upload_Hub.html" style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:8px;padding:12px;text-decoration:none;color:var(--text);transition:background .15s" onmouseover="this.style.background='rgba(245,158,11,.2)'" onmouseout="this.style.background='rgba(245,158,11,.1)'">
+          <div style="font-size:12px;font-weight:700;color:#F59E0B;margin-bottom:4px">📤 PLANNERS / SCHEDULERS</div>
+          <div style="font-size:11px;color:var(--text2)">Start with <b>Data Upload Hub</b> — drop your Excel files, refresh everything</div>
+        </a>
+        <a href="HOC_Compound_Coordinator.html" style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:8px;padding:12px;text-decoration:none;color:var(--text);transition:background .15s" onmouseover="this.style.background='rgba(59,130,246,.2)'" onmouseout="this.style.background='rgba(59,130,246,.1)'">
+          <div style="font-size:12px;font-weight:700;color:#60A5FA;margin-bottom:4px">🧪 COMPOUND TEAM</div>
+          <div style="font-size:11px;color:var(--text2)">Start with <b>Compound Coordinator</b> — see what's overdue, mark batches complete</div>
+        </a>
+        <a href="HOC_Production_Supervisor.html" style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:12px;text-decoration:none;color:var(--text);transition:background .15s" onmouseover="this.style.background='rgba(34,197,94,.2)'" onmouseout="this.style.background='rgba(34,197,94,.1)'">
+          <div style="font-size:12px;font-weight:700;color:#4ADE80;margin-bottom:4px">⚙️ PRODUCTION FLOOR</div>
+          <div style="font-size:11px;color:var(--text2)">Start with <b>Production Supervisor</b> — live status by line, OEE, downtime</div>
+        </a>
+        <a href="HOC_Quality_Lab.html" style="background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:8px;padding:12px;text-decoration:none;color:var(--text);transition:background .15s" onmouseover="this.style.background='rgba(16,185,129,.2)'" onmouseout="this.style.background='rgba(16,185,129,.1)'">
+          <div style="font-size:12px;font-weight:700;color:#34D399;margin-bottom:4px">🔬 QC TEAM</div>
+          <div style="font-size:11px;color:var(--text2)">Start with <b>Quality Lab</b> — pending tests, release decisions, holds</div>
+        </a>
+        <a href="HOC_Leadership_Control_Tower.html" style="background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.3);border-radius:8px;padding:12px;text-decoration:none;color:var(--text);transition:background .15s" onmouseover="this.style.background='rgba(139,92,246,.2)'" onmouseout="this.style.background='rgba(139,92,246,.1)'">
+          <div style="font-size:12px;font-weight:700;color:#A78BFA;margin-bottom:4px">📊 LEADERSHIP</div>
+          <div style="font-size:11px;color:var(--text2)">Start with <b>Control Tower</b> — KPIs, risks, pipeline flow, all in one</div>
+        </a>
+        <a href="HOC_Sales_Dashboard.html" style="background:rgba(236,72,153,.1);border:1px solid rgba(236,72,153,.3);border-radius:8px;padding:12px;text-decoration:none;color:var(--text);transition:background .15s" onmouseover="this.style.background='rgba(236,72,153,.2)'" onmouseout="this.style.background='rgba(236,72,153,.1)'">
+          <div style="font-size:12px;font-weight:700;color:#F472B6;margin-bottom:4px">💼 SALES / ACCOUNT MGMT</div>
+          <div style="font-size:11px;color:var(--text2)">Start with <b>Sales Dashboard</b> — customer orders, fill rate, at-risk orders</div>
+        </a>
+      </div>
+
+      <div style="background:rgba(16,185,129,.06);border-left:3px solid #10B981;padding:10px 14px;border-radius:4px;margin-bottom:14px">
+        <div style="font-size:11px;font-weight:700;color:#10B981;margin-bottom:6px">📚 NEED THE FULL TRAINING?</div>
+        <div style="font-size:11.5px;color:var(--text2);line-height:1.6">
+          The <a href="HOC_Onboarding.html" style="color:#10B981;font-weight:700">Onboarding &amp; Operations Guide</a> has step-by-step walkthroughs for every role, a glossary, KPI definitions, troubleshooting, and a knowledge check quiz. ~15 min to go through.
+        </div>
+      </div>
+
+      <div style="background:rgba(59,130,246,.06);border-left:3px solid #3B82F6;padding:10px 14px;border-radius:4px;margin-bottom:14px">
+        <div style="font-size:11px;font-weight:700;color:#60A5FA;margin-bottom:6px">💡 KEY THINGS TO KNOW</div>
+        <ul style="margin:0;padding-left:18px;font-size:11px;color:var(--text2);line-height:1.7">
+          <li><b>Click any KPI number or row</b> — it'll jump you to the right tool to act on it</li>
+          <li><b>Data flows downstream</b> — Compound → PreWeigh → QC → Production → FG → Warehouse</li>
+          <li><b>Yellow banner</b> means data is stale (over 7 days); re-upload from Data Upload Hub</li>
+          <li><b>System Diagnostics</b> (top right card) shows health of every connection</li>
+          <li><b>Tablet?</b> Add to home screen — works offline once cached</li>
+        </ul>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--text3)">
+        <span>You can reopen this guide anytime via the <b>?</b> button in the corner</span>
+        <button onclick="closeQuickStart()" style="background:#3B82F6;color:white;border:none;padding:8px 20px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">Got it — let's go</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Help button (always visible, opens quickstart) -->
+  <button onclick="openQuickStart()" title="Open Quick Start Guide" style="position:fixed;bottom:24px;right:24px;width:44px;height:44px;border-radius:50%;background:#3B82F6;color:white;border:none;font-size:20px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(59,130,246,.4);z-index:998">?</button>
+
+  <!-- First-time onboarding banner (shows when no upload data exists) -->
+  <div id="onboard-banner" style="display:none;background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(245,158,11,.04));border:1px solid rgba(245,158,11,.35);border-radius:8px;padding:14px 18px;margin-bottom:14px">
+    <div style="display:flex;align-items:flex-start;gap:14px">
+      <div style="font-size:24px">👋</div>
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:700;color:#F59E0B;margin-bottom:4px">Welcome — let's get the floor connected</div>
+        <div style="font-size:11px;color:var(--text2);line-height:1.5">
+          No production data is loaded yet. Start by uploading the Production Tracker so every dashboard wakes up with today's batches, KPIs, and schedule.
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+          <a href="HOC_Data_Upload_Hub.html" style="background:#F59E0B;color:#1a1207;padding:6px 14px;border-radius:6px;text-decoration:none;font-size:11px;font-weight:700">📤 Open Data Upload Hub</a>
+          <a href="HOC_Production_Schedule.html" style="background:rgba(255,255,255,.06);color:var(--text2);padding:6px 14px;border-radius:6px;text-decoration:none;font-size:11px;font-weight:600;border:1px solid rgba(255,255,255,.1)">Or browse without data →</a>
+        </div>
+      </div>
+      <button onclick="document.getElementById('onboard-banner').style.display='none';try{localStorage.setItem('hoc_onboard_dismissed','1');}catch(e){}" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:0 4px">×</button>
+    </div>
+  </div>
+
+  <!-- Staleness warning banner (shows when upload is >7 days old) -->
+  <div id="stale-banner" style="display:none;background:linear-gradient(135deg,rgba(245,158,11,.18),rgba(245,158,11,.05));border:1px solid rgba(245,158,11,.45);border-radius:8px;padding:12px 16px;margin-bottom:14px">
+    <div style="display:flex;align-items:flex-start;gap:12px">
+      <div style="font-size:20px">⏰</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;color:#F59E0B;margin-bottom:3px">Production data may be stale</div>
+        <div style="font-size:11px;color:var(--text2);line-height:1.5" id="stale-detail">—</div>
+      </div>
+      <a href="HOC_Data_Upload_Hub.html" style="background:#F59E0B;color:#1a1207;padding:5px 12px;border-radius:6px;text-decoration:none;font-size:11px;font-weight:700">Re-upload</a>
+    </div>
+  </div>
+
+  <!-- Freshness line (always shows when data exists) -->
+  <div id="freshness-line" style="display:none;font-size:10px;color:var(--text3);margin-bottom:8px;padding:0 4px;display:flex;align-items:center;gap:8px">
+    <span id="freshness-text">—</span>
+    <span style="flex:1"></span>
+    <a href="#" onclick="event.preventDefault();try{localStorage.removeItem('hoc_onboard_dismissed');}catch(e){};document.getElementById('onboard-banner').style.display='block';window.scrollTo({top:0,behavior:'smooth'});return false;" style="color:var(--text3);text-decoration:none;font-size:10px;padding:2px 8px;border:1px solid var(--border);border-radius:4px;cursor:pointer">👋 Show welcome guide</a>
+  </div>
+
+  <!-- KPI ROW -->
+  <div class="kpi-row" id="kpi-row">
+    <div class="kpi"><div class="kl">May Cases</div><div class="kv" id="kv-cases" style="color:var(--text)">—</div><div class="ks">Produced</div></div>
+    <div class="kpi"><div class="kl">Case Balance</div><div class="kv" id="kv-balance" style="color:var(--text)">—</div><div class="ks">vs goal</div></div>
+    <div class="kpi"><div class="kl">Open Batches</div><div class="kv" id="kv-batches" style="color:var(--text)">—</div><div class="ks">Not started</div></div>
+    <div class="kpi"><div class="kl">Synced Updates</div><div class="kv" id="kv-synced" style="color:var(--purple)">0</div><div class="ks">From floor tools</div></div>
+    <div class="kpi"><div class="kl">Blocked Batches</div><div class="kv" id="kv-blocked" style="color:var(--text)">0</div><div class="ks">Upstream stopped</div></div>
+    <div class="kpi"><div class="kl">OEE (May)</div><div class="kv" id="kv-oee" style="color:var(--text)">—</div><div class="ks">vs 60% goal</div></div>
+    <div class="kpi"><div class="kl">Attainment</div><div class="kv" id="kv-att" style="color:var(--text)">—</div><div class="ks">vs 90% goal</div></div>
+  </div>
+
+  <!-- WORKFLOW FLOW BAR -->
+  <div class="section-title">Production Workflow — 8 Steps</div>
+  <div class="flow">
+    <a href="HOC_Compound_Coordinator.html" class="flow-step" style="background:#3B82F622;color:#3B82F6;border-color:#3B82F644">CC&nbsp;Step 1</a><div class="flow-arr">→</div><a href="HOC_PreWeigh_Scheduler.html" class="flow-step" style="background:#8B5CF622;color:#8B5CF6;border-color:#8B5CF644">PW&nbsp;Step 2</a><div class="flow-arr">→</div><a href="HOC_Compound_Scheduler_v3.html" class="flow-step" style="background:#3B82F622;color:#3B82F6;border-color:#3B82F644">CS&nbsp;Step 3</a><div class="flow-arr">→</div><a href="HOC_Quality_Lab.html" class="flow-step" style="background:#10B98122;color:#10B981;border-color:#10B98144">QC&nbsp;Step 4</a><div class="flow-arr">→</div><a href="HOC_Production_Coordinator.html" class="flow-step" style="background:#F59E0B22;color:#F59E0B;border-color:#F59E0B44">PC&nbsp;Step 5</a><div class="flow-arr">→</div><a href="HOC_Production_Supervisor.html" class="flow-step" style="background:#22C55E22;color:#22C55E;border-color:#22C55E44">PS&nbsp;Step 6</a><div class="flow-arr">→</div><a href="HOC_FG_Reconciliation.html" class="flow-step" style="background:#10B98122;color:#10B981;border-color:#10B98144">FG&nbsp;Step 7</a><div class="flow-arr">→</div><a href="HOC_Warehouse_Movement.html" class="flow-step" style="background:#F59E0B22;color:#F59E0B;border-color:#F59E0B44">WH&nbsp;Step 8</a>
+  </div>
+
+  <!-- FLOOR TOOLS -->
+  <a href="HOC_Roll_Call.html" class="tool-card" style="border-color:#7C3AED22;text-decoration:none;border-width:2px;" onmouseover="this.style.borderColor='#7C3AED88'" onmouseout="this.style.borderColor='#7C3AED22'">
+      <div class="tc-logo" style="background:#7C3AED22;color:#7C3AED;border:1px solid #7C3AED44">RC</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#7C3AED">Employee Roll Call</div>
+        <div class="tc-desc">Shift attendance · Points tracking · HC vs standard · 85 employees</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:#7C3AED22;color:#7C3AED;border:1px solid #7C3AED44">Shift Start</span>
+      <div class="tc-arrow">›</div>
+    </a>
+
+  <a href="HOC_Data_Upload_Hub.html" class="tool-card" style="border-color:#F59E0B22;text-decoration:none;border-width:2px;" onmouseover="this.style.borderColor='#F59E0B88'" onmouseout="this.style.borderColor='#F59E0B22'">
+      <div class="tc-logo" style="background:linear-gradient(135deg,#F59E0B,#EF4444);color:#fff">DU</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#F59E0B">Data Upload Hub</div>
+        <div class="tc-desc">Drop Excel files → all 11 static dashboards update instantly · No rebuild needed</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:#F59E0B22;color:#F59E0B;border:1px solid #F59E0B44">Data Sync</span>
+      <div class="tc-arrow">›</div>
+    </a>
+
+  <a href="HOC_System_Diagnostics.html" class="tool-card" style="border-color:#64748b22;text-decoration:none;border-width:2px;" onmouseover="this.style.borderColor='#64748b88'" onmouseout="this.style.borderColor='#64748b22'">
+      <div class="tc-logo" style="background:linear-gradient(135deg,#64748b,#94a3b8);color:#fff;font-size:16px">🔧</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#94a3b8">System Diagnostics</div>
+        <div class="tc-desc">Health check · upload status · Supabase · auto-detect engine · troubleshooting</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:#64748b22;color:#94a3b8;border:1px solid #64748b44">Health</span>
+      <div class="tc-arrow">›</div>
+    </a>
+
+  <a href="HOC_Datalink_Health.html" class="tool-card" style="border-color:#22D3EE22;text-decoration:none;border-width:2px;" onmouseover="this.style.borderColor='#22D3EE88'" onmouseout="this.style.borderColor='#22D3EE22'">
+      <div class="tc-logo" style="background:linear-gradient(135deg,#22D3EE,#0891B2);color:#000;font-size:16px">📡</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#22D3EE">Datalink Health</div>
+        <div class="tc-desc">Vicinity OData status · endpoint pulls · diagnostic report for IT · for the datalink terminal server</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:#22D3EE22;color:#22D3EE;border:1px solid #22D3EE44">NEW</span>
+      <div class="tc-arrow">›</div>
+    </a>
+
+  <a href="HOC_Onboarding.html" class="tool-card" style="border-color:#10B98122;text-decoration:none;border-width:2px;" onmouseover="this.style.borderColor='#10B98188'" onmouseout="this.style.borderColor='#10B98122'">
+      <div class="tc-logo" style="background:linear-gradient(135deg,#10B981,#14B8A6);color:#fff;font-size:16px">📚</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#10B981">Onboarding &amp; Operations Guide</div>
+        <div class="tc-desc">Role guides · how-to walkthroughs · glossary · KPI definitions · knowledge check</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:#10B98122;color:#10B981;border:1px solid #10B98144">Training</span>
+      <div class="tc-arrow">›</div>
+    </a>
+
+  <div class="section-title">Floor Tools</div>
+  <div class="tool-grid">
+<a href="HOC_Compound_Coordinator.html" class="tool-card" style="border-color:#3B82F622;text-decoration:none;" onmouseover="this.style.borderColor='#3B82F666'" onmouseout="this.style.borderColor='#3B82F622'">
+      <div class="tc-logo" style="background:#3B82F622;color:#3B82F6;border:1px solid #3B82F644">CC</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#3B82F6">Compound Coordinator</div>
+        <div class="tc-desc">Raw material gate · shortage flagging</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:#3B82F622;color:#3B82F6;border:1px solid #3B82F644">Step 1</span>
+      <div class="tc-arrow">›</div>
+    </a>
+<a href="HOC_PreWeigh_Scheduler.html" class="tool-card" style="border-color:#8B5CF622;text-decoration:none;" onmouseover="this.style.borderColor='#8B5CF666'" onmouseout="this.style.borderColor='#8B5CF622'">
+      <div class="tc-logo" style="background:#8B5CF622;color:#8B5CF6;border:1px solid #8B5CF644">PW</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#8B5CF6">Pre-Weigh</div>
+        <div class="tc-desc">6 pulls/day · 2 techs · chemicals</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:#8B5CF622;color:#8B5CF6;border:1px solid #8B5CF644">Step 2</span>
+      <div class="tc-arrow">›</div>
+    </a>
+<a href="HOC_Compound_Scheduler_v3.html" class="tool-card" style="border-color:#3B82F622;text-decoration:none;" onmouseover="this.style.borderColor='#3B82F666'" onmouseout="this.style.borderColor='#3B82F622'">
+      <div class="tc-logo" style="background:#3B82F622;color:#3B82F6;border:1px solid #3B82F644">CS</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#3B82F6">Compound Scheduler</div>
+        <div class="tc-desc">Schedule · formula standards · prebatch</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:#3B82F622;color:#3B82F6;border:1px solid #3B82F644">Step 3</span>
+      <div class="tc-arrow">›</div>
+    </a>
+<a href="HOC_Tank_Board.html" class="tool-card" style="border-color:#14B8A622;text-decoration:none;" onmouseover="this.style.borderColor='#14B8A666'" onmouseout="this.style.borderColor='#14B8A622'">
+      <div class="tc-logo" style="background:#14B8A622;color:#14B8A6;border:1px solid #14B8A644">TB</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#14B8A6">Compound Tank Board</div>
+        <div class="tc-desc">14 tanks · status · batch-to-tank assignment</div>
+      </div>
+      
+      <div class="tc-arrow">›</div>
+    </a>
+<a href="HOC_Quality_Lab.html" class="tool-card" style="border-color:#10B98122;text-decoration:none;" onmouseover="this.style.borderColor='#10B98166'" onmouseout="this.style.borderColor='#10B98122'">
+      <div class="tc-logo" style="background:#10B98122;color:#10B981;border:1px solid #10B98144">QC</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#10B981">Quality Lab</div>
+        <div class="tc-desc">QC release · pH · viscosity · color</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:#10B98122;color:#10B981;border:1px solid #10B98144">Step 4</span>
+      <div class="tc-arrow">›</div>
+    </a>
+<a href="HOC_Production_Coordinator.html" class="tool-card" style="border-color:#F59E0B22;text-decoration:none;" onmouseover="this.style.borderColor='#F59E0B66'" onmouseout="this.style.borderColor='#F59E0B22'">
+      <div class="tc-logo" style="background:#F59E0B22;color:#F59E0B;border:1px solid #F59E0B44">PC</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#F59E0B">Prod Coordinator</div>
+        <div class="tc-desc">Component verification · line readiness</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:#F59E0B22;color:#F59E0B;border:1px solid #F59E0B44">Step 5</span>
+      <div class="tc-arrow">›</div>
+    </a>
+<a href="HOC_Production_Supervisor.html" class="tool-card" style="border-color:#22C55E22;text-decoration:none;" onmouseover="this.style.borderColor='#22C55E66'" onmouseout="this.style.borderColor='#22C55E22'">
+      <div class="tc-logo" style="background:#22C55E22;color:#22C55E;border:1px solid #22C55E44">PS</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#22C55E">Production</div>
+        <div class="tc-desc">OEE · actual cases · 13 lines</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:#22C55E22;color:#22C55E;border:1px solid #22C55E44">Step 6</span>
+      <div class="tc-arrow">›</div>
+    </a>
+<a href="HOC_FG_Reconciliation.html" class="tool-card" style="border-color:#10B98122;text-decoration:none;" onmouseover="this.style.borderColor='#10B98166'" onmouseout="this.style.borderColor='#10B98122'">
+      <div class="tc-logo" style="background:#10B98122;color:#10B981;border:1px solid #10B98144">FG</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#10B981">FG Reconciliation</div>
+        <div class="tc-desc">Yield · case count · pallet tracking</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:#10B98122;color:#10B981;border:1px solid #10B98144">Step 7</span>
+      <div class="tc-arrow">›</div>
+    </a>
+<a href="HOC_Warehouse_Movement.html" class="tool-card" style="border-color:#F59E0B22;text-decoration:none;" onmouseover="this.style.borderColor='#F59E0B66'" onmouseout="this.style.borderColor='#F59E0B22'">
+      <div class="tc-logo" style="background:#F59E0B22;color:#F59E0B;border:1px solid #F59E0B44">WH</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#F59E0B">Warehouse Movement</div>
+        <div class="tc-desc">Outbound · Receiving · 844 POs</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:#F59E0B22;color:#F59E0B;border:1px solid #F59E0B44">Step 8</span>
+      <div class="tc-arrow">›</div>
+    </a>
+<a href="HOC_Inventory.html" class="tool-card" style="border-color:#22D3EE22;text-decoration:none;border-width:2px" onmouseover="this.style.borderColor='#22D3EE88'" onmouseout="this.style.borderColor='#22D3EE22'">
+      <div class="tc-logo" style="background:#22D3EE22;color:#22D3EE;border:1px solid #22D3EE44">INV</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#22D3EE">Inventory</div>
+        <div class="tc-desc">Tank Farm · MU Browser · Receive PO · FIFO Picker · Trace</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:#22D3EE22;color:#22D3EE;border:1px solid #22D3EE44">NEW</span>
+      <div class="tc-arrow">›</div>
+    </a>
+    <a href="HOC_Scrap_Tracker.html" class="tool-card" style="border-color:#EF444422;text-decoration:none;border-width:2px" onmouseover="this.style.borderColor='#EF444488'" onmouseout="this.style.borderColor='#EF444422'">
+      <div class="tc-logo" style="background:#EF444422;color:#EF4444;border:1px solid #EF444444">SC</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#EF4444">Scrap Tracker</div>
+        <div class="tc-desc">Log scrap per batch · By reason · By shift · CSV export · Supabase sync</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:#EF444422;color:#EF4444;border:1px solid #EF444444">NEW</span>
+      <div class="tc-arrow">›</div>
+    </a>
+    <a href="HOC_Finance.html" class="tool-card" style="border-color:#FBBF2422;text-decoration:none;border-width:2px" onmouseover="this.style.borderColor='#FBBF2488'" onmouseout="this.style.borderColor='#FBBF2422'">
+      <div class="tc-logo" style="background:#FBBF2422;color:#FBBF24;border:1px solid #FBBF2444">$</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#FBBF24">Finance</div>
+        <div class="tc-desc">Material cost · Labor variance · Scrap $ · Monthly P&amp;L rollup · Cost config</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:#FBBF2422;color:#FBBF24;border:1px solid #FBBF2444">NEW</span>
+      <div class="tc-arrow">›</div>
+    </a>
+  </div>
+
+  <!-- MANAGEMENT TOOLS -->
+  
+
+  <div class="section-title">Management &amp; Oversight</div>
+  <a href="HOC_Production_Schedule.html" class="tool-card" style="border-color:#3B82F622;text-decoration:none;border-width:2px;" onmouseover="this.style.borderColor='#3B82F688'" onmouseout="this.style.borderColor='#3B82F622'"><div class="tc-logo" style="background:linear-gradient(135deg,#3B82F6,#8B5CF6);color:#fff">PS</div><div class="tc-info"><div class="tc-name" style="color:#3B82F6">Production Schedule</div><div class="tc-desc">Full schedule · All lines · All periods · Upload-driven</div></div></a>
+<a href="HOC_Gemba_Tracker.html" class="tool-card" style="border-color:#05966922;text-decoration:none;" onmouseover="this.style.borderColor='#05966966'" onmouseout="this.style.borderColor='#05966922'">
+      <div class="tc-logo" style="background:#05966922;color:#059669;border:1px solid #05966944">GW</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#059669">Gemba Walk Tracker</div>
+        <div class="tc-desc">95 findings · 73 actions · Safety · Housekeeping · Productivity</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:#05966922;color:#059669;border:1px solid #05966944">CI</span>
+      <div class="tc-arrow">›</div>
+    </a>
+  <a href="HOC_5S_Connected.html" class="tool-card" style="border-color:#3B82F622;text-decoration:none;" onmouseover="this.style.borderColor='#3B82F666'" onmouseout="this.style.borderColor='#3B82F622'">
+      <div class="tc-logo" style="background:#3B82F622;color:#3B82F6;border:1px solid #3B82F644">5S</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#3B82F6">5S for Success</div>
+        <div class="tc-desc">Audit scoring · Department scores · Safety · Red tags · Suggestions</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:#3B82F622;color:#3B82F6;border:1px solid #3B82F644">CI</span>
+      <div class="tc-arrow">›</div>
+    </a>
+  <div class="tool-grid">
+<a href="HOC_Demand_Planning_Hub.html" class="tool-card" style="border-color:#3B82F622;text-decoration:none;" onmouseover="this.style.borderColor='#3B82F666'" onmouseout="this.style.borderColor='#3B82F622'">
+      <div class="tc-logo" style="background:#3B82F622;color:#3B82F6;border:1px solid #3B82F644">DP</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#3B82F6">Demand & Planning Hub</div>
+        <div class="tc-desc">Capacity · schedule · material risk · OEE</div>
+      </div>
+      
+      <div class="tc-arrow">›</div>
+    </a>
+<a href="HOC_Sales_Dashboard.html" class="tool-card" style="border-color:#EC489922;text-decoration:none;" onmouseover="this.style.borderColor='#EC489966'" onmouseout="this.style.borderColor='#EC489922'">
+      <div class="tc-logo" style="background:#EC489922;color:#EC4899;border:1px solid #EC489944">SL</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#EC4899">Sales &amp; Customer View</div>
+        <div class="tc-desc">Customer orders · fill rate · at-risk · ship pipeline</div>
+      </div>
+      
+      <div class="tc-arrow">›</div>
+    </a>
+<a href="HOC_Event_Engine.html" class="tool-card" style="border-color:#EF444422;text-decoration:none;" onmouseover="this.style.borderColor='#EF444466'" onmouseout="this.style.borderColor='#EF444422'">
+      <div class="tc-logo" style="background:#EF444422;color:#EF4444;border:1px solid #EF444444">EE</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#EF4444">Event Engine</div>
+        <div class="tc-desc">Events · EmailJS · alert matrix · log</div>
+      </div>
+      
+      <div class="tc-arrow">›</div>
+    </a>
+<a href="HOC_Leadership_Control_Tower.html" class="tool-card" style="border-color:#8B5CF622;text-decoration:none;" onmouseover="this.style.borderColor='#8B5CF666'" onmouseout="this.style.borderColor='#8B5CF622'">
+      <div class="tc-logo" style="background:#8B5CF622;color:#8B5CF6;border:1px solid #8B5CF644">CT</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#8B5CF6">Leadership Control Tower</div>
+        <div class="tc-desc">KPIs · audit trail · pipeline · closed loop</div>
+      </div>
+      
+      <div class="tc-arrow">›</div>
+    </a>
+<a href="HOC_Procurement_Dashboard.html" class="tool-card" style="border-color:#10B98122;text-decoration:none;" onmouseover="this.style.borderColor='#10B98166'" onmouseout="this.style.borderColor='#10B98122'">
+      <div class="tc-logo" style="background:#10B98122;color:#10B981;border:1px solid #10B98144">PR</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#10B981">Procurement</div>
+        <div class="tc-desc">POs · shortages · expedite queue</div>
+      </div>
+      
+      <div class="tc-arrow">›</div>
+    </a>
+<a href="HOC_Schedule_Reforecast.html" class="tool-card" style="border-color:#8B5CF622;text-decoration:none;" onmouseover="this.style.borderColor='#8B5CF666'" onmouseout="this.style.borderColor='#8B5CF622'">
+      <div class="tc-logo" style="background:#8B5CF622;color:#8B5CF6;border:1px solid #8B5CF644">RF</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#8B5CF6">Schedule Reforecast</div>
+        <div class="tc-desc">Capacity recalc · what-if · gap analysis</div>
+      </div>
+      
+      <div class="tc-arrow">›</div>
+    </a>
+<a href="HOC_Continuous_Improvement.html" class="tool-card" style="border-color:#F59E0B22;text-decoration:none;" onmouseover="this.style.borderColor='#F59E0B66'" onmouseout="this.style.borderColor='#F59E0B22'">
+      <div class="tc-logo" style="background:#F59E0B22;color:#F59E0B;border:1px solid #F59E0B44">CI</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#F59E0B">CI & Maintenance</div>
+        <div class="tc-desc">Yield · OEE trends · downtime · WOs</div>
+      </div>
+      
+      <div class="tc-arrow">›</div>
+    </a>
+<a href="HOC_Maintenance_Dashboard.html" class="tool-card" style="border-color:#F59E0B22;text-decoration:none;" onmouseover="this.style.borderColor='#F59E0B66'" onmouseout="this.style.borderColor='#F59E0B22'">
+      <div class="tc-logo" style="background:#F59E0B22;color:#F59E0B;border:1px solid #F59E0B44">MT</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#F59E0B">Maintenance Dashboard</div>
+        <div class="tc-desc">Equipment status · work orders · PM</div>
+      </div>
+      
+      <div class="tc-arrow">›</div>
+    </a>
+
+    <a href="HOC_Changeover_Dashboard.html" class="tool-card" style="border-color:#EF444422;text-decoration:none;" onmouseover="this.style.borderColor='#EF444466'" onmouseout="this.style.borderColor='#EF444422'">
+      <div class="tc-logo" style="background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;border:1px solid #EF444444">CO</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#EF4444">Changeover Dashboard</div>
+        <div class="tc-desc">SMED tracking · live timer · OEE recovery</div>
+      </div>
+      <div class="tc-arrow">›</div>
+    </a>
+  </div>
+
+  <!-- SYNC PANEL -->
+<div class="section-title">Floor Sync Bus</div>
+  <div class="sync-panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-size:10px;font-weight:700;color:var(--purple)">⚡ Shared Sync Bus — hoc_sync_v1</div>
+      <div style="display:flex;gap:6px">
+        <button onclick="clearSync()" style="padding:3px 8px;border-radius:5px;font:inherit;font-size:9px;cursor:pointer;background:var(--bg2);border:1px solid var(--border);color:var(--text3)">Clear</button>
+        <button onclick="exportSync()" style="padding:3px 8px;border-radius:5px;font:inherit;font-size:9px;cursor:pointer;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);color:var(--blue)">⬇ Export CSV</button>
+      </div>
+    </div>
+    <div id="sync-entries" class="sync-entries" style="color:var(--text3)">No floor updates yet. Open any floor tool and log an update.</div>
+  </div>
+
+  <!-- SETUP NOTICE -->
+  <div class="notice">
+    <b>How to use HOC-OES correctly</b><br>
+    Click any tool above to open it directly. Each tool has a <b>← HOC-OES</b> button to return here.<br>
+    All tools share the sync bus automatically — updates from Pre-Weigh appear in Compound Scheduler, Leadership Tower, and everywhere else.<br><br>
+    <b>For full sync across multiple devices:</b> host this folder on SharePoint or run
+    <code>python -m http.server 8000</code> in the folder, then open <code>http://localhost:8000/index.html</code>.<br>
+    Currently opened as: <span id="current-url" style="color:var(--amber)"></span>
+  </div>
+
+</div>
+
+<script>
+const SYNC_KEY = 'hoc_sync_v1';
+const UPLOAD_KEY = 'hoc_upload_v1';
+const SUPA_URL = 'https://yemtpvrumqvbzrzpwnyy.supabase.co';
+const SUPA_KEY = 'sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl';
+
+function H(){ return {'apikey':SUPA_KEY, 'Authorization':'Bearer '+SUPA_KEY}; }
+function syncRead() { try { return JSON.parse(localStorage.getItem(SYNC_KEY)||'{}'); } catch(e) { return {}; } }
+
+// ── v6.33 LB-3/LB-4: unified status helper ──────────────────────────
+// Single source of truth for "what's the live status of this batch?"
+// Reads BOTH floor sources (hoc_sync_v1 prod.status from Roll Call AND
+// hoc_floor_v1 from PreWeigh/Coordinator/QC). Production Supervisor used
+// to be the only screen that read hoc_sync_v1; every other KPI screen
+// read raw b.status. Result: 4 different counts for the same KPI.
+// This helper ends that mismatch — every screen now sees the same status.
+function _getEffectiveStatus633(b){
+  if(!b || !b.batch) return (b && b.status) || 'NOT STARTED';
+  try {
+    var sync = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+    var entry = sync[b.batch];
+    if(entry && entry.prod && entry.prod.status){
+      return String(entry.prod.status).toUpperCase();
+    }
+  } catch(e){}
+  try {
+    var floor = JSON.parse(localStorage.getItem('hoc_floor_v1') || '{}');
+    var f = floor[b.batch];
+    if(f && f.status){
+      return String(f.status).toUpperCase();
+    }
+  } catch(e){}
+  return String(b.status || 'NOT STARTED').toUpperCase();
+}
+function N(n) { return typeof n==='number' ? n.toLocaleString() : (n||'—'); }
+function pct(v) { return typeof v==='number' ? Math.round(v*100)+'%' : '—'; }
+
+// Pulled from Supabase + cached in localStorage
+var _UPLOAD = {};
+var _FLOOR = {};
+
+function loadLocal(){
+  try { var u = localStorage.getItem(UPLOAD_KEY); if(u) _UPLOAD = JSON.parse(u); } catch(e){}
+  try { var f = localStorage.getItem('hoc_floor_v1'); if(f) _FLOOR = JSON.parse(f); } catch(e){}
+}
+
+// Pull master schedule from Supabase (broadcast by Data Upload Hub)
+function pullScheduleFromSupabase(){
+  return fetch(SUPA_URL+'/rest/v1/hoc_schedule?id=eq.1', {headers:H()})
+    .then(function(r){ return r.ok ? r.json() : []; })
+    .then(function(rows){
+      if(!rows || !rows.length || !rows[0].data) return;
+      var remote;
+      try{ remote = JSON.parse(rows[0].data); } catch(e){ return; }
+      var rTs = new Date(remote._updated||0).getTime();
+      var lTs = new Date((_UPLOAD&&_UPLOAD._updated)||0).getTime();
+      if(rTs > lTs){
+        _UPLOAD = remote;
+        localStorage.setItem(UPLOAD_KEY, JSON.stringify(remote));
+      }
+    }).catch(function(){});
+}
+
+// Pull floor updates (status changes, qc_status, etc) from Supabase
+function pullFloorFromSupabase(){
+  return fetch(SUPA_URL+'/rest/v1/hoc_batches?select=*', {headers:H()})
+    .then(function(r){ return r.ok ? r.json() : []; })
+    .then(function(rows){
+      if(!Array.isArray(rows)) return;
+      var fl = {};
+      rows.forEach(function(r){
+        try { fl[r.batch_id] = typeof r.data === 'string' ? JSON.parse(r.data) : r.data; }
+        catch(e){}
+      });
+      _FLOOR = fl;
+      localStorage.setItem('hoc_floor_v1', JSON.stringify(_FLOOR));
+    }).catch(function(){});
+}
+
+// Show current URL
+document.getElementById('current-url').textContent = window.location.href.slice(0,80) + '...';
+
+// Compute KPIs from the live schedule + floor data
+function loadKPIs() {
+  // Floor updates count (from Supabase floor table now, not just local sync bus)
+  var floorN = Object.keys(_FLOOR).length;
+  var localN = Object.keys(syncRead()).length;
+  var n = Math.max(floorN, localN);
+  document.getElementById('kv-synced').textContent = n;
+  document.getElementById('kv-synced').style.color = n > 0 ? 'var(--green)' : 'var(--purple)';
+  document.getElementById('sync-dot').style.background = n > 0 ? 'var(--green)' : 'var(--purple)';
+  document.getElementById('sync-label').textContent = n > 0 ? n + ' synced' : 'Sync';
+
+  // Compute from schedule data if we have it
+  var batches = (_UPLOAD && _UPLOAD.batches) || [];
+  var goals   = (_UPLOAD && _UPLOAD.goals)   || {};
+
+  // ── Onboarding banner: show only if no batches loaded AND user hasn't dismissed
+  try {
+    var dismissed = localStorage.getItem('hoc_onboard_dismissed') === '1';
+    var banner = document.getElementById('onboard-banner');
+    if(banner){
+      banner.style.display = (batches.length === 0 && !dismissed) ? 'block' : 'none';
+    }
+  } catch(e){}
+
+  // ── Freshness line + staleness banner ──────────────────────────────
+  var staleBanner = document.getElementById('stale-banner');
+  var freshLine   = document.getElementById('freshness-line');
+  var freshText   = document.getElementById('freshness-text');
+  if(_UPLOAD && _UPLOAD._updated && batches.length){
+    var uploadedMs = new Date(_UPLOAD._updated).getTime();
+    var ageMs = Date.now() - uploadedMs;
+    var ageDays = Math.floor(ageMs / 86400000);
+    var ageHours = Math.floor(ageMs / 3600000);
+    var when = new Date(_UPLOAD._updated).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+
+    // Human-readable age
+    var ageLabel;
+    if(ageHours < 1)         ageLabel = 'just now';
+    else if(ageHours < 24)   ageLabel = ageHours + 'h ago';
+    else if(ageDays === 1)   ageLabel = 'yesterday';
+    else                     ageLabel = ageDays + ' days ago';
+
+    if(freshLine){
+      freshLine.style.display = 'block';
+      // Color the label by age
+      var col = ageDays >= 7 ? 'var(--amber)' : ageDays >= 3 ? '#cbd5e1' : 'var(--text3)';
+      freshText.innerHTML = '📅 Production schedule uploaded <span style="color:'+col+';font-weight:600">' + ageLabel + '</span> · ' + when;
+    }
+
+    if(staleBanner){
+      if(ageDays >= 7){
+        staleBanner.style.display = 'block';
+        document.getElementById('stale-detail').innerHTML =
+          'Last upload was <strong style="color:var(--amber)">' + ageLabel + '</strong> (' + when + '). ' +
+          'Batches, statuses, and KPIs may not reflect what\'s actually running on the floor today. ' +
+          'If the planner has a newer Production Tracker, drop it in the Data Upload Hub to refresh.';
+      } else {
+        staleBanner.style.display = 'none';
+      }
+    }
+  } else {
+    if(freshLine) freshLine.style.display = 'none';
+    if(staleBanner) staleBanner.style.display = 'none';
+  }
+
+  if(batches.length){
+    // Filter to current month — tolerant of ISO, US, Excel serial, and Date.
+    // Same logic as Production Supervisor for KPI consistency.
+    var now = new Date();
+    var prefix = now.toISOString().slice(0,7); // YYYY-MM
+    var thisYear = now.getUTCFullYear();
+    var thisMonth = now.getUTCMonth();
+    function _isThisMonth(v){
+      if(v == null || v === '') return false;
+      if(typeof v === 'number'){
+        var d = new Date(Math.round((v - 25569) * 86400 * 1000));
+        return d.getUTCFullYear() === thisYear && d.getUTCMonth() === thisMonth;
+      }
+      var s = String(v).trim();
+      if(!s) return false;
+      if(s.indexOf(prefix) === 0) return true;
+      if(/^\d{4,6}(\.\d+)?$/.test(s)){
+        var d2 = new Date(Math.round((Number(s) - 25569) * 86400 * 1000));
+        return d2.getUTCFullYear() === thisYear && d2.getUTCMonth() === thisMonth;
+      }
+      var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if(m){
+        var mo = parseInt(m[1],10) - 1;
+        var yr = parseInt(m[3],10);
+        return yr === thisYear && mo === thisMonth;
+      }
+      return false;
+    }
+    var monthBatches = batches.filter(function(b){ return _isThisMonth(b.date); });
+
+    // Merge floor data so we know real status + qc_status
+    var merged = monthBatches.map(function(b){
+      var f = _FLOOR[b.batch] || {};
+      return Object.assign({}, b, {
+        status:    f.status || b.status || 'NOT STARTED',
+        actqty:    (f.actqty != null ? f.actqty : b.actqty) || 0,
+        qc_status: f.qc_status || ''
+      });
+    });
+
+    // Open batches = NOT STARTED only (aligned with PS).
+    // Previously this counted everything !== COMPLETED, which included RUNNING — causing
+    // Index and PS to show different numbers for the same KPI. NOT STARTED is the truer
+    // "open" definition: batches that haven't been touched yet.
+    var open = merged.filter(function(b){
+      var s = _getEffectiveStatus633(b);
+      return s === 'NOT STARTED' || s === '';
+    }).length;
+    document.getElementById('kv-batches').textContent = open;
+
+    // Blocked = qc_status HOLD or REJECTED
+    var blocked = merged.filter(function(b){ return b.qc_status === 'HOLD' || b.qc_status === 'REJECTED'; }).length;
+    document.getElementById('kv-blocked').textContent = blocked;
+    document.getElementById('kv-blocked').style.color = blocked > 0 ? 'var(--red)' : 'var(--green)';
+
+    // ── Cases: PRIORITY ORDER (v6.32 — flipped from prior versions)
+    //   1. Production Schedule paste — monthly master's MTD "Scheduled" row
+    //      (uploadGoals.may_actual / may_goal). NEW PRIMARY in v6.32.
+    //   2. hoc_attainment_v1 plant.cum_actual (attainment paste — legacy fallback)
+    //   3. Sum of COMPLETED batch actqty (last-resort)
+    // Production Supervisor uses the same ladder. When both screens read
+    // identical data, operators trust the numbers.
+    var cases = null;
+    var goalCases = null;
+    var caseSource = 'computed from batches';
+
+    // Read attainment paste (still needed for Attainment % fallback below)
+    var attainment = null;
+    try { attainment = JSON.parse(localStorage.getItem('hoc_attainment_v1') || 'null'); } catch(e){}
+    var attainmentPctFromPaste = null;
+    if(attainment && attainment.plant && Array.isArray(attainment.plant.wks)){
+      for(var awi = attainment.plant.wks.length - 1; awi >= 0; awi--){
+        var awk = attainment.plant.wks[awi];
+        if(awk && awk.attainment_cum_pct != null && awk.attainment_cum_pct > 0){
+          attainmentPctFromPaste = Math.round(awk.attainment_cum_pct);
+          break;
+        }
+      }
+    }
+
+    // Source 1 (NEW PRIMARY): Production Schedule paste — Scheduled row of MTD block
+    var rawActual = goals.may_actual != null ? goals.may_actual
+                  : goals['Overall May Cases'] != null ? goals['Overall May Cases']
+                  : goals['May Cases'] != null ? goals['May Cases']
+                  : goals.cases_actual;
+    var rawGoal   = goals.may_goal != null ? goals.may_goal
+                  : goals['Case Goal'] != null ? goals['Case Goal']
+                  : goals['Overall May Cases Goal'] != null ? goals['Overall May Cases Goal']
+                  : goals.cases_goal;
+    if((Number(rawActual) >= 1000) || (Number(rawGoal) >= 1000)){
+      cases = Number(rawActual) || 0;
+      goalCases = Number(rawGoal) || 0;
+      caseSource = 'Production Schedule paste';
+    }
+    // Source 2 (legacy fallback): pasted attainment sheet
+    else if(attainment && attainment.plant &&
+            attainment.plant.cum_actual != null &&
+            attainment.plant.net_req    != null){
+      cases     = Number(attainment.plant.cum_actual);
+      goalCases = Number(attainment.plant.net_req);
+      caseSource = 'Attainment paste · ' + (attainment._month_label || 'current');
+    }
+    // Source 3 (last resort): sum from completed batches (deduped by batch number)
+    else {
+      var seenBatches = {};
+      var sumCompleted = 0, sumPlanned = 0;
+      merged.forEach(function(b){
+        if(!b.batch || seenBatches[b.batch]) return;
+        seenBatches[b.batch] = 1;
+        sumPlanned += (Number(b.origqty) || 0);
+        if(b.status === 'COMPLETED') sumCompleted += (Number(b.actqty) || 0);
+      });
+      cases = sumCompleted;
+      goalCases = sumPlanned;
+    }
+    document.getElementById('kv-cases').textContent = N(cases);
+
+    // Balance: actual − goal (aligned with PS — no more "× 0.9" stretch math).
+    // Positive = ahead of plan (green). Negative = behind plan (red).
+    if(goalCases > 0){
+      var balance = cases - goalCases;
+      document.getElementById('kv-balance').textContent = (balance >= 0 ? '+' : '') + N(Math.round(balance));
+      document.getElementById('kv-balance').style.color = balance >= 0 ? 'var(--green)' : 'var(--red)';
+    }
+  }
+
+  // ── Manual KPI overrides (v6.32) — operator-entered OEE/Attainment on
+  //    Data Upload Hub win over any parsed/Patch values.
+  var manualKpi = {};
+  try { manualKpi = JSON.parse(localStorage.getItem('hoc_kpi_manual_v1') || 'null') || {}; } catch(e){}
+  var oeeGoalLocal = manualKpi.oee_goal != null ? Number(manualKpi.oee_goal) : 60;
+  var attGoalLocal = manualKpi.att_goal != null ? Number(manualKpi.att_goal) : 90;
+
+  // OEE: PRIORITY ORDER (v6.32)
+  //   1. Manual entry (Data Upload Hub)
+  //   2. Patch per-line average
+  //   3. "—"
+  var oeeEl = document.getElementById('kv-oee');
+  if(oeeEl){
+    if(manualKpi.oee != null){
+      var manualOEE = Math.round(Number(manualKpi.oee) * 10) / 10;
+      oeeEl.textContent = manualOEE + '%';
+      oeeEl.style.color = manualOEE >= oeeGoalLocal ? 'var(--green)' : 'var(--red)';
+    } else {
+      var oeeMap = (_UPLOAD && _UPLOAD.goals && _UPLOAD.goals.oee_by_line) || {};
+      var oeeValues = Object.values(oeeMap).filter(function(v){ return v > 0; });
+      if(oeeValues.length){
+        var oeeAvg = Math.round(oeeValues.reduce(function(a,b){ return a+b; }, 0) / oeeValues.length);
+        oeeEl.textContent = oeeAvg + '%';
+        oeeEl.style.color = oeeAvg >= oeeGoalLocal ? 'var(--green)' : 'var(--red)';
+      } else {
+        oeeEl.textContent = '—';
+        oeeEl.style.color = 'var(--text3)';
+      }
+    }
+  }
+
+  // Attainment: PRIORITY ORDER (v6.32)
+  //   1. Manual entry (Data Upload Hub)
+  //   2. hoc_attainment_v1 plant cumulative %
+  //   3. Patch per-line average
+  //   4. "—"
+  var attEl = document.getElementById('kv-att');
+  if(attEl){
+    var attVal = null;
+    if(manualKpi.att != null){
+      attVal = Math.round(Number(manualKpi.att) * 10) / 10;
+    } else if(attainmentPctFromPaste != null){
+      attVal = attainmentPctFromPaste;
+    } else {
+      var attMap = (_UPLOAD && _UPLOAD.goals && _UPLOAD.goals.att_by_line) || {};
+      var attValues = Object.values(attMap).filter(function(v){ return v > 0; });
+      if(attValues.length){
+        attVal = Math.round(attValues.reduce(function(a,b){ return a+b; }, 0) / attValues.length);
+      }
+    }
+    if(attVal != null){
+      attEl.textContent = attVal + '%';
+      attEl.style.color = attVal >= attGoalLocal ? 'var(--green)' : 'var(--red)';
+    } else {
+      attEl.textContent = '—';
+      attEl.style.color = 'var(--text3)';
+    }
+  }
+
+  // Render sync entries from floor data + local sync bus
+  var all = syncRead();
+  // Also pull floor data into the entries view
+  Object.keys(_FLOOR).forEach(function(bid){
+    var f = _FLOOR[bid];
+    if(!all[bid]) all[bid] = {};
+    if(f.status)        all[bid].prod = all[bid].prod || {status: f.status};
+    if(f.qc_status)     all[bid].qc   = all[bid].qc   || {qc_status: f.qc_status};
+    if(f.cmpd_status||f.cmpd) all[bid].cmpd = all[bid].cmpd || {cmpd_status: f.cmpd_status || f.cmpd};
+  });
+  var entries = Object.entries(all);
+  var el = document.getElementById('sync-entries');
+  if (!entries.length) {
+    el.textContent = 'No floor updates yet. Open any floor tool and log an update.';
+    el.style.color = 'var(--text3)';
+    return;
+  }
+  el.style.color = 'var(--text2)';
+  el.innerHTML = '<div style="margin-bottom:6px;font-size:9px;color:var(--text3)">'+entries.length+' batches updated by floor teams</div>' +
+    entries.slice(0,15).map(function(e) {
+      var id=e[0], s=e[1];
+      var parts=[];
+      if(s.cc&&s.cc.status)          parts.push('<span style="color:#3B82F6">CC:'+s.cc.status.slice(0,15)+'</span>');
+      if(s.pw&&s.pw.pw_status)       parts.push('<span style="color:#8B5CF6">PW:'+s.pw.pw_status.slice(0,12)+'</span>');
+      if(s.cmpd&&s.cmpd.cmpd_status) parts.push('<span style="color:#3B82F6">CMPD:'+s.cmpd.cmpd_status.slice(0,12)+'</span>');
+      if(s.qc&&s.qc.qc_status)       parts.push('<span style="color:#10B981">QC:'+s.qc.qc_status+'</span>');
+      if(s.prod&&s.prod.status)       parts.push('<span style="color:#22C55E">PROD:'+s.prod.status+'</span>');
+      if(s.fg&&s.fg.fg_status)        parts.push('<span style="color:#10B981">FG:'+s.fg.fg_status.slice(0,10)+'</span>');
+      if(s.wh&&s.wh.wh_status)       parts.push('<span style="color:#F59E0B">WH:'+s.wh.wh_status.slice(0,10)+'</span>');
+      return '<div class="sync-entry"><b style="color:#8B5CF6">'+id+'</b> · '+parts.join(' · ')+'</div>';
+    }).join('');
+}
+
+function toggleSync() {
+  var el = document.getElementById('sync-entries');
+  el.style.display = el.style.display === 'none' ? 'block' : 'block';
+}
+
+function clearSync() {
+  if (!confirm('Clear all floor sync data?')) return;
+  try { localStorage.removeItem(SYNC_KEY); } catch(e) {}
+  loadKPIs();
+}
+
+function exportSync() {
+  var all = syncRead();
+  var entries = Object.entries(all);
+  if (!entries.length) { alert('No sync data to export.'); return; }
+  var hdrs = ['Batch','CC','PW','CMPD','QC','PC','PROD','FG','WH'];
+  var rows = entries.map(function(e) {
+    var id=e[0],s=e[1];
+    return [id,s.cc&&s.cc.status||'',s.pw&&s.pw.pw_status||'',
+            s.cmpd&&s.cmpd.cmpd_status||'',s.qc&&s.qc.qc_status||'',
+            s.pc&&s.pc.result||'',s.prod&&s.prod.status||'',
+            s.fg&&s.fg.fg_status||'',s.wh&&s.wh.wh_status||''];
+  });
+  var csv = [hdrs,...rows].map(function(r){return r.map(function(v){return '"'+String(v||'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download = 'hoc_sync_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+// PWA install
+var deferredInstall = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  deferredInstall = e;
+  document.getElementById('install-btn').classList.add('show');
+});
+async function installPWA() {
+  if (!deferredInstall) { alert('Open in Chrome/Edge to install'); return; }
+  deferredInstall.prompt();
+  deferredInstall = null;
+}
+
+// Service worker — with auto-update detection (v6.34e: cache-bypass for sw.js itself)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(function(reg){
+    // Check for updates every 60 seconds while page is open
+    setInterval(function(){ reg.update().catch(function(){}); }, 60000);
+
+    // When a new service worker is waiting, notify the user
+    reg.addEventListener('updatefound', function(){
+      var newWorker = reg.installing;
+      if(!newWorker) return;
+      newWorker.addEventListener('statechange', function(){
+        if(newWorker.state === 'installed' && navigator.serviceWorker.controller){
+          // New version is ready
+          if(confirm('A new version of HOC-OES is available. Reload now to update?')){
+            newWorker.postMessage('SKIP_WAITING');
+            window.location.reload();
+          }
+        }
+      });
+    });
+  }).catch(function(){});
+
+  // When the new SW takes over, force a reload so the user gets fresh code
+  var reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', function(){
+    if(reloading) return;
+    reloading = true;
+    window.location.reload();
+  });
+
+  // v6.34e: Listen for SW_UPDATED postMessage from new SW activation.
+  // When received, soft-reload the page so the user sees fresh content
+  // without needing to manually unregister the SW or hard-refresh.
+  navigator.serviceWorker.addEventListener('message', function(e){
+    if(e.data && e.data.type === 'SW_UPDATED'){
+      if(reloading) return;
+      reloading = true;
+      window.location.reload();
+    }
+  });
+}
+
+// Watch for sync changes
+window.addEventListener('storage', function(e) {
+  if (e.key === SYNC_KEY || e.key === UPLOAD_KEY || e.key === 'hoc_floor_v1') loadKPIs();
+});
+
+// Initial load: localStorage first (fast), then Supabase pull (fresh)
+loadLocal();
+
+// Clear any stale 'hoc_goals_cache' written by old hardcoded Leadership Control Tower —
+// we now read live data from Supabase via _UPLOAD instead.
+try {
+  var gc = JSON.parse(localStorage.getItem('hoc_goals_cache')||'null');
+  if(gc && gc.goals && (gc.goals['Overall May Cases'] || gc.goals['Case Balance'])){
+    // This is hardcoded data, not real time. Remove it.
+    localStorage.removeItem('hoc_goals_cache');
+  }
+} catch(e){}
+
+loadKPIs();
+Promise.all([pullScheduleFromSupabase(), pullFloorFromSupabase()]).then(loadKPIs);
+
+// Re-render every 5s from cache, repull from Supabase every 30s
+setInterval(loadKPIs, 5000);
+setInterval(function(){
+  Promise.all([pullScheduleFromSupabase(), pullFloorFromSupabase()]).then(loadKPIs);
+}, 30000);
+</script>
+
+
+<!-- ══ POWER BI CARDS — HIDDEN FOR JUNE 1 LAUNCH ══
+     Re-enable later by changing display:none to display:block.
+     Per ops: cards stay in source but stay hidden until ready. -->
+<div id="power-bi-section" style="display:none">
+  <!-- ══ POWER BI LIVE REPORTS ══════════════════════════════════════ -->
+  <div style="background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.15);border-radius:12px;padding:14px 16px;margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+      <div style="font-size:13px;font-weight:700;color:#3B82F6">Power BI Live Reports</div>
+      <div style="font-size:9px;padding:2px 8px;border-radius:10px;background:rgba(59,130,246,.15);color:#3B82F6;border:1px solid rgba(59,130,246,.3);font-weight:700">LIVE</div>
+    </div>
+    <div style="font-size:10px;color:var(--text2)">
+      Connected to Vicinity, FastCore, Patch OEE, and GP Dynamics via Power BI. 
+      Requires HOC Microsoft 365 login. Data refreshes automatically.
+    </div>
+  </div>
+
+  <div class="section-title" style="color:#059669">
+    ⚙️ Power BI — Operations
+    <span style="font-size:9px;font-weight:400;color:var(--text3);letter-spacing:0;text-transform:none;margin-left:6px">Live from Vicinity, FastCore, and Patch OEE</span>
+  </div>
+  <div class="tool-grid">
+<a href="https://app.powerbi.com/reportEmbed?reportId=df2536f0-3b2b-4bf0-8cd5-eaa1cbf9b0c8&autoAuth=true&ctid=f97465cc-8749-4d94-8313-197effe766d5" target="_blank" class="tool-card" style="border-color:#05966922;text-decoration:none;" onmouseover="this.style.borderColor='#05966988'" onmouseout="this.style.borderColor='#05966922'">
+      <div class="tc-logo" style="background:#05966922;color:#059669;border:1px solid #05966944">PA</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#059669">Operational Dashboard - Patch</div>
+        <div class="tc-desc">OEE · downtime · line performance · cases</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(59,130,246,.12);color:#3B82F6;border:1px solid rgba(59,130,246,.25);flex-shrink:0">Power BI ↗</span>
+    </a>
+<a href="https://app.powerbi.com/reportEmbed?reportId=26ce50d7-1bd7-485a-ae1e-7517fbb196a7&autoAuth=true&ctid=f97465cc-8749-4d94-8313-197effe766d5" target="_blank" class="tool-card" style="border-color:#3B82F622;text-decoration:none;" onmouseover="this.style.borderColor='#3B82F688'" onmouseout="this.style.borderColor='#3B82F622'">
+      <div class="tc-logo" style="background:#3B82F622;color:#3B82F6;border:1px solid #3B82F644">PI</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#3B82F6">Production & Inventory Overview</div>
+        <div class="tc-desc">Cases produced · inventory levels · schedule</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(59,130,246,.12);color:#3B82F6;border:1px solid rgba(59,130,246,.25);flex-shrink:0">Power BI ↗</span>
+    </a>
+<a href="https://app.powerbi.com/reportEmbed?reportId=e1aa772c-83e9-4507-93d2-87f588b0c9ea&autoAuth=true&ctid=f97465cc-8749-4d94-8313-197effe766d5" target="_blank" class="tool-card" style="border-color:#10B98122;text-decoration:none;" onmouseover="this.style.borderColor='#10B98188'" onmouseout="this.style.borderColor='#10B98122'">
+      <div class="tc-logo" style="background:#10B98122;color:#10B981;border:1px solid #10B98144">FG</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#10B981">Finished Goods Made</div>
+        <div class="tc-desc">FG cases · yield · production output</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(59,130,246,.12);color:#3B82F6;border:1px solid rgba(59,130,246,.25);flex-shrink:0">Power BI ↗</span>
+    </a>
+<a href="https://app.powerbi.com/reportEmbed?reportId=aa09bb35-f0b2-4171-95db-8b4feafb3852&autoAuth=true&ctid=f97465cc-8749-4d94-8313-197effe766d5" target="_blank" class="tool-card" style="border-color:#F59E0B22;text-decoration:none;" onmouseover="this.style.borderColor='#F59E0B88'" onmouseout="this.style.borderColor='#F59E0B22'">
+      <div class="tc-logo" style="background:#F59E0B22;color:#F59E0B;border:1px solid #F59E0B44">PO</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#F59E0B">Purchase Orders w/ Receipts</div>
+        <div class="tc-desc">PO status · receiving · open orders</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(59,130,246,.12);color:#3B82F6;border:1px solid rgba(59,130,246,.25);flex-shrink:0">Power BI ↗</span>
+    </a>
+<a href="https://app.powerbi.com/reportEmbed?reportId=386d3990-c77e-48b1-8d7f-035bb74a709b&autoAuth=true&ctid=f97465cc-8749-4d94-8313-197effe766d5" target="_blank" class="tool-card" style="border-color:#8B5CF622;text-decoration:none;" onmouseover="this.style.borderColor='#8B5CF688'" onmouseout="this.style.borderColor='#8B5CF622'">
+      <div class="tc-logo" style="background:#8B5CF622;color:#8B5CF6;border:1px solid #8B5CF644">FC</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#8B5CF6">Fascor Cycle Count</div>
+        <div class="tc-desc">FastCore cycle counts · inventory accuracy</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(59,130,246,.12);color:#3B82F6;border:1px solid rgba(59,130,246,.25);flex-shrink:0">Power BI ↗</span>
+    </a>
+<a href="https://app.powerbi.com/reportEmbed?reportId=b685563f-204a-4b93-b959-db6c34f7cdc8&autoAuth=true&ctid=f97465cc-8749-4d94-8313-197effe766d5" target="_blank" class="tool-card" style="border-color:#7C3AED22;text-decoration:none;" onmouseover="this.style.borderColor='#7C3AED88'" onmouseout="this.style.borderColor='#7C3AED22'">
+      <div class="tc-logo" style="background:#7C3AED22;color:#7C3AED;border:1px solid #7C3AED44">FI</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#7C3AED">Fascor Inventory</div>
+        <div class="tc-desc">FastCore live inventory · warehouse stock</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(59,130,246,.12);color:#3B82F6;border:1px solid rgba(59,130,246,.25);flex-shrink:0">Power BI ↗</span>
+    </a>
+<a href="https://app.powerbi.com/reportEmbed?reportId=3362fdd5-dff0-405f-8ff8-433db7c36953&autoAuth=true&ctid=f97465cc-8749-4d94-8313-197effe766d5" target="_blank" class="tool-card" style="border-color:#3B82F622;text-decoration:none;" onmouseover="this.style.borderColor='#3B82F688'" onmouseout="this.style.borderColor='#3B82F622'">
+      <div class="tc-logo" style="background:#3B82F622;color:#3B82F6;border:1px solid #3B82F644">BM</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#3B82F6">BOM - Vicinity</div>
+        <div class="tc-desc">Bill of materials · component requirements</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(59,130,246,.12);color:#3B82F6;border:1px solid rgba(59,130,246,.25);flex-shrink:0">Power BI ↗</span>
+    </a>
+<a href="https://app.powerbi.com/reportEmbed?reportId=7ad6e692-3cb0-4101-b6db-22e095f3503a&autoAuth=true&ctid=f97465cc-8749-4d94-8313-197effe766d5" target="_blank" class="tool-card" style="border-color:#F59E0B22;text-decoration:none;" onmouseover="this.style.borderColor='#F59E0B88'" onmouseout="this.style.borderColor='#F59E0B22'">
+      <div class="tc-logo" style="background:#F59E0B22;color:#F59E0B;border:1px solid #F59E0B44">WS</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#F59E0B">Warehouse Slots</div>
+        <div class="tc-desc">Warehouse locations · slot utilization</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(59,130,246,.12);color:#3B82F6;border:1px solid rgba(59,130,246,.25);flex-shrink:0">Power BI ↗</span>
+    </a>
+<a href="https://app.powerbi.com/reportEmbed?reportId=9207ec62-02ec-4f15-a183-eeb60cccae58&autoAuth=true&ctid=f97465cc-8749-4d94-8313-197effe766d5" target="_blank" class="tool-card" style="border-color:#EF444422;text-decoration:none;" onmouseover="this.style.borderColor='#EF444488'" onmouseout="this.style.borderColor='#EF444422'">
+      <div class="tc-logo" style="background:#EF444422;color:#EF4444;border:1px solid #EF444444">RN</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#EF4444">Received Not Invoiced</div>
+        <div class="tc-desc">Outstanding receipts · pending invoices</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(59,130,246,.12);color:#3B82F6;border:1px solid rgba(59,130,246,.25);flex-shrink:0">Power BI ↗</span>
+    </a>
+<a href="https://app.powerbi.com/reportEmbed?reportId=96c55473-f221-4847-990d-cbdee90dcf1f&autoAuth=true&ctid=f97465cc-8749-4d94-8313-197effe766d5" target="_blank" class="tool-card" style="border-color:#10B98122;text-decoration:none;" onmouseover="this.style.borderColor='#10B98188'" onmouseout="this.style.borderColor='#10B98122'">
+      <div class="tc-logo" style="background:#10B98122;color:#10B981;border:1px solid #10B98144">HI</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#10B981">Historical Inventory</div>
+        <div class="tc-desc">Inventory trends · historical levels</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(59,130,246,.12);color:#3B82F6;border:1px solid rgba(59,130,246,.25);flex-shrink:0">Power BI ↗</span>
+    </a>
+  </div>
+
+
+  <div class="section-title" style="color:#3B82F6">
+    📊 Power BI — Demand Planning
+    <span style="font-size:9px;font-weight:400;color:var(--text3);letter-spacing:0;text-transform:none;margin-left:6px">Live from Vicinity MRP and demand systems</span>
+  </div>
+  <div class="tool-grid">
+<a href="https://app.powerbi.com/reportEmbed?reportId=c50ec424-aae6-4b65-9433-69b8681c00bc&autoAuth=true&ctid=f97465cc-8749-4d94-8313-197effe766d5" target="_blank" class="tool-card" style="border-color:#3B82F622;text-decoration:none;" onmouseover="this.style.borderColor='#3B82F688'" onmouseout="this.style.borderColor='#3B82F622'">
+      <div class="tc-logo" style="background:#3B82F622;color:#3B82F6;border:1px solid #3B82F644">IP</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#3B82F6">Item Planning</div>
+        <div class="tc-desc">Item planning · MRP requirements · supply plan</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(59,130,246,.12);color:#3B82F6;border:1px solid rgba(59,130,246,.25);flex-shrink:0">Power BI ↗</span>
+    </a>
+<a href="https://app.powerbi.com/reportEmbed?reportId=886ecb22-b2b9-4512-8a35-0b2fbe938dfd&autoAuth=true&ctid=f97465cc-8749-4d94-8313-197effe766d5" target="_blank" class="tool-card" style="border-color:#10B98122;text-decoration:none;" onmouseover="this.style.borderColor='#10B98188'" onmouseout="this.style.borderColor='#10B98122'">
+      <div class="tc-logo" style="background:#10B98122;color:#10B981;border:1px solid #10B98144">IT</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#10B981">Item Transactions</div>
+        <div class="tc-desc">Item transaction history · movement detail</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(59,130,246,.12);color:#3B82F6;border:1px solid rgba(59,130,246,.25);flex-shrink:0">Power BI ↗</span>
+    </a>
+<a href="https://app.powerbi.com/reportEmbed?reportId=5419f996-ec6d-4949-9e04-2d298d45ca78&autoAuth=true&ctid=f97465cc-8749-4d94-8313-197effe766d5" target="_blank" class="tool-card" style="border-color:#F59E0B22;text-decoration:none;" onmouseover="this.style.borderColor='#F59E0B88'" onmouseout="this.style.borderColor='#F59E0B22'">
+      <div class="tc-logo" style="background:#F59E0B22;color:#F59E0B;border:1px solid #F59E0B44">OD</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#F59E0B">Open Demand</div>
+        <div class="tc-desc">Open demand · unfulfilled requirements</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(59,130,246,.12);color:#3B82F6;border:1px solid rgba(59,130,246,.25);flex-shrink:0">Power BI ↗</span>
+    </a>
+<a href="https://app.powerbi.com/reportEmbed?reportId=6fc18b55-0767-4a9c-b294-1049736a561f&autoAuth=true&ctid=f97465cc-8749-4d94-8313-197effe766d5" target="_blank" class="tool-card" style="border-color:#8B5CF622;text-decoration:none;" onmouseover="this.style.borderColor='#8B5CF688'" onmouseout="this.style.borderColor='#8B5CF622'">
+      <div class="tc-logo" style="background:#8B5CF622;color:#8B5CF6;border:1px solid #8B5CF644">VB</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#8B5CF6">Vicinity Batches</div>
+        <div class="tc-desc">Vicinity batch status · compound tracking</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(59,130,246,.12);color:#3B82F6;border:1px solid rgba(59,130,246,.25);flex-shrink:0">Power BI ↗</span>
+    </a>
+  </div>
+
+
+  <div class="section-title" style="color:#EF4444">
+    💰 Power BI — Sales
+    <span style="font-size:9px;font-weight:400;color:var(--text3);letter-spacing:0;text-transform:none;margin-left:6px">Live from GP Dynamics sales data</span>
+  </div>
+  <div class="tool-grid">
+<a href="https://app.powerbi.com/reportEmbed?reportId=d47ecb07-bfe8-4953-9adf-c35371590b82&autoAuth=true&ctid=f97465cc-8749-4d94-8313-197effe766d5" target="_blank" class="tool-card" style="border-color:#EF444422;text-decoration:none;" onmouseover="this.style.borderColor='#EF444488'" onmouseout="this.style.borderColor='#EF444422'">
+      <div class="tc-logo" style="background:#EF444422;color:#EF4444;border:1px solid #EF444444">DI</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#EF4444">Distributor Inventory Analytics</div>
+        <div class="tc-desc">Distributor inventory · channel stock levels</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(59,130,246,.12);color:#3B82F6;border:1px solid rgba(59,130,246,.25);flex-shrink:0">Power BI ↗</span>
+    </a>
+<a href="https://app.powerbi.com/reportEmbed?reportId=bc315f7d-97db-46a2-87ba-c8084dabbfe1&autoAuth=true&ctid=f97465cc-8749-4d94-8313-197effe766d5" target="_blank" class="tool-card" style="border-color:#10B98122;text-decoration:none;" onmouseover="this.style.borderColor='#10B98188'" onmouseout="this.style.borderColor='#10B98122'">
+      <div class="tc-logo" style="background:#10B98122;color:#10B981;border:1px solid #10B98144">FR</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#10B981">Fill Rate</div>
+        <div class="tc-desc">Order fill rate · service level performance</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(59,130,246,.12);color:#3B82F6;border:1px solid rgba(59,130,246,.25);flex-shrink:0">Power BI ↗</span>
+    </a>
+<a href="https://app.powerbi.com/reportEmbed?reportId=b82a5cb6-15a0-4eb3-a3dd-dd61d6b845cb&autoAuth=true&ctid=f97465cc-8749-4d94-8313-197effe766d5" target="_blank" class="tool-card" style="border-color:#3B82F622;text-decoration:none;" onmouseover="this.style.borderColor='#3B82F688'" onmouseout="this.style.borderColor='#3B82F622'">
+      <div class="tc-logo" style="background:#3B82F622;color:#3B82F6;border:1px solid #3B82F644">SF</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#3B82F6">Sales Forecast</div>
+        <div class="tc-desc">Sales forecast · demand projections</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(59,130,246,.12);color:#3B82F6;border:1px solid rgba(59,130,246,.25);flex-shrink:0">Power BI ↗</span>
+    </a>
+<a href="https://app.powerbi.com/reportEmbed?reportId=201be743-72c3-4b84-9727-d6c0270b24d6&autoAuth=true&ctid=f97465cc-8749-4d94-8313-197effe766d5" target="_blank" class="tool-card" style="border-color:#F59E0B22;text-decoration:none;" onmouseover="this.style.borderColor='#F59E0B88'" onmouseout="this.style.borderColor='#F59E0B22'">
+      <div class="tc-logo" style="background:#F59E0B22;color:#F59E0B;border:1px solid #F59E0B44">SM</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#F59E0B">Sales & Marketing Dashboard</div>
+        <div class="tc-desc">Sales performance · marketing analytics</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(59,130,246,.12);color:#3B82F6;border:1px solid rgba(59,130,246,.25);flex-shrink:0">Power BI ↗</span>
+    </a>
+<a href="https://app.powerbi.com/reportEmbed?reportId=e46de657-96e0-451f-9348-d499b8e2e3be&autoAuth=true&ctid=f97465cc-8749-4d94-8313-197effe766d5" target="_blank" class="tool-card" style="border-color:#8B5CF622;text-decoration:none;" onmouseover="this.style.borderColor='#8B5CF688'" onmouseout="this.style.borderColor='#8B5CF622'">
+      <div class="tc-logo" style="background:#8B5CF622;color:#8B5CF6;border:1px solid #8B5CF644">SA</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#8B5CF6">Sales Analytics Platform</div>
+        <div class="tc-desc">Sales analytics · SKU performance · trends</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(59,130,246,.12);color:#3B82F6;border:1px solid rgba(59,130,246,.25);flex-shrink:0">Power BI ↗</span>
+    </a>
+<a href="https://app.powerbi.com/reportEmbed?reportId=b5810bd0-3aed-46b9-8a9d-335ad6235ae9&autoAuth=true&ctid=f97465cc-8749-4d94-8313-197effe766d5" target="_blank" class="tool-card" style="border-color:#05966922;text-decoration:none;" onmouseover="this.style.borderColor='#05966988'" onmouseout="this.style.borderColor='#05966922'">
+      <div class="tc-logo" style="background:#05966922;color:#059669;border:1px solid #05966944">SP</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#059669">Sales and Production</div>
+        <div class="tc-desc">Sales vs production · gap analysis</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(59,130,246,.12);color:#3B82F6;border:1px solid rgba(59,130,246,.25);flex-shrink:0">Power BI ↗</span>
+    </a>
+  </div>
+
+
+  <div class="section-title" style="color:#8B5CF6">
+    🎯 Power BI — S&OP Accuracy
+    <span style="font-size:9px;font-weight:400;color:var(--text3);letter-spacing:0;text-transform:none;margin-left:6px">Sales and operations planning accuracy metrics</span>
+  </div>
+  <div class="tool-grid">
+<a href="https://app.powerbi.com/reportEmbed?reportId=91734ad4-55e6-4d2a-843c-36293c4acaec&autoAuth=true&ctid=f97465cc-8749-4d94-8313-197effe766d5" target="_blank" class="tool-card" style="border-color:#8B5CF622;text-decoration:none;" onmouseover="this.style.borderColor='#8B5CF688'" onmouseout="this.style.borderColor='#8B5CF622'">
+      <div class="tc-logo" style="background:#8B5CF622;color:#8B5CF6;border:1px solid #8B5CF644">CS</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#8B5CF6">Consolidated Sales Forecast</div>
+        <div class="tc-desc">Consolidated forecast · consensus demand plan</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(59,130,246,.12);color:#3B82F6;border:1px solid rgba(59,130,246,.25);flex-shrink:0">Power BI ↗</span>
+    </a>
+<a href="https://app.powerbi.com/reportEmbed?reportId=a52ea7a5-17d0-4e2f-a896-f26e27f567d7&autoAuth=true&ctid=f97465cc-8749-4d94-8313-197effe766d5" target="_blank" class="tool-card" style="border-color:#3B82F622;text-decoration:none;" onmouseover="this.style.borderColor='#3B82F688'" onmouseout="this.style.borderColor='#3B82F622'">
+      <div class="tc-logo" style="background:#3B82F622;color:#3B82F6;border:1px solid #3B82F644">DR</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#3B82F6">Demand Realization</div>
+        <div class="tc-desc">Demand realization · forecast accuracy</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(59,130,246,.12);color:#3B82F6;border:1px solid rgba(59,130,246,.25);flex-shrink:0">Power BI ↗</span>
+    </a>
+<a href="https://app.powerbi.com/reportEmbed?reportId=2a818787-23e4-45ce-ab41-a93646902ed2&autoAuth=true&ctid=f97465cc-8749-4d94-8313-197effe766d5" target="_blank" class="tool-card" style="border-color:#10B98122;text-decoration:none;" onmouseover="this.style.borderColor='#10B98188'" onmouseout="this.style.borderColor='#10B98122'">
+      <div class="tc-logo" style="background:#10B98122;color:#10B981;border:1px solid #10B98144">FL</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#10B981">Fulfillment Report</div>
+        <div class="tc-desc">Order fulfillment · on-time delivery</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(59,130,246,.12);color:#3B82F6;border:1px solid rgba(59,130,246,.25);flex-shrink:0">Power BI ↗</span>
+    </a>
+<a href="https://app.powerbi.com/reportEmbed?reportId=e0414828-7620-4720-a4de-97414f3d4bb1&autoAuth=true&ctid=f97465cc-8749-4d94-8313-197effe766d5" target="_blank" class="tool-card" style="border-color:#F59E0B22;text-decoration:none;" onmouseover="this.style.borderColor='#F59E0B88'" onmouseout="this.style.borderColor='#F59E0B22'">
+      <div class="tc-logo" style="background:#F59E0B22;color:#F59E0B;border:1px solid #F59E0B44">SO</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#F59E0B">S&OP Accuracy</div>
+        <div class="tc-desc">S&OP accuracy · planning performance</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(59,130,246,.12);color:#3B82F6;border:1px solid rgba(59,130,246,.25);flex-shrink:0">Power BI ↗</span>
+    </a>
+<a href="https://app.powerbi.com/reportEmbed?reportId=da8a252b-5ac5-4909-ad14-1dbad440b4a6&autoAuth=true&ctid=f97465cc-8749-4d94-8313-197effe766d5" target="_blank" class="tool-card" style="border-color:#EF444422;text-decoration:none;" onmouseover="this.style.borderColor='#EF444488'" onmouseout="this.style.borderColor='#EF444422'">
+      <div class="tc-logo" style="background:#EF444422;color:#EF4444;border:1px solid #EF444444">SK</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#EF4444">SKU Performance</div>
+        <div class="tc-desc">SKU-level performance · ABC analysis</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(59,130,246,.12);color:#3B82F6;border:1px solid rgba(59,130,246,.25);flex-shrink:0">Power BI ↗</span>
+    </a>
+<a href="https://app.powerbi.com/reportEmbed?reportId=dc9b2808-65f3-4e1d-8b88-97417d959568&autoAuth=true&ctid=f97465cc-8749-4d94-8313-197effe766d5" target="_blank" class="tool-card" style="border-color:#05966922;text-decoration:none;" onmouseover="this.style.borderColor='#05966988'" onmouseout="this.style.borderColor='#05966922'">
+      <div class="tc-logo" style="background:#05966922;color:#059669;border:1px solid #05966944">IT</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#059669">Items</div>
+        <div class="tc-desc">Item master · product catalog analytics</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(59,130,246,.12);color:#3B82F6;border:1px solid rgba(59,130,246,.25);flex-shrink:0">Power BI ↗</span>
+    </a>
+  </div>
+
+
+
+</div>
+<!-- ══ END POWER BI HIDDEN BLOCK ══ -->
+<script>
+// Quick Start guide — auto-shows on first visit, persists choice
+function openQuickStart(){
+  document.getElementById('quickstart-overlay').style.display = 'flex';
+}
+function closeQuickStart(){
+  document.getElementById('quickstart-overlay').style.display = 'none';
+  try { localStorage.setItem('hoc_quickstart_seen', '1'); } catch(e){}
+}
+// Auto-show on first visit (any visit before they've dismissed it)
+(function(){
+  try {
+    if(!localStorage.getItem('hoc_quickstart_seen')){
+      // Brief delay so it doesn't fight the page render
+      setTimeout(function(){ openQuickStart(); }, 400);
+    }
+  } catch(e){}
+})();
+
+// Auto-update date displays
+(function(){
+  var today = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  var shortDate = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  document.querySelectorAll('.brand-sub,.brand-sub *,[class*="brand-sub"]').forEach(function(el){
+    if(el.children.length === 0){
+      el.textContent = el.textContent.replace(/(?:January|February|March|April|May|June|July|August|September|October|November|December) \d{1,2},? \d{4}/g, today);
+      el.textContent = el.textContent.replace(/(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2},? \d{4}/g, shortDate);
+    }
+  });
+  // Also fix any standalone date text nodes
+  var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  var node;
+  var dateRe = /(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2},? \d{4}/g;
+  while(node = walker.nextNode()){
+    if(dateRe.test(node.textContent)){
+      node.textContent = node.textContent.replace(dateRe, shortDate);
+    }
+  }
+})();
+</script>
+
+
+<script>
+// ── Supabase cross-device sync addon ─────────────────────────────────
+(function() {
+  var SB_URL  = 'https://yemtpvrumqvbzrzpwnyy.supabase.co';
+  var SB_ANON = 'sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl';
+  
+  function sbPost(table, body) {
+    if (typeof fetch === 'undefined') return;
+    fetch(SB_URL + '/rest/v1/' + table, {
+      method: 'POST',
+      headers: {
+        'apikey': SB_ANON,
+        'Authorization': 'Bearer ' + SB_ANON,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates,return=minimal'
+      },
+      body: JSON.stringify(body)
+    }).catch(function() {});
+  }
+  
+  function sbGet(table, params) {
+    if (typeof fetch === 'undefined') return Promise.resolve([]);
+    return fetch(SB_URL + '/rest/v1/' + table + '?' + params, {
+      headers: {
+        'apikey': SB_ANON,
+        'Authorization': 'Bearer ' + SB_ANON
+      }
+    }).then(function(r) { return r && r.ok ? r.json() : []; })
+      .catch(function() { return []; });
+  }
+
+  // Intercept localStorage writes to hoc_sync_v1 and mirror to Supabase
+  var _origSetItem = localStorage.setItem.bind(localStorage);
+  localStorage.setItem = function(key, val) {
+    _origSetItem(key, val);
+    if (key !== 'hoc_sync_v1') return;
+    try {
+      var data = JSON.parse(val);
+      // SINGLE-ROW BROADCAST PATTERN
+      // hoc_sync_bus schema: { id=1, updated_at, payload jsonb }
+      // We upsert the entire local sync state into the single row (id=1).
+      // Other devices poll, see updated_at change, and pull the new payload.
+      sbPost('hoc_sync_bus', {
+        id: 1,
+        updated_at: new Date().toISOString(),
+        payload: data
+      });
+    } catch(e) {}
+  };
+
+  // Poll Supabase every 15 seconds for updates from other devices
+  var lastUpdatedAt = null;
+  setInterval(function() {
+    sbGet('hoc_sync_bus',
+      'id=eq.1&select=updated_at,payload'
+    ).then(function(rows) {
+      if (!rows || !rows.length) return;
+      var row = rows[0];
+      if (!row || !row.updated_at) return;
+      // Only merge if updated_at is newer than what we last saw
+      if (lastUpdatedAt && row.updated_at <= lastUpdatedAt) return;
+      lastUpdatedAt = row.updated_at;
+      var remote = row.payload;
+      if (!remote || typeof remote !== 'object') return;
+      try {
+        var local = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+        var changed = false;
+        // Merge remote payload into local — section-by-section, no clobber.
+        Object.keys(remote).forEach(function(batch) {
+          var remoteSections = remote[batch];
+          if (typeof remoteSections !== 'object') return;
+          if (!local[batch]) local[batch] = {};
+          Object.keys(remoteSections).forEach(function(section) {
+            local[batch][section] = Object.assign(
+              local[batch][section] || {}, remoteSections[section] || {}
+            );
+            changed = true;
+          });
+        });
+        if (changed) {
+          // Write without triggering our interceptor to avoid loop
+          _origSetItem('hoc_sync_v1', JSON.stringify(local));
+          // Trigger re-render
+          try { renderAll(); } catch(e) {
+            try { renderBadges(); } catch(e2) {}
+          }
+        }
+      } catch(e) {}
+    });
+  }, 15000);
+
+  console.log('HOC-OES: Supabase cross-device sync active');
+})();
+</script>
+
+<script src="vicinity_datalink.js"></script>
+<script src="hoc_events.js"></script>
+</body>
+</html>

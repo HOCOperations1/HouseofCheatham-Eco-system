@@ -1,0 +1,960 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HOC Gemba Walk Tracker</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0B0E17;--bg2:#111520;--bg3:#161C28;--border:#1E293B;
+  --text:#DDE4F0;--text2:#8A97B4;--text3:#4A5570;
+  --green:#22C55E;--green-l:rgba(34,197,94,.09);
+  --blue:#3B82F6;--blue-l:rgba(59,130,246,.12);
+  --amber:#F59E0B;--amber-l:rgba(245,158,11,.12);
+  --red:#EF4444;--red-l:rgba(239,68,68,.12);
+  --teal:#10B981;--teal-l:rgba(16,185,129,.1);
+  --purple:#8B5CF6;--purple-l:rgba(139,92,246,.1);
+  --gray-l:#1E2535;
+  font-family:ui-monospace,"Cascadia Code","Fira Code",monospace;
+}
+body{background:var(--bg);color:var(--text);min-height:100vh;font-size:12px}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 14px;display:flex;align-items:stretch;position:sticky;top:0;z-index:100}
+.brand{display:flex;align-items:center;gap:8px;padding:9px 13px 9px 0;border-right:1px solid var(--border);margin-right:11px;flex-shrink:0}
+.logo{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.brand-name{font-weight:700;font-size:12px}.brand-sub{font-size:9px;color:var(--text3)}
+.nav{display:flex;flex:1;overflow-x:auto}
+.nb{padding:0 11px;background:none;border:none;border-bottom:2px solid transparent;color:var(--text2);cursor:pointer;font:inherit;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;transition:all .15s;white-space:nowrap}
+.nb:hover{color:var(--text)}
+.badges{display:flex;gap:5px;align-items:center;padding:7px 0;margin-left:auto;flex-shrink:0}
+.badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:.04em}
+.b-red{background:var(--red-l);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.b-amb{background:var(--amber-l);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.b-grn{background:var(--green-l);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.b-blu{background:var(--blue-l);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.b-teal{background:var(--teal-l);color:var(--teal);border:1px solid rgba(16,185,129,.3)}
+.b-gry{background:var(--gray-l);color:var(--text2);border:1px solid var(--border)}
+.b-pur{background:var(--purple-l);color:var(--purple);border:1px solid rgba(139,92,246,.3)}
+.content{padding:13px;max-width:1600px;margin:0 auto}
+.page{display:none}.page.active{display:block}
+.card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px}
+.card-title{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:6px;margin-bottom:10px}
+.kpi{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 11px}
+.kl{font-size:8px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.kv{font-size:22px;font-weight:700;line-height:1}.ks{font-size:9px;color:var(--text3);margin-top:3px}
+.tbl-wrap{border-radius:8px;border:1px solid var(--border);overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{padding:5px 8px;font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);text-align:left;border-bottom:1px solid var(--border);background:var(--bg2);white-space:nowrap}
+td{padding:5px 8px;border-bottom:1px solid rgba(30,41,59,.5);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.015)}
+.pill{display:inline-flex;font-size:8px;font-weight:700;padding:2px 6px;border-radius:3px;letter-spacing:.05em;white-space:nowrap}
+.p-done{background:rgba(148,163,184,.08);color:#475569;border:1px solid #334155}
+.p-run{background:var(--blue-l);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.p-ns{background:var(--gray-l);color:var(--text3);border:1px solid var(--border)}
+.p-od{background:var(--red-l);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.p-ar{background:var(--amber-l);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.p-ot{background:var(--green-l);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.p-qc{background:var(--teal-l);color:var(--teal);border:1px solid rgba(16,185,129,.3)}
+.p-rel{background:var(--purple-l);color:var(--purple);border:1px solid rgba(139,92,246,.3)}
+.p-hold{background:var(--amber-l);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.p-must{background:var(--red-l);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.p-should{background:var(--amber-l);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.p-sync{background:rgba(139,92,246,.12);color:var(--purple);border:1px solid rgba(139,92,246,.3)}
+.filter-row{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
+.fb{padding:4px 9px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font:inherit;font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;transition:all .15s}
+.fb:hover{color:var(--text)}
+.detail{border-radius:10px;padding:12px;margin:8px 0 10px;display:none}
+.detail.open{display:block}
+.dg{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:8px 0;font-size:11px}
+.df label{font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);display:block;margin-bottom:2px}
+.df span{color:var(--text);font-weight:600}
+.close-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:17px;line-height:1}
+.upd-panel{margin-top:10px;padding:10px 12px;border-radius:7px}
+.upd-section{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.upd-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:7px}
+.upd-label{font-size:10px;color:var(--text2);white-space:nowrap;min-width:130px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px}
+.fld{display:flex;flex-direction:column;gap:3px}
+.fld label{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3)}
+select,input[type=text],input[type=date],input[type=number],textarea{background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:5px;padding:4px 8px;font:inherit;font-size:10px}
+textarea{width:100%;resize:vertical;min-height:46px;margin-top:4px}
+.btn{padding:5px 14px;border-radius:5px;font:inherit;font-size:10px;font-weight:700;cursor:pointer;border:1px solid}
+.saved-msg{font-size:10px;display:none}.saved-msg.show{display:inline}
+.line-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(248px,1fr));gap:8px;margin-bottom:10px}
+.lc{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 13px;cursor:pointer;transition:border-color .15s}
+.lc:hover{border-color:#253047}
+.lc-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.lc-row{display:flex;justify-content:space-between;font-size:10px;color:var(--text2);padding:2px 0}
+.lc-row span{color:var(--text);font-weight:600}
+.pb{height:5px;background:var(--gray-l);border-radius:3px;margin:5px 0 3px;overflow:hidden}
+.pb-fill{height:100%;border-radius:3px}
+.alert-s{border-radius:10px;padding:10px 12px;margin-bottom:10px}
+.at{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
+.ag{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:6px}
+.ai{border-radius:6px;padding:7px 9px}
+.t3{color:var(--text3)}.done-row td{opacity:.4}.run-row td{background:rgba(59,130,246,.04)}
+.must-row td{background:rgba(239,68,68,.04)}.should-row td{background:rgba(245,158,11,.03)}
+.no-fit td{border-left:3px solid var(--red)!important}
+.num-red{color:var(--red);font-weight:700}.num-grn{color:var(--green);font-weight:700}
+.sync-bar{background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:8px;padding:7px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;font-size:10px;flex-wrap:wrap}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--purple);display:inline-block;margin-right:4px}
+.fc-lhdr{background:#16213a;padding:7px 12px;border-radius:6px;margin:10px 0 2px;display:flex;justify-content:space-between;align-items:center}
+.fc-lhdr-l{font-size:11px;font-weight:700;color:var(--text)}
+.fc-lhdr-r{font-size:9px;color:var(--text3);display:flex;gap:10px}
+.fc-bar{height:4px;border-radius:2px;margin:2px 0;overflow:hidden;background:rgba(255,255,255,.08)}
+.fc-bar-fill{height:100%;border-radius:2px}
+.exp-step{font-size:10px;color:var(--text2);margin-bottom:6px;padding:7px 10px;background:var(--bg2);border-radius:6px;border-left:3px solid}
+.logo{background:linear-gradient(135deg,#059669,#0D9488)}
+.nb.active{color:var(--teal);border-bottom-color:var(--teal)}
+.btn-t{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:var(--teal);padding:4px 12px;border-radius:5px;font:inherit;font-size:10px;font-weight:700;cursor:pointer}
+.finding-row{display:grid;grid-template-columns:120px 80px 100px 80px 1fr 70px 90px 100px;gap:6px;align-items:center;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);margin-bottom:3px;font-size:10px}
+.finding-row:hover{background:var(--bg3)}
+.risk-H{color:var(--red);font-weight:700}
+.risk-M{color:var(--amber);font-weight:700}
+.risk-L{color:var(--green)}
+.risk-N{color:var(--text3)}
+.st-open{color:var(--red)}
+.st-prog{color:var(--amber)}
+.st-hold{color:var(--text3)}
+.st-closed{color:var(--green)}
+.area-card{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:6px}
+.ac-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.finding-detail{background:var(--bg2);border:1px solid rgba(16,185,129,.2);border-radius:8px;padding:14px;margin-bottom:10px;display:none}
+.finding-detail.open{display:block}
+.rtag{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:8px 10px;margin-bottom:4px;font-size:10px}
+.cal-row{display:grid;grid-template-columns:90px 80px 100px 120px 100px 80px;gap:8px;align-items:center;padding:5px 10px;border-radius:5px;font-size:10px;margin-bottom:2px;background:var(--bg2)}
+.cal-row.past{opacity:.45}
+.cal-row.today{background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2)}
+.cal-row.upcoming{background:var(--bg3)}
+.dept-chip{padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700}
+.dept-Production{background:rgba(59,130,246,.15);color:var(--blue)}
+.dept-Compound{background:rgba(16,185,129,.15);color:var(--teal)}
+.dept-Quality{background:rgba(139,92,246,.15);color:var(--purple)}
+.dept-Logistics{background:rgba(245,158,11,.15);color:var(--amber)}
+.new-finding-form{background:var(--bg3);border:1px solid rgba(16,185,129,.2);border-radius:10px;padding:14px;margin-bottom:14px}
+</style><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<script>var HOC_OES_VERSION="1778588401";</script>
+</head><body>
+
+<div class="topbar">
+  <div class="brand">
+    <a href="index.html" style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text2);text-decoration:none;font-size:9px;font-weight:700;flex-shrink:0;white-space:nowrap">← HOC-OES</a>
+    <div class="logo">GW</div>
+    <div>
+      <div class="brand-name">Gemba Walk Tracker</div>
+      <div class="brand-sub">Housekeeping · Safety · Productivity · 95 findings · <span class="js-today-date">May 17, 2026</span></div>
+    </div>
+  </div>
+  <nav class="nav">
+    <button class="nb active" onclick="P('cmd')">Dashboard</button>
+    <button class="nb" onclick="P('findings')">All Findings</button>
+    <button class="nb" onclick="P('actions')">Action Tracker</button>
+    <button class="nb" onclick="P('redtags')">Red Tags</button>
+    <button class="nb" onclick="P('calendar')">Walk Calendar</button>
+    <button class="nb" onclick="P('newwalk')">Log New Walk</button>
+  </nav>
+  <div class="badges" id="badges"></div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="page active" id="page-cmd"><div class="content">
+  <div class="sync-bar" id="sync-bar"></div>
+  <div class="kpi-grid" id="cmd-kpis"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+    <div class="card">
+      <div class="card-title">Open Items by Area — Top 10</div>
+      <div id="area-chart"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Open by Department &amp; Focus</div>
+      <div id="dept-chart"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">🚨 High Risk Open Findings — Immediate Action Required
+      <span class="t3" style="font-size:9px;font-weight:400;letter-spacing:0" id="high-count"></span>
+    </div>
+    <div id="high-risk-list"></div>
+  </div>
+</div></div>
+
+<!-- ALL FINDINGS -->
+<div class="page" id="page-findings"><div class="content">
+  <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+    <select id="f-dept"   onchange="filterFindings()" style="font:inherit;font-size:10px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:4px 8px">
+      <option value="">All Depts</option><option value="Production">Production</option><option value="Compound">Compound</option><option value="Quality">Quality</option><option value="Logistics">Logistics</option><option value="All">All</option>
+    </select>
+    <select id="f-status" onchange="filterFindings()" style="font:inherit;font-size:10px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:4px 8px">
+      <option value="">All Status</option><option value="Open">Open</option><option value="In Progress">In Progress</option><option value="On Hold">On Hold</option><option value="Closed">Closed</option>
+    </select>
+    <select id="f-risk"   onchange="filterFindings()" style="font:inherit;font-size:10px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:4px 8px">
+      <option value="">All Risk</option><option value="High">High</option><option value="Medium">Medium</option><option value="Low">Low</option><option value="N/A">N/A</option>
+    </select>
+    <select id="f-focus"  onchange="filterFindings()" style="font:inherit;font-size:10px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:4px 8px">
+      <option value="">All Focus</option><option value="Housekeeping">Housekeeping</option><option value="Safety">Safety</option><option value="Productivity">Productivity</option>
+    </select>
+    <button onclick="exportFindings()" style="margin-left:auto;padding:4px 12px;border-radius:5px;font:inherit;font-size:9px;font-weight:700;cursor:pointer;background:var(--blue-l);border:1px solid rgba(59,130,246,.3);color:var(--blue)">⬇ Export CSV</button>
+  </div>
+  <div style="font-size:9px;color:var(--text3);margin-bottom:6px" id="findings-count"></div>
+  <div style="font-size:9px;font-weight:700;display:grid;grid-template-columns:120px 80px 100px 80px 1fr 70px 90px 100px;gap:6px;padding:4px 10px;color:var(--text3);letter-spacing:.05em;text-transform:uppercase">
+    <span>ID</span><span>Date</span><span>Area</span><span>Focus</span><span>Description</span><span>Risk</span><span>Status</span><span>Owner</span>
+  </div>
+  <div id="findings-list"></div>
+</div></div>
+
+<!-- ACTION TRACKER -->
+<div class="page" id="page-actions"><div class="content">
+  <div class="kpi-grid" id="act-kpis"></div>
+  <div class="card">
+    <div class="card-title">Open Action Items
+      <button onclick="exportActions()" style="float:right;margin-top:-2px;padding:3px 10px;background:var(--blue-l);border:1px solid rgba(59,130,246,.3);border-radius:5px;color:var(--blue);font:inherit;font-size:9px;font-weight:700;cursor:pointer">⬇ Export</button>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Action ID</th><th>Finding</th><th>Date</th><th>Dept</th><th>Area</th><th>Focus</th><th>Description</th><th>Risk</th><th>Owner</th><th>Due</th><th>Status</th><th>Days Open</th><th>Update</th></tr></thead>
+      <tbody id="actions-tbody"></tbody>
+    </table></div>
+  </div>
+</div></div>
+
+<!-- RED TAGS -->
+<div class="page" id="page-redtags"><div class="content">
+  <div class="kpi-grid" id="rt-kpis"></div>
+  <div class="card">
+    <div class="card-title">Red Tag Log — Active Items</div>
+    <div id="redtag-list"></div>
+  </div>
+</div></div>
+
+<!-- WALK CALENDAR -->
+<div class="page" id="page-calendar"><div class="content">
+  <p style="font-size:10px;color:var(--text2);margin-bottom:10px">
+    Scheduled Mon / Wed / Fri. Departments rotate weekly. Alternates Housekeeping and Productivity themes.
+    Housekeeping closes within 48 hours. Productivity within 1 week.
+  </p>
+  <div class="card">
+    <div class="card-title">Upcoming Gemba Walks — 2026</div>
+    <div style="font-size:9px;font-weight:700;display:grid;grid-template-columns:90px 80px 100px 120px 100px 80px;gap:8px;padding:4px 10px;color:var(--text3);letter-spacing:.05em;text-transform:uppercase">
+      <span>Week Of</span><span>Date</span><span>Day</span><span>Department</span><span>Theme</span><span>Due By</span>
+    </div>
+    <div id="calendar-list"></div>
+  </div>
+</div></div>
+
+<!-- LOG NEW WALK -->
+<div class="page" id="page-newwalk"><div class="content">
+  <div class="new-finding-form">
+    <div style="font-size:11px;font-weight:700;color:var(--teal);margin-bottom:12px">Log New Gemba Finding</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">
+      <div class="upd-row" style="flex-direction:column;align-items:flex-start">
+        <span class="upd-label">Date</span>
+        <input type="date" id="nw-date" style="width:100%">
+      </div>
+      <div class="upd-row" style="flex-direction:column;align-items:flex-start">
+        <span class="upd-label">Department</span>
+        <select id="nw-dept" style="width:100%"><option value="Production">Production</option><option value="Compound">Compound</option><option value="Quality">Quality</option><option value="Logistics">Logistics</option><option value="All">All</option></select>
+      </div>
+      <div class="upd-row" style="flex-direction:column;align-items:flex-start">
+        <span class="upd-label">Area / Line</span>
+        <input type="text" id="nw-area" placeholder="Line 2, Tank Area..." style="width:100%">
+      </div>
+      <div class="upd-row" style="flex-direction:column;align-items:flex-start">
+        <span class="upd-label">Focus Type</span>
+        <select id="nw-focus" style="width:100%"><option value="Housekeeping">Housekeeping</option><option value="Safety">Safety</option><option value="Productivity">Productivity</option></select>
+      </div>
+      <div class="upd-row" style="flex-direction:column;align-items:flex-start">
+        <span class="upd-label">Risk Level</span>
+        <select id="nw-risk" style="width:100%"><option value="High">High</option><option value="Medium">Medium</option><option value="Low">Low</option><option value="N/A">N/A</option></select>
+      </div>
+      <div class="upd-row" style="flex-direction:column;align-items:flex-start">
+        <span class="upd-label">Observer</span>
+        <input type="text" id="nw-observer" placeholder="Your name" style="width:100%">
+      </div>
+    </div>
+    <div class="upd-row" style="flex-direction:column;align-items:flex-start;margin-bottom:8px">
+      <span class="upd-label">Finding Description</span>
+      <textarea id="nw-desc" placeholder="Describe what was observed..." style="height:60px;width:100%"></textarea>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div class="upd-row" style="flex-direction:column;align-items:flex-start">
+        <span class="upd-label">Immediate Action Required?</span>
+        <select id="nw-immediate" style="width:100%">
+          <option value="Yes">Yes</option><option value="No">No</option>
+        </select>
+      </div>
+      <div class="upd-row" style="flex-direction:column;align-items:flex-start">
+        <span class="upd-label">Owner (if known)</span>
+        <input type="text" id="nw-owner" placeholder="Name or role" style="width:100%">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn-t" onclick="saveNewFinding()">+ Log Finding</button>
+      <span class="saved-msg" id="nw-saved" style="color:var(--teal)">✓ Finding logged</span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Locally Logged Findings (this session)</div>
+    <div id="new-findings-list" style="font-size:10px;color:var(--text3)">No new findings logged yet this session.</div>
+  </div>
+</div></div>
+
+<script>
+// ── Supabase Real-time Sync Layer ────────────────────────────────────
+// Replaces localStorage hoc_sync_v1 with live Supabase database
+// All 19 tools share the same real-time data across all devices
+
+var SB_URL  = 'https://yemtpvrumqvbzrzpwnyy.supabase.co';
+var SB_ANON = 'sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl';
+
+// ── Core fetch helper ─────────────────────────────────────────────────
+function sbFetch(method, table, body, params) {
+  var url = SB_URL + '/rest/v1/' + table;
+  if (params) url += '?' + params;
+  var opts = {
+    method: method,
+    headers: {
+      'apikey': SB_ANON,
+      'Authorization': 'Bearer ' + SB_ANON,
+      'Content-Type': 'application/json',
+      'Prefer': method === 'POST' ? 'resolution=merge-duplicates,return=minimal' : 'return=minimal'
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  return fetch(url, opts).catch(function(e) {
+    console.warn('Supabase fetch failed, using localStorage fallback:', e.message);
+    return null;
+  });
+}
+
+// ── Sync bus: write to Supabase AND localStorage (fallback) ───────────
+function syncSet(batch, section, data) {
+  // Always write to localStorage first (instant, works offline)
+  try {
+    var local = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+    if (!local[batch]) local[batch] = {};
+    local[batch][section] = Object.assign(local[batch][section] || {}, data);
+    localStorage.setItem('hoc_sync_v1', JSON.stringify(local));
+  } catch(e) {}
+
+  // Then mirror full localStorage state to Supabase single-row heartbeat.
+  // hoc_sync_bus has schema { id=1, updated_at, payload jsonb } and is upserted
+  // by every device. Use Prefer: resolution=merge-duplicates so id=1 conflicts
+  // don't error — they update the existing row instead.
+  try {
+    var fullState = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+    sbFetch('POST', 'hoc_sync_bus', {
+      id: 1,
+      payload: fullState,
+      updated_at: new Date().toISOString()
+    }, null).then(function(r) {
+      if (r && !r.ok) console.warn('Supabase sync write failed:', r.status);
+    });
+  } catch(e) { console.warn('Sync write threw:', e); }
+}
+
+// ── Sync bus: read from Supabase, fallback to localStorage ────────────
+function syncRead() {
+  // Return localStorage immediately (no await needed for real-time tools)
+  try {
+    return JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+  } catch(e) { return {}; }
+}
+
+// ── Sync bus: read specific batch+section from Supabase ───────────────
+function syncGet(batch) {
+  // Sync from Supabase in background, return localStorage now
+  sbFetch('GET', 'hoc_sync_bus', null, 
+    'batch=eq.' + encodeURIComponent(batch) + '&select=section,data'
+  ).then(function(r) {
+    if (!r || !r.ok) return;
+    return r.json();
+  }).then(function(rows) {
+    if (!rows || !rows.length) return;
+    // Merge Supabase data into localStorage
+    try {
+      var local = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+      if (!local[batch]) local[batch] = {};
+      rows.forEach(function(row) {
+        local[batch][row.section] = Object.assign(
+          local[batch][row.section] || {}, row.data
+        );
+      });
+      localStorage.setItem('hoc_sync_v1', JSON.stringify(local));
+    } catch(e) {}
+  }).catch(function() {});
+  
+  // Return localStorage immediately
+  try {
+    var all = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+    return all[batch] || {};
+  } catch(e) { return {}; }
+}
+
+// ── Real-time subscription: listen for changes from OTHER devices ──────
+function initSupabaseRealtime() {
+  // Poll Supabase every 15 seconds for changes (WebSocket in Phase 3)
+  // This is the cross-device sync - catches updates from other users
+  // Cross-device sync — heartbeat pattern.
+  // hoc_sync_bus has ONE row (id=1) with a 'payload' jsonb column. All devices
+  // upsert to that row; all devices poll it. If updated_at moved forward and
+  // payload differs from what we last saw, merge it into localStorage.
+  var lastUpdatedAt = null;
+
+  setInterval(function() {
+    sbFetch('GET', 'hoc_sync_bus', null,
+      'id=eq.1&select=updated_at,payload'
+    ).then(function(r) {
+      if (!r || !r.ok) return;
+      return r.json();
+    }).then(function(rows) {
+      if (!rows || !rows.length) return;
+      var row = rows[0];
+      if (!row || !row.updated_at) return;
+      if (lastUpdatedAt && row.updated_at <= lastUpdatedAt) return;
+      lastUpdatedAt = row.updated_at;
+      var remote = row.payload;
+      if (!remote || typeof remote !== 'object') return;
+      try {
+        var local = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+        var hasChanges = false;
+        Object.keys(remote).forEach(function(batch) {
+          var sections = remote[batch];
+          if (typeof sections !== 'object' || !sections) return;
+          if (!local[batch]) local[batch] = {};
+          Object.keys(sections).forEach(function(section) {
+            local[batch][section] = Object.assign(
+              local[batch][section] || {}, sections[section] || {}
+            );
+            hasChanges = true;
+          });
+        });
+        if (hasChanges) {
+          localStorage.setItem('hoc_sync_v1', JSON.stringify(local));
+          try { renderAll(); } catch(e) {
+            try { renderBadges(); } catch(e2) {}
+          }
+        }
+      } catch(e) {}
+    }).catch(function() {});
+  }, 15000); // Check every 15 seconds
+}
+
+// ── Sync bus bar: show Supabase connection status ─────────────────────
+function renderSyncBar(el) {
+  if (!el) return;
+  var now = new Date().toLocaleTimeString('en-US', {hour:'numeric',minute:'2-digit',second:'2-digit'});
+  el.innerHTML = 
+    '<span style="color:var(--green);font-weight:700">● LIVE</span>' +
+    '<span style="color:var(--text3)">Supabase real-time sync active</span>' +
+    '<span style="color:var(--text3)">Last check: ' + now + '</span>' +
+    '<span style="color:var(--text3)">Cross-device sync: 15s</span>';
+}
+
+// Start real-time sync on load
+initSupabaseRealtime();
+
+
+
+const FINDINGS  = [{"id":"GW-2026-0413-001","date":"2026-04-13","dept":"Production","area":"Line 2","shift":"A","observer":"Josh Booker","focus":"Housekeeping","desc":"Bottles under sorter","risk":"High","immediate":"Yes","owner":"","due":"2026-04-15","days_open":24,"status":"Open","verified":"","comments":"Trip hazard"},{"id":"GW-2026-0413-002","date":"2026-04-13","dept":"Production","area":"Line 2","shift":"A","observer":"Josh Booker","focus":"Safety","desc":"Cap pallet wrap creating trip hazard","risk":"High","immediate":"Yes","owner":"","due":"2026-04-13","days_open":24,"status":"Open","verified":"","comments":""},{"id":"GW-2026-0413-003","date":"2026-04-13","dept":"Production","area":"Line 2","shift":"A","observer":"Josh Booker","focus":"Housekeeping","desc":"Soiled rags on floor at bottle labeler","risk":"Medium","immediate":"Yes","owner":"","due":"2026-04-15","days_open":24,"status":"Open","verified":"","comments":"5S issue"},{"id":"GW-2026-0413-004","date":"2026-04-13","dept":"Production","area":"Line 2","shift":"A","observer":"Josh Booker","focus":"Housekeeping","desc":"Clutter under roller racks","risk":"Medium","immediate":"Yes","owner":"","due":"2026-04-15","days_open":24,"status":"Open","verified":"","comments":""},{"id":"GW-2026-0413-005","date":"2026-04-13","dept":"Production","area":"Line 2","shift":"A","observer":"Josh Booker","focus":"Housekeeping","desc":"Totes everywhere","risk":"Medium","immediate":"Yes","owner":"","due":"2026-04-15","days_open":24,"status":"Open","verified":"","comments":""},{"id":"GW-2026-0413-006","date":"2026-04-13","dept":"Production","area":"Line 2","shift":"A","observer":"Josh Booker","focus":"Housekeeping","desc":"Step ladder at bundler has trash and equipment on it","risk":"Medium","immediate":"Yes","owner":"","due":"2026-04-15","days_open":24,"status":"Open","verified":"","comments":""},{"id":"GW-2026-0413-007","date":"2026-04-13","dept":"Production","area":"Line 2","shift":"A","observer":"Josh Booker","focus":"Housekeeping","desc":"Hoodies hanging from rack and print/apply area","risk":"Low","immediate":"Yes","owner":"","due":"2026-04-15","days_open":24,"status":"Open","verified":"","comments":""},{"id":"GW-2026-0413-008","date":"2026-04-13","dept":"Production","area":"Line 2","shift":"A","observer":"Josh Booker","focus":"Housekeeping","desc":"Trash on floor","risk":"Medium","immediate":"Yes","owner":"","due":"2026-04-15","days_open":24,"status":"Open","verified":"","comments":""},{"id":"GW-2026-0413-009","date":"2026-04-13","dept":"Production","area":"Line 2","shift":"A","observer":"Josh Booker","focus":"Housekeeping","desc":"Bottle pallet floor marking missing on backside","risk":"Medium","immediate":"Yes","owner":"","due":"2026-04-15","days_open":24,"status":"Open","verified":"","comments":"Visual management issue"},{"id":"GW-2026-0413-010","date":"2026-04-13","dept":"Production","area":"Line 3","shift":"All","observer":"Paul Manuel","focus":"Housekeeping","desc":"Water hose not put away","risk":"Medium","immediate":"Yes","owner":"J. Booker","due":"2026-04-15","days_open":24,"status":"In Progress","verified":"2026-04-13","comments":"Josh will order water hose organizer "},{"id":"GW-2026-0413-011","date":"2026-04-13","dept":"Production","area":"Line 3","shift":"All","observer":"Paul Manuel","focus":"Housekeeping","desc":"Wipes on the floor","risk":"Low","immediate":"Yes","owner":"Elisenia","due":"2026-04-15","days_open":0,"status":"Closed","verified":"2026-04-13","comments":""},{"id":"GW-2026-0413-012","date":"2026-04-13","dept":"Production","area":"Line 3","shift":"All","observer":"Paul Manuel","focus":"Housekeeping","desc":"Grey totes on line","risk":"Low","immediate":"Yes","owner":"Elisenia","due":"2026-04-15","days_open":0,"status":"Closed","verified":"2026-04-13","comments":""},{"id":"GW-2026-0413-013","date":"2026-04-13","dept":"Production","area":"Line 3","shift":"All","observer":"Paul Manuel","focus":"Housekeeping","desc":"Trash under conveyor","risk":"Medium","immediate":"Yes","owner":"Elisenia","due":"2026-04-15","days_open":0,"status":"Closed","verified":"2026-04-13","comments":""},{"id":"GW-2026-0413-014","date":"2026-04-13","dept":"Production","area":"Line 3","shift":"All","observer":"Paul Manuel","focus":"Safety","desc":"Absorbent pad under turntable","risk":"Medium","immediate":"Yes","owner":"Elisenia","due":"2026-04-13","days_open":0,"status":"Closed","verified":"2026-04-13","comments":""},{"id":"GW-2026-0413-015","date":"2026-04-13","dept":"Production","area":"Line 3","shift":"All","observer":"Paul Manuel","focus":"Housekeeping","desc":"Broom and dust pans not put away","risk":"Low","immediate":"Yes","owner":"Elisenia","due":"2026-04-15","days_open":0,"status":"Closed","verified":"2026-04-13","comments":""},{"id":"GW-2026-0413-016","date":"2026-04-13","dept":"Production","area":"Line 3","shift":"All","observer":"Paul Manuel","focus":"Safety","desc":"Drain grate needs to be put back on floor drain","risk":"High","immediate":"Yes","owner":"Elisenia","due":"2026-04-13","days_open":0,"status":"Closed","verified":"2026-04-13","comments":""},{"id":"GW-2026-0413-017","date":"2026-04-13","dept":"Production","area":"Line 3","shift":"All","observer":"Paul Manuel","focus":"Safety","desc":"PPE compliance observed","risk":"N/A","immediate":"No","owner":"Elisenia","due":"","days_open":0,"status":"Closed","verified":"2026-04-13","comments":"Positive observation"},{"id":"GW-2026-0413-018","date":"2026-04-13","dept":"Production","area":"Line 4","shift":"All","observer":"Maranda Holton","focus":"Safety","desc":"General housekeeping acceptable and PPE on","risk":"N/A","immediate":"No","owner":"Lydia ","due":"","days_open":0,"status":"Closed","verified":"2026-04-13","comments":"Positive observation"},{"id":"GW-2026-0413-019","date":"2026-04-13","dept":"Production","area":"Line 11","shift":"All","observer":"Willie Barber","focus":"Housekeeping","desc":"Label on the floor","risk":"Low","immediate":"Yes","owner":"Kabba, Kadiatu","due":"2026-04-15","days_open":3,"status":"Closed","verified":"2026-04-16","comments":""},{"id":"GW-2026-0413-020","date":"2026-04-13","dept":"Production","area":"Line 11","shift":"All","observer":"Willie Barber","focus":"Housekeeping","desc":"Bottles on the floor","risk":"High","immediate":"Yes","owner":"Kabba, Kadiatu","due":"2026-04-15","days_open":3,"status":"Closed","verified":"2026-04-16","comments":""},{"id":"GW-2026-0413-021","date":"2026-04-13","dept":"Production","area":"Line 11","shift":"All","observer":"Willie Barber","focus":"Housekeeping","desc":"Material rack not used; material stored on floor","risk":"High","immediate":"Yes","owner":"Kabba, Kadiatu","due":"2026-04-15","days_open":24,"status":"In Progress","verified":"","comments":""},{"id":"GW-2026-0413-022","date":"2026-04-13","dept":"Production","area":"Line 11","shift":"All","observer":"Willie Barber","focus":"Housekeeping","desc":"Caps on floor","risk":"Medium","immediate":"Yes","owner":"Kabba, Kadiatu","due":"2026-04-15","days_open":3,"status":"Closed","verified":"2026-04-16","comments":""},{"id":"GW-2026-0413-023","date":"2026-04-13","dept":"Production","area":"Line 11","shift":"All","observer":"Willie Barber","focus":"Housekeeping","desc":"General housekeeping poor","risk":"Medium","immediate":"Yes","owner":"Kabba, Kadiatu","due":"2026-04-15","days_open":3,"status":"Closed","verified":"2026-04-16","comments":""},{"id":"GW-2026-0413-024","date":"2026-04-13","dept":"Production","area":"Line 11","shift":"All","observer":"Willie Barber","focus":"Safety","desc":"Visible spill on the floor","risk":"High","immediate":"Yes","owner":"Kabba, Kadiatu","due":"2026-04-13","days_open":3,"status":"Closed","verified":"2026-04-16","comments":""},{"id":"GW-2026-0413-025","date":"2026-04-13","dept":"Production","area":"Line 11","shift":"All","observer":"Willie Barber","focus":"Productivity","desc":"Work area not organized","risk":"Medium","immediate":"Yes","owner":"Kabba, Kadiatu","due":"2026-04-20","days_open":24,"status":"In Progress","verified":"2026-04-16","comments":""},{"id":"GW-2026-0413-026","date":"2026-04-13","dept":"Production","area":"Line 11","shift":"All","observer":"Willie Barber","focus":"Safety","desc":"PPE good","risk":"N/A","immediate":"No","owner":"Kabba, Kadiatu","due":"","days_open":0,"status":"Closed","verified":"2026-04-13","comments":"Positive observation"},{"id":"GW-2026-0413-027","date":"2026-04-13","dept":"Production","area":"Line 1","shift":"All","observer":"Willie Barber","focus":"Housekeeping","desc":"Stacked totes on the line","risk":"Medium","immediate":"Yes","owner":"Rashida","due":"2026-04-15","days_open":0,"status":"Closed","verified":"","comments":""},{"id":"GW-2026-0413-028","date":"2026-04-13","dept":"Production","area":"Line 1","shift":"All","observer":"Willie Barber","focus":"Housekeeping","desc":"Boxes under conveyor","risk":"Medium","immediate":"Yes","owner":"J. Booker","due":"2026-04-15","days_open":24,"status":"In Progress","verified":"","comments":"Josh will order table / rack "},{"id":"GW-2026-0413-029","date":"2026-04-13","dept":"Production","area":"Line 1","shift":"All","observer":"Willie Barber","focus":"Safety","desc":"2x4 block used to brace conveyor","risk":"High","immediate":"Yes","owner":"","due":"2026-04-13","days_open":24,"status":"Open","verified":"","comments":"Unsafe temporary fix"},{"id":"GW-2026-0413-030","date":"2026-04-13","dept":"Production","area":"Line 1","shift":"All","observer":"Willie Barber","focus":"Housekeeping","desc":"Random pallet on floor","risk":"Medium","immediate":"Yes","owner":"Rashida","due":"2026-04-15","days_open":0,"status":"Closed","verified":"","comments":""},{"id":"GW-2026-0413-031","date":"2026-04-13","dept":"Production","area":"Line 1","shift":"All","observer":"Willie Barber","focus":"Safety","desc":"Everyone wearing PPE","risk":"N/A","immediate":"No","owner":"Rashida","due":"","days_open":0,"status":"Closed","verified":"2026-04-13","comments":"Positive observation"},{"id":"GW-2026-0413-032","date":"2026-04-13","dept":"Production","area":"Line 1","shift":"All","observer":"Willie Barber","focus":"Housekeeping","desc":"Material rack not used; material stored across floor","risk":"High","immediate":"Yes","owner":"Rashida","due":"2026-04-15","days_open":0,"status":"Closed","verified":"","comments":""},{"id":"GW-2026-0413-033","date":"2026-04-13","dept":"Production","area":"Line 1","shift":"All","observer":"Willie Barber","focus":"Housekeeping","desc":"Boxes everywhere, especially around box sorter and bottle sorter","risk":"High","immediate":"Yes","owner":"J. Booker ","due":"2026-04-15","days_open":24,"status":"In Progress","verified":"","comments":"Josh will order table / rack "},{"id":"GW-2026-0413-034","date":"2026-04-13","dept":"Production","area":"Line 1","shift":"All","observer":"Willie Barber","focus":"Housekeeping","desc":"General housekeeping bad","risk":"Medium","immediate":"Yes","owner":"Rashida","due":"2026-04-15","days_open":0,"status":"Closed","verified":"","comments":""},{"id":"GW-2026-0415-001","date":"2026-04-15","dept":"Compound","area":"Pre Weigh","shift":"All","observer":"Josh Booker","focus":"Housekeeping","desc":"Pre weigh area needs buckets organized","risk":"Medium","immediate":"Yes","owner":"","due":"2026-04-17","days_open":22,"status":"Open","verified":"","comments":"4/15/2026 compound gemba walk"},{"id":"GW-2026-0415-002","date":"2026-04-15","dept":"Compound","area":"Pre Weigh Staging","shift":"All","observer":"Josh Booker","focus":"Housekeeping","desc":"Trash everywhere in pre weigh staging location","risk":"Medium","immediate":"Yes","owner":"","due":"2026-04-17","days_open":22,"status":"Open","verified":"","comments":"4/15/2026 compound gemba walk"},{"id":"GW-2026-0415-003","date":"2026-04-15","dept":"Compound","area":"Pre Weigh Staging","shift":"All","observer":"Josh Booker","focus":"Safety","desc":"Trip hazards in pre weigh staging location","risk":"High","immediate":"Yes","owner":"","due":"2026-04-15","days_open":22,"status":"Open","verified":"","comments":"4/15/2026 compound gemba walk"},{"id":"GW-2026-0415-004","date":"2026-04-15","dept":"Compound","area":"Dye Room","shift":"All","observer":"Josh Booker","focus":"Housekeeping","desc":"Dye room unorganized","risk":"Medium","immediate":"Yes","owner":"","due":"2026-04-17","days_open":22,"status":"Open","verified":"","comments":"4/15/2026 compound gemba walk"},{"id":"GW-2026-0415-005","date":"2026-04-15","dept":"Compound","area":"Dye Room","shift":"All","observer":"Josh Booker","focus":"Safety","desc":"Cardboard on ground being used for slipping hazard; better fix needed","risk":"High","immediate":"Yes","owner":"","due":"2026-04-15","days_open":22,"status":"Open","verified":"","comments":"4/15/2026 compound gemba walk"},{"id":"GW-2026-0415-006","date":"2026-04-15","dept":"Compound","area":"Mezzanine / Tanks","shift":"All","observer":"Maranda Holton","focus":"Safety","desc":"Trip hazards on floor of mezzanine and around tanks","risk":"High","immediate":"Yes","owner":"","due":"2026-04-15","days_open":22,"status":"Open","verified":"","comments":"4/15/2026 compound gemba walk"},{"id":"GW-2026-0415-007","date":"2026-04-15","dept":"Compound","area":"Compound Floor","shift":"All","observer":"Maranda Holton","focus":"Housekeeping","desc":"Caps on floor","risk":"Medium","immediate":"Yes","owner":"","due":"2026-04-17","days_open":22,"status":"Open","verified":"","comments":"4/15/2026 compound gemba walk"},{"id":"GW-2026-0415-008","date":"2026-04-15","dept":"Compound","area":"Compound Storage","shift":"All","observer":"Maranda Holton","focus":"Housekeeping","desc":"No obvious area to store perishables, jars, rags, and related items","risk":"Medium","immediate":"Yes","owner":"","due":"2026-04-17","days_open":22,"status":"Open","verified":"","comments":"4/15/2026 compound gemba walk"},{"id":"GW-2026-0415-009","date":"2026-04-15","dept":"Compound","area":"Panels Area","shift":"All","observer":"Maranda Holton","focus":"Safety","desc":"Panels with junk sitting on them","risk":"Medium","immediate":"Yes","owner":"","due":"2026-04-15","days_open":22,"status":"Open","verified":"","comments":"4/15/2026 compound gemba walk"},{"id":"GW-2026-0415-010","date":"2026-04-15","dept":"Compound","area":"Tank Area","shift":"All","observer":"Quneshial Givens","focus":"Safety","desc":"Transfer lines not capped","risk":"High","immediate":"Yes","owner":"","due":"2026-04-15","days_open":22,"status":"Open","verified":"","comments":"4/15/2026 compound gemba walk"},{"id":"GW-2026-0415-011","date":"2026-04-15","dept":"Compound","area":"Tank Area","shift":"All","observer":"Quneshial Givens","focus":"Safety","desc":"Eye wash station covered","risk":"High","immediate":"Yes","owner":"","due":"2026-04-15","days_open":22,"status":"Open","verified":"","comments":"4/15/2026 compound gemba walk"},{"id":"GW-2026-0415-012","date":"2026-04-15","dept":"Compound","area":"Tank Area","shift":"All","observer":"Quneshial Givens","focus":"Safety","desc":"Tank lids open","risk":"High","immediate":"Yes","owner":"","due":"2026-04-15","days_open":22,"status":"Open","verified":"","comments":"4/15/2026 compound gemba walk"},{"id":"GW-2026-0415-013","date":"2026-04-15","dept":"Compound","area":"Tank Area","shift":"All","observer":"Quneshial Givens","focus":"Housekeeping","desc":"Trash on floor","risk":"Medium","immediate":"Yes","owner":"","due":"2026-04-17","days_open":22,"status":"Open","verified":"","comments":"4/15/2026 compound gemba walk"},{"id":"GW-2026-0415-014","date":"2026-04-15","dept":"Compound","area":"Tank Area","shift":"All","observer":"Quneshial Givens","focus":"Housekeeping","desc":"Trash container overflowing","risk":"Medium","immediate":"Yes","owner":"","due":"2026-04-17","days_open":22,"status":"Open","verified":"","comments":"4/15/2026 compound gemba walk"},{"id":"GW-2026-0415-015","date":"2026-04-15","dept":"Compound","area":"Tank Area","shift":"All","observer":"Quneshial Givens","focus":"Safety","desc":"Hoses on floor creating trip hazard","risk":"High","immediate":"Yes","owner":"","due":"2026-04-15","days_open":22,"status":"Open","verified":"","comments":"4/15/2026 compound gemba walk"},{"id":"GW-2026-0415-016","date":"2026-04-15","dept":"Compound","area":"Tank Area","shift":"All","observer":"Quneshial Givens","focus":"Safety","desc":"Spill left on floor unattended","risk":"High","immediate":"Yes","owner":"","due":"2026-04-15","days_open":22,"status":"Open","verified":"","comments":"4/15/2026 compound gemba walk"},{"id":"GW-2026-0415-017","date":"2026-04-15","dept":"Compound","area":"Tank Area","shift":"All","observer":"Quneshial Givens","focus":"Housekeeping","desc":"General housekeeping poor","risk":"Medium","immediate":"Yes","owner":"","due":"2026-04-17","days_open":22,"status":"Open","verified":"","comments":"4/15/2026 compound gemba walk"},{"id":"GW-2026-0417-001","date":"2026-04-17","dept":"Quality","area":"All","shift":"All","observer":"Makebbah","focus":"Productivity","desc":"No established QA station on the floor or lines","risk":"Medium","immediate":"Yes","owner":"","due":"2026-04-24","days_open":20,"status":"Open","verified":"","comments":"4/17/2026 quality gemba walk"},{"id":"GW-2026-0417-002","date":"2026-04-17","dept":"Quality","area":"All","shift":"All","observer":"Makebbah","focus":"Housekeeping","desc":"Cluttered lines causing congestion","risk":"Medium","immediate":"Yes","owner":"","due":"2026-04-19","days_open":20,"status":"Open","verified":"","comments":"4/17/2026 quality gemba walk"},{"id":"GW-2026-0420-001","date":"2026-04-20","dept":"Production","area":"Line 11","shift":"All","observer":"Josh Booker","focus":"Housekeeping","desc":"Line cleaning while running is being maintained and no extra storage items observed","risk":"Low","immediate":"No","owner":"","due":"","days_open":0,"status":"Open","verified":"","comments":"4/20/2026 production gemba walk"},{"id":"GW-2026-0420-002","date":"2026-04-20","dept":"Production","area":"Line 10","shift":"All","observer":"Josh Booker","focus":"Housekeeping","desc":"No extra storage items observed; workspace needs reorganization","risk":"Medium","immediate":"Yes","owner":"","due":"2026-04-22","days_open":17,"status":"Open","verified":"","comments":"4/20/2026 production gemba walk"},{"id":"GW-2026-0420-003","date":"2026-04-20","dept":"Production","area":"Line 14","shift":"All","observer":"Josh Booker","focus":"Housekeeping","desc":"Clean packets on floor underneath machine; remove small desk and glove boxes stacked along the scale","risk":"Medium","immediate":"Yes","owner":"","due":"2026-04-22","days_open":17,"status":"Open","verified":"","comments":"4/20/2026 production gemba walk"},{"id":"GW-2026-0420-004","date":"2026-04-20","dept":"Production","area":"Line 10","shift":"All","observer":"Josh Booker","focus":"Housekeeping","desc":"Cabinet is cluttered with used paper towels and general clutter; replace with proper computer desk","risk":"Medium","immediate":"Yes","owner":"","due":"2026-04-22","days_open":17,"status":"Open","verified":"","comments":"4/20/2026 production gemba walk"},{"id":"GW-2026-0420-005","date":"2026-04-20","dept":"Production","area":"All","shift":"All","observer":"Willie Barber / Paul","focus":"Productivity","desc":"Remove unused cabinets and desks from production floor","risk":"Medium","immediate":"Yes","owner":"","due":"2026-04-27","days_open":17,"status":"Open","verified":"","comments":"4/20/2026 production gemba walk"},{"id":"GW-2026-0420-006","date":"2026-04-20","dept":"Production","area":"Line 4","shift":"All","observer":"Willie Barber / Paul","focus":"Safety","desc":"Eye wash station blocked; no easy emergency access; material cabinet and shelves need rework","risk":"High","immediate":"Yes","owner":"","due":"2026-04-20","days_open":17,"status":"Open","verified":"","comments":"4/20/2026 production gemba walk"},{"id":"GW-2026-0420-007","date":"2026-04-20","dept":"Production","area":"Line 5","shift":"All","observer":"Willie Barber / Paul","focus":"Safety","desc":"Hoses on floor need support rails","risk":"High","immediate":"Yes","owner":"","due":"2026-04-20","days_open":17,"status":"Open","verified":"","comments":"4/20/2026 production gemba walk"},{"id":"GW-2026-0420-008","date":"2026-04-20","dept":"Production","area":"Line 6","shift":"All","observer":"Willie Barber / Paul","focus":"Productivity","desc":"Cluttered workspace needs reorganization; employee reaches over conveyor to use computer creating ergonomic issue","risk":"High","immediate":"Yes","owner":"","due":"2026-04-27","days_open":17,"status":"Open","verified":"","comments":"4/20/2026 production gemba walk"},{"id":"GW-2026-0420-009","date":"2026-04-20","dept":"Production","area":"Line 8","shift":"All","observer":"Willie Barber / Paul","focus":"Productivity","desc":"Consolidate inject and computer to one station and remove extra desk and cabinets from line","risk":"Medium","immediate":"Yes","owner":"","due":"2026-04-27","days_open":17,"status":"Open","verified":"","comments":"4/20/2026 production gemba walk"},{"id":"GW-2026-0420-010","date":"2026-04-20","dept":"Production","area":"Line 7","shift":"All","observer":"Willie Barber / Paul","focus":"Housekeeping","desc":"Red tagged items need to be removed from floor","risk":"Medium","immediate":"Yes","owner":"","due":"2026-04-22","days_open":17,"status":"Open","verified":"","comments":"4/20/2026 production gemba walk"},{"id":"GW-2026-0420-011","date":"2026-04-20","dept":"Production","area":"Line 16","shift":"All","observer":"Willie Barber / Paul","focus":"Productivity","desc":"Need a cabinet for parts","risk":"Low","immediate":"Yes","owner":"","due":"2026-04-27","days_open":17,"status":"Open","verified":"","comments":"4/20/2026 production gemba walk"},{"id":"GW-2026-0420-012","date":"2026-04-20","dept":"Production","area":"All","shift":"All","observer":"Willie Barber / Paul","focus":"Housekeeping","desc":"Print and Apply desk between lines 4 and 5 needs organization","risk":"Medium","immediate":"Yes","owner":"","due":"2026-04-22","days_open":17,"status":"Open","verified":"","comments":"4/20/2026 production gemba walk"},{"id":"GW-2026-0420-013","date":"2026-04-20","dept":"Production","area":"All","shift":"All","observer":"Willie Barber / Paul","focus":"Housekeeping","desc":"Need a designated pallet jack storage area when not in use","risk":"Medium","immediate":"Yes","owner":"","due":"2026-04-22","days_open":17,"status":"Open","verified":"","comments":"4/20/2026 production gemba walk"},{"id":"GW-2026-0422-001","date":"2026-04-22","dept":"Quality","area":"QA Floor","shift":"All","observer":"Josh Booker / Ricky","focus":"Safety","desc":"QA floor cleanliness not in order / PPE gloves not being worn","risk":"High","immediate":"Yes","owner":"QA Lead","due":"2026-04-22","days_open":15,"status":"Open","verified":"","comments":"4/22/2026 quality gemba walk"},{"id":"GW-2026-0422-002","date":"2026-04-22","dept":"Quality","area":"Finished Goods Lines","shift":"All","observer":"Josh Booker / Ricky","focus":"Housekeeping","desc":"Trash on FG lines","risk":"High","immediate":"Yes","owner":"Production Lead","due":"2026-04-24","days_open":15,"status":"Open","verified":"","comments":"4/22/2026 quality gemba walk"},{"id":"GW-2026-0422-003","date":"2026-04-22","dept":"Quality","area":"Bucket Staging","shift":"All","observer":"Josh Booker / Ricky","focus":"Productivity","desc":"Tag pallet on buckets needs attention","risk":"Medium","immediate":"Yes","owner":"Warehouse / Material Handler","due":"2026-04-29","days_open":15,"status":"Open","verified":"","comments":"4/22/2026 quality gemba walk"},{"id":"GW-2026-0422-004","date":"2026-04-22","dept":"Quality","area":"Holding Area","shift":"All","observer":"Josh Booker / Ricky","focus":"Housekeeping","desc":"Holding Area has unlabeled totes of finished goods and soiled rags","risk":"High","immediate":"Yes","owner":"QA Lead / Warehouse Lead","due":"2026-04-24","days_open":15,"status":"Open","verified":"","comments":"4/22/2026 quality gemba walk"},{"id":"GW-2026-0422-005","date":"2026-04-22","dept":"Quality","area":"Release Area","shift":"All","observer":"Josh Booker / Ricky","focus":"Productivity","desc":"Release area seal good, batch code stamp good. Packet dry and soldier stacked according to standard.","risk":"Low","immediate":"No","owner":"QA Lead","due":"","days_open":0,"status":"Closed","verified":"","comments":"4/22/2026 quality gemba walk"},{"id":"GW-2026-0422-006","date":"2026-04-22","dept":"Quality","area":"WIP / Rework","shift":"All","observer":"Quneshial / Diamond","focus":"Housekeeping","desc":"Rework stations full and organized","risk":"Low","immediate":"No","owner":"Production Lead","due":"","days_open":0,"status":"Closed","verified":"","comments":"4/22/2026 quality gemba walk"},{"id":"GW-2026-0422-007","date":"2026-04-22","dept":"Quality","area":"Quality Lab","shift":"All","observer":"Willie Barber / Paul","focus":"Housekeeping","desc":"QC lab cabinets and record boxes outside office; confirm if this is the best location. 5S needed in workspace.","risk":"Medium","immediate":"Yes","owner":"QC Lead","due":"2026-04-24","days_open":15,"status":"Open","verified":"","comments":"4/22/2026 quality gemba walk"},{"id":"GW-2026-0422-008","date":"2026-04-22","dept":"Quality","area":"Quality Lab","shift":"All","observer":"Willie Barber / Paul","focus":"Housekeeping","desc":"Unused table sitting outside door needs resolution and is taking up space.","risk":"Medium","immediate":"Yes","owner":"QC Lead","due":"2026-04-24","days_open":15,"status":"Open","verified":"","comments":"4/22/2026 quality gemba walk"},{"id":"GW-2026-0422-009","date":"2026-04-22","dept":"Quality","area":"Retain Area","shift":"All","observer":"Willie Barber / Paul","focus":"Productivity","desc":"Retain area has totes with no labels on them.","risk":"High","immediate":"Yes","owner":"QA Lead","due":"2026-04-29","days_open":15,"status":"Open","verified":"","comments":"4/22/2026 quality gemba walk"},{"id":"GW-2026-0422-010","date":"2026-04-22","dept":"Quality","area":"Holding Area","shift":"All","observer":"Willie Barber / Paul","focus":"Productivity","desc":"Holding Area needs to be counted weekly and scrap needs resolution; some dates are hitting 2-year mark. Would benefit from a monthly meeting to address and track.","risk":"High","immediate":"Yes","owner":"Operations / Warehouse Lead","due":"2026-04-29","days_open":15,"status":"Open","verified":"","comments":"4/22/2026 quality gemba walk"},{"id":"GW-2026-0422-011","date":"2026-04-22","dept":"Quality","area":"Holding Area","shift":"All","observer":"Willie Barber / Paul","focus":"Productivity","desc":"Additional racking is needed to put like items back with like items.","risk":"Medium","immediate":"Yes","owner":"Operations","due":"2026-04-29","days_open":15,"status":"Open","verified":"","comments":"4/22/2026 quality gemba walk"},{"id":"GW-2026-0424-001","date":"2026-04-24","dept":"Logistics","area":"Dock Area","shift":"B","observer":"Willie Barber","focus":"Housekeeping","desc":"Logistics dock area has wasted material on floor; floor and dock door need to be swept.","risk":"High","immediate":"Yes","owner":"Logistics Lead","due":"2026-04-26","days_open":13,"status":"Open","verified":"","comments":"4/24/2026 logistics gemba walk"},{"id":"GW-2026-0424-002","date":"2026-04-24","dept":"Logistics","area":"Dock Doors","shift":"B","observer":"Willie Barber","focus":"Housekeeping","desc":"Dock doors should be 5S for uniformity; some are cluttered with mess.","risk":"High","immediate":"Yes","owner":"Logistics Lead","due":"2026-04-26","days_open":13,"status":"Open","verified":"","comments":"4/24/2026 logistics gemba walk"},{"id":"GW-2026-0424-003","date":"2026-04-24","dept":"Logistics","area":"Dock Area","shift":"B","observer":"Willie Barber","focus":"Safety","desc":"No visible dock locking system or visual indicator for in use vs not in use.","risk":"High","immediate":"Yes","owner":"Maintenance / Logistics Lead","due":"2026-04-24","days_open":13,"status":"Open","verified":"","comments":"4/24/2026 logistics gemba walk"},{"id":"GW-2026-0424-004","date":"2026-04-24","dept":"Logistics","area":"Charging Stations","shift":"B","observer":"Willie Barber","focus":"Safety","desc":"Quite a bit of items leaning against wall and underneath charging stations.","risk":"High","immediate":"Yes","owner":"Logistics Lead","due":"2026-04-24","days_open":13,"status":"Open","verified":"","comments":"4/24/2026 logistics gemba walk"},{"id":"GW-2026-0424-005","date":"2026-04-24","dept":"Logistics","area":"Tote Area","shift":"B","observer":"Willie Barber","focus":"Housekeeping","desc":"Totes area needs organization.","risk":"High","immediate":"Yes","owner":"Logistics Lead","due":"2026-04-26","days_open":13,"status":"Open","verified":"","comments":"4/24/2026 logistics gemba walk"},{"id":"GW-2026-0424-006","date":"2026-04-24","dept":"Logistics","area":"Warehouse","shift":"B","observer":"Willie Barber","focus":"Productivity","desc":"Random stuff on pallets needs to be put away.","risk":"High","immediate":"Yes","owner":"Logistics Lead","due":"2026-05-01","days_open":13,"status":"Open","verified":"","comments":"4/24/2026 logistics gemba walk"},{"id":"GW-2026-0424-007","date":"2026-04-24","dept":"Logistics","area":"Warehouse","shift":"B","observer":"Willie Barber","focus":"Housekeeping","desc":"Quite a bit of items seem to be candidates for red tag program.","risk":"High","immediate":"Yes","owner":"Operations / Logistics Lead","due":"2026-04-26","days_open":13,"status":"Open","verified":"","comments":"4/24/2026 logistics gemba walk"},{"id":"GW-2026-0424-008","date":"2026-04-24","dept":"Logistics","area":"Warehouse","shift":"B","observer":"Willie Barber","focus":"Housekeeping","desc":"Crushed blue drums in area; general housekeeping is not to standard.","risk":"Medium","immediate":"Yes","owner":"Logistics Lead","due":"2026-04-26","days_open":13,"status":"Open","verified":"","comments":"4/24/2026 logistics gemba walk"},{"id":"GW-2026-0424-009","date":"2026-04-24","dept":"Logistics","area":"Warehouse","shift":"B","observer":"Willie Barber","focus":"Safety","desc":"Old forklift forks on floor as well as straps.","risk":"High","immediate":"Yes","owner":"Logistics Lead / Maintenance","due":"2026-04-24","days_open":13,"status":"Open","verified":"","comments":"4/24/2026 logistics gemba walk"},{"id":"GW-2026-0427-001","date":"2026-04-27","dept":"Quality","area":"Line 6","shift":"A","observer":"Willie Barber / Paul","focus":"Productivity","desc":"Production floor pallet with glue sitting on the floor behind Line 6; only what is being used should remain and rest should be put away properly.","risk":"High","immediate":"Yes","owner":"Production Lead / Material Handler","due":"2026-05-04","days_open":10,"status":"Open","verified":"","comments":"4/27/2026 quality gemba walk"},{"id":"GW-2026-0427-002","date":"2026-04-27","dept":"Quality","area":"Line 7","shift":"A","observer":"Willie Barber / Paul","focus":"Housekeeping","desc":"QA line standards need to be consolidated and stored properly; Line 7 had line standard sitting on floor.","risk":"High","immediate":"Yes","owner":"QA Lead","due":"2026-04-29","days_open":10,"status":"Open","verified":"","comments":"4/27/2026 quality gemba walk"},{"id":"GW-2026-0427-003","date":"2026-04-27","dept":"Quality","area":"Production Floor","shift":"A","observer":"Willie Barber / Paul","focus":"Housekeeping","desc":"Mop buckets and chairs on the lines need to be put in appropriate areas.","risk":"Medium","immediate":"Yes","owner":"Production Lead","due":"2026-04-29","days_open":10,"status":"Open","verified":"","comments":"4/27/2026 quality gemba walk"},{"id":"GW-2026-0427-004","date":"2026-04-27","dept":"Quality","area":"Line 7","shift":"A","observer":"Willie Barber / Paul","focus":"Productivity","desc":"Trial packet sitting in grey bin on the floor on Line 7 with no labeling or known disposition.","risk":"High","immediate":"Yes","owner":"QA Lead / Production Lead","due":"2026-05-04","days_open":10,"status":"Open","verified":"","comments":"4/27/2026 quality gemba walk"},{"id":"GW-2026-0427-005","date":"2026-04-27","dept":"Quality","area":"Line 5","shift":"A","observer":"Willie Barber / Paul","focus":"Productivity","desc":"Line 5 has kids kits on the line, but running men’s texturizers. Line 7 components are on a pallet on Line 5. CRITICAL LINE CLEARANCE ESCALATION.","risk":"High","immediate":"Yes","owner":"Production Supervisor/ Line leads","due":"2026-05-04","days_open":10,"status":"Open","verified":"","comments":"4/27/2026 quality gemba walk"},{"id":"GW-2026-0427-006","date":"2026-04-27","dept":"Quality","area":"Line 2","shift":"A","observer":"Willie Barber / Paul","focus":"Housekeeping","desc":"Components on Line 2 in trash.","risk":"High","immediate":"Yes","owner":"Production Supervisor/ Line leads","due":"2026-04-29","days_open":10,"status":"Open","verified":"","comments":"4/27/2026 quality gemba walk"},{"id":"GW-2026-0427-007","date":"2026-04-27","dept":"Quality","area":"Line 11","shift":"A","observer":"Willie Barber / Paul","focus":"Safety","desc":"Line 11 is slippery from oil on floor. CRITICAL SAFETY ESCALATION.","risk":"High","immediate":"Yes","owner":"Supervisor / Production Lead","due":"2026-04-27","days_open":10,"status":"Open","verified":"","comments":"4/27/2026 quality gemba walk"},{"id":"GW-2026-0427-008","date":"2026-04-27","dept":"Quality","area":"Line 10","shift":"A","observer":"Willie Barber / Paul","focus":"Housekeeping","desc":"QA retain cart on the floor posted up by Line 10 and not in correct location.","risk":"Medium","immediate":"Yes","owner":"QA Lead","due":"2026-04-29","days_open":10,"status":"Open","verified":"","comments":"4/27/2026 quality gemba walk"},{"id":"GW-2026-0427-009","date":"2026-04-27","dept":"Quality","area":"Line 1","shift":"A","observer":"Willie Barber / Paul","focus":"Productivity","desc":"Poor line clearance on Line 1; previous two finished-good items showing on racks. CRITICAL LINE CLEARANCE ESCALATION.","risk":"High","immediate":"Yes","owner":"Production Supervisor/ Line leads","due":"2026-05-04","days_open":10,"status":"Open","verified":"","comments":"4/27/2026 quality gemba walk"}];
+const ACTIONS   = [{"action_id":"ACT-001","finding_id":"GW-2026-0413-001","date":"2026-04-13","dept":"Production","area":"Line 2","focus":"Housekeeping","desc":"Bottles under sorter","risk":"High","owner":"","due":"2026-04-15","status":"Open","days":24},{"action_id":"ACT-002","finding_id":"GW-2026-0413-002","date":"2026-04-13","dept":"Production","area":"Line 2","focus":"Safety","desc":"Cap pallet wrap creating trip hazard","risk":"High","owner":"","due":"2026-04-13","status":"Open","days":24},{"action_id":"ACT-003","finding_id":"GW-2026-0413-003","date":"2026-04-13","dept":"Production","area":"Line 2","focus":"Housekeeping","desc":"Soiled rags on floor at bottle labeler","risk":"Medium","owner":"","due":"2026-04-15","status":"Open","days":24},{"action_id":"ACT-004","finding_id":"GW-2026-0413-004","date":"2026-04-13","dept":"Production","area":"Line 2","focus":"Housekeeping","desc":"Clutter under roller racks","risk":"Medium","owner":"","due":"2026-04-15","status":"Open","days":24},{"action_id":"ACT-005","finding_id":"GW-2026-0413-005","date":"2026-04-13","dept":"Production","area":"Line 2","focus":"Housekeeping","desc":"Totes everywhere","risk":"Medium","owner":"","due":"2026-04-15","status":"Open","days":24},{"action_id":"ACT-006","finding_id":"GW-2026-0413-006","date":"2026-04-13","dept":"Production","area":"Line 2","focus":"Housekeeping","desc":"Step ladder at bundler has trash and equipment on it","risk":"Medium","owner":"","due":"2026-04-15","status":"Open","days":24},{"action_id":"ACT-007","finding_id":"GW-2026-0413-007","date":"2026-04-13","dept":"Production","area":"Line 2","focus":"Housekeeping","desc":"Hoodies hanging from rack and print/apply area","risk":"Low","owner":"","due":"2026-04-15","status":"Open","days":24},{"action_id":"ACT-008","finding_id":"GW-2026-0413-008","date":"2026-04-13","dept":"Production","area":"Line 2","focus":"Housekeeping","desc":"Trash on floor","risk":"Medium","owner":"","due":"2026-04-15","status":"Open","days":24},{"action_id":"ACT-009","finding_id":"GW-2026-0413-009","date":"2026-04-13","dept":"Production","area":"Line 2","focus":"Housekeeping","desc":"Bottle pallet floor marking missing on backside","risk":"Medium","owner":"","due":"2026-04-15","status":"Open","days":24},{"action_id":"ACT-010","finding_id":"GW-2026-0413-010","date":"2026-04-13","dept":"Production","area":"Line 3","focus":"Housekeeping","desc":"Water hose not put away","risk":"Medium","owner":"J. Booker","due":"2026-04-15","status":"In Progress","days":24},{"action_id":"ACT-011","finding_id":"GW-2026-0413-021","date":"2026-04-13","dept":"Production","area":"Line 11","focus":"Housekeeping","desc":"Material rack not used; material stored on floor","risk":"High","owner":"Kabba, Kadiatu","due":"2026-04-15","status":"In Progress","days":24},{"action_id":"ACT-012","finding_id":"GW-2026-0413-025","date":"2026-04-13","dept":"Production","area":"Line 11","focus":"Productivity","desc":"Work area not organized","risk":"Medium","owner":"Kabba, Kadiatu","due":"2026-04-20","status":"In Progress","days":24},{"action_id":"ACT-013","finding_id":"GW-2026-0413-028","date":"2026-04-13","dept":"Production","area":"Line 1","focus":"Housekeeping","desc":"Boxes under conveyor","risk":"Medium","owner":"J. Booker","due":"2026-04-15","status":"In Progress","days":24},{"action_id":"ACT-014","finding_id":"GW-2026-0413-029","date":"2026-04-13","dept":"Production","area":"Line 1","focus":"Safety","desc":"2x4 block used to brace conveyor","risk":"High","owner":"","due":"2026-04-13","status":"Open","days":24},{"action_id":"ACT-015","finding_id":"GW-2026-0413-033","date":"2026-04-13","dept":"Production","area":"Line 1","focus":"Housekeeping","desc":"Boxes everywhere, especially around box sorter and bottle sorter","risk":"High","owner":"J. Booker ","due":"2026-04-15","status":"In Progress","days":24},{"action_id":"ACT-016","finding_id":"GW-2026-0415-001","date":"2026-04-15","dept":"Compound","area":"Pre Weigh","focus":"Housekeeping","desc":"Pre weigh area needs buckets organized","risk":"Medium","owner":"","due":"2026-04-17","status":"Open","days":22},{"action_id":"ACT-017","finding_id":"GW-2026-0415-002","date":"2026-04-15","dept":"Compound","area":"Pre Weigh Staging","focus":"Housekeeping","desc":"Trash everywhere in pre weigh staging location","risk":"Medium","owner":"","due":"2026-04-17","status":"Open","days":22},{"action_id":"ACT-018","finding_id":"GW-2026-0415-003","date":"2026-04-15","dept":"Compound","area":"Pre Weigh Staging","focus":"Safety","desc":"Trip hazards in pre weigh staging location","risk":"High","owner":"","due":"2026-04-15","status":"Open","days":22},{"action_id":"ACT-019","finding_id":"GW-2026-0415-004","date":"2026-04-15","dept":"Compound","area":"Dye Room","focus":"Housekeeping","desc":"Dye room unorganized","risk":"Medium","owner":"","due":"2026-04-17","status":"Open","days":22},{"action_id":"ACT-020","finding_id":"GW-2026-0415-005","date":"2026-04-15","dept":"Compound","area":"Dye Room","focus":"Safety","desc":"Cardboard on ground being used for slipping hazard; better fix needed","risk":"High","owner":"","due":"2026-04-15","status":"Open","days":22},{"action_id":"ACT-021","finding_id":"GW-2026-0415-006","date":"2026-04-15","dept":"Compound","area":"Mezzanine / Tanks","focus":"Safety","desc":"Trip hazards on floor of mezzanine and around tanks","risk":"High","owner":"","due":"2026-04-15","status":"Open","days":22},{"action_id":"ACT-022","finding_id":"GW-2026-0415-007","date":"2026-04-15","dept":"Compound","area":"Compound Floor","focus":"Housekeeping","desc":"Caps on floor","risk":"Medium","owner":"","due":"2026-04-17","status":"Open","days":22},{"action_id":"ACT-023","finding_id":"GW-2026-0415-008","date":"2026-04-15","dept":"Compound","area":"Compound Storage","focus":"Housekeeping","desc":"No obvious area to store perishables, jars, rags, and related items","risk":"Medium","owner":"","due":"2026-04-17","status":"Open","days":22},{"action_id":"ACT-024","finding_id":"GW-2026-0415-009","date":"2026-04-15","dept":"Compound","area":"Panels Area","focus":"Safety","desc":"Panels with junk sitting on them","risk":"Medium","owner":"","due":"2026-04-15","status":"Open","days":22},{"action_id":"ACT-025","finding_id":"GW-2026-0415-010","date":"2026-04-15","dept":"Compound","area":"Tank Area","focus":"Safety","desc":"Transfer lines not capped","risk":"High","owner":"","due":"2026-04-15","status":"Open","days":22},{"action_id":"ACT-026","finding_id":"GW-2026-0415-011","date":"2026-04-15","dept":"Compound","area":"Tank Area","focus":"Safety","desc":"Eye wash station covered","risk":"High","owner":"","due":"2026-04-15","status":"Open","days":22},{"action_id":"ACT-027","finding_id":"GW-2026-0415-012","date":"2026-04-15","dept":"Compound","area":"Tank Area","focus":"Safety","desc":"Tank lids open","risk":"High","owner":"","due":"2026-04-15","status":"Open","days":22},{"action_id":"ACT-028","finding_id":"GW-2026-0415-013","date":"2026-04-15","dept":"Compound","area":"Tank Area","focus":"Housekeeping","desc":"Trash on floor","risk":"Medium","owner":"","due":"2026-04-17","status":"Open","days":22},{"action_id":"ACT-029","finding_id":"GW-2026-0415-014","date":"2026-04-15","dept":"Compound","area":"Tank Area","focus":"Housekeeping","desc":"Trash container overflowing","risk":"Medium","owner":"","due":"2026-04-17","status":"Open","days":22},{"action_id":"ACT-030","finding_id":"GW-2026-0415-015","date":"2026-04-15","dept":"Compound","area":"Tank Area","focus":"Safety","desc":"Hoses on floor creating trip hazard","risk":"High","owner":"","due":"2026-04-15","status":"Open","days":22},{"action_id":"ACT-031","finding_id":"GW-2026-0415-016","date":"2026-04-15","dept":"Compound","area":"Tank Area","focus":"Safety","desc":"Spill left on floor unattended","risk":"High","owner":"","due":"2026-04-15","status":"Open","days":22},{"action_id":"ACT-032","finding_id":"GW-2026-0415-017","date":"2026-04-15","dept":"Compound","area":"Tank Area","focus":"Housekeeping","desc":"General housekeeping poor","risk":"Medium","owner":"","due":"2026-04-17","status":"Open","days":22},{"action_id":"ACT-033","finding_id":"GW-2026-0417-001","date":"2026-04-17","dept":"Quality","area":"All","focus":"Productivity","desc":"No established QA station on the floor or lines","risk":"Medium","owner":"","due":"2026-04-24","status":"Open","days":20},{"action_id":"ACT-034","finding_id":"GW-2026-0417-002","date":"2026-04-17","dept":"Quality","area":"All","focus":"Housekeeping","desc":"Cluttered lines causing congestion","risk":"Medium","owner":"","due":"2026-04-19","status":"Open","days":20},{"action_id":"ACT-035","finding_id":"GW-2026-0420-002","date":"2026-04-20","dept":"Production","area":"Line 10","focus":"Housekeeping","desc":"No extra storage items observed; workspace needs reorganization","risk":"Medium","owner":"","due":"2026-04-22","status":"Open","days":17},{"action_id":"ACT-036","finding_id":"GW-2026-0420-003","date":"2026-04-20","dept":"Production","area":"Line 14","focus":"Housekeeping","desc":"Clean packets on floor underneath machine; remove small desk and glove boxes stacked along the scale","risk":"Medium","owner":"","due":"2026-04-22","status":"Open","days":17},{"action_id":"ACT-037","finding_id":"GW-2026-0420-004","date":"2026-04-20","dept":"Production","area":"Line 10","focus":"Housekeeping","desc":"Cabinet is cluttered with used paper towels and general clutter; replace with proper computer desk","risk":"Medium","owner":"","due":"2026-04-22","status":"Open","days":17},{"action_id":"ACT-038","finding_id":"GW-2026-0420-005","date":"2026-04-20","dept":"Production","area":"All","focus":"Productivity","desc":"Remove unused cabinets and desks from production floor","risk":"Medium","owner":"","due":"2026-04-27","status":"Open","days":17},{"action_id":"ACT-039","finding_id":"GW-2026-0420-006","date":"2026-04-20","dept":"Production","area":"Line 4","focus":"Safety","desc":"Eye wash station blocked; no easy emergency access; material cabinet and shelves need rework","risk":"High","owner":"","due":"2026-04-20","status":"Open","days":17},{"action_id":"ACT-040","finding_id":"GW-2026-0420-007","date":"2026-04-20","dept":"Production","area":"Line 5","focus":"Safety","desc":"Hoses on floor need support rails","risk":"High","owner":"","due":"2026-04-20","status":"Open","days":17},{"action_id":"ACT-041","finding_id":"GW-2026-0420-008","date":"2026-04-20","dept":"Production","area":"Line 6","focus":"Productivity","desc":"Cluttered workspace needs reorganization; employee reaches over conveyor to use computer creating ergonomic issue","risk":"High","owner":"","due":"2026-04-27","status":"Open","days":17},{"action_id":"ACT-042","finding_id":"GW-2026-0420-009","date":"2026-04-20","dept":"Production","area":"Line 8","focus":"Productivity","desc":"Consolidate inject and computer to one station and remove extra desk and cabinets from line","risk":"Medium","owner":"","due":"2026-04-27","status":"Open","days":17},{"action_id":"ACT-043","finding_id":"GW-2026-0420-010","date":"2026-04-20","dept":"Production","area":"Line 7","focus":"Housekeeping","desc":"Red tagged items need to be removed from floor","risk":"Medium","owner":"","due":"2026-04-22","status":"Open","days":17},{"action_id":"ACT-044","finding_id":"GW-2026-0420-011","date":"2026-04-20","dept":"Production","area":"Line 16","focus":"Productivity","desc":"Need a cabinet for parts","risk":"Low","owner":"","due":"2026-04-27","status":"Open","days":17},{"action_id":"ACT-045","finding_id":"GW-2026-0420-012","date":"2026-04-20","dept":"Production","area":"All","focus":"Housekeeping","desc":"Print and Apply desk between lines 4 and 5 needs organization","risk":"Medium","owner":"","due":"2026-04-22","status":"Open","days":17},{"action_id":"ACT-046","finding_id":"GW-2026-0420-013","date":"2026-04-20","dept":"Production","area":"All","focus":"Housekeeping","desc":"Need a designated pallet jack storage area when not in use","risk":"Medium","owner":"","due":"2026-04-22","status":"Open","days":17},{"action_id":"ACT-047","finding_id":"GW-2026-0422-001","date":"2026-04-22","dept":"Quality","area":"QA Floor","focus":"Safety","desc":"QA floor cleanliness not in order / PPE gloves not being worn","risk":"High","owner":"QA Lead","due":"2026-04-22","status":"Open","days":15},{"action_id":"ACT-048","finding_id":"GW-2026-0422-002","date":"2026-04-22","dept":"Quality","area":"Finished Goods Lines","focus":"Housekeeping","desc":"Trash on FG lines","risk":"High","owner":"Production Lead","due":"2026-04-24","status":"Open","days":15},{"action_id":"ACT-049","finding_id":"GW-2026-0422-003","date":"2026-04-22","dept":"Quality","area":"Bucket Staging","focus":"Productivity","desc":"Tag pallet on buckets needs attention","risk":"Medium","owner":"Warehouse / Material Handler","due":"2026-04-29","status":"Open","days":15},{"action_id":"ACT-050","finding_id":"GW-2026-0422-004","date":"2026-04-22","dept":"Quality","area":"Holding Area","focus":"Housekeeping","desc":"Holding Area has unlabeled totes of finished goods and soiled rags","risk":"High","owner":"QA Lead / Warehouse Lead","due":"2026-04-24","status":"Open","days":15},{"action_id":"ACT-051","finding_id":"GW-2026-0422-007","date":"2026-04-22","dept":"Quality","area":"Quality Lab","focus":"Housekeeping","desc":"QC lab cabinets and record boxes outside office; confirm if this is the best location. 5S needed in workspace.","risk":"Medium","owner":"QC Lead","due":"2026-04-24","status":"Open","days":15},{"action_id":"ACT-052","finding_id":"GW-2026-0422-008","date":"2026-04-22","dept":"Quality","area":"Quality Lab","focus":"Housekeeping","desc":"Unused table sitting outside door needs resolution and is taking up space.","risk":"Medium","owner":"QC Lead","due":"2026-04-24","status":"Open","days":15},{"action_id":"ACT-053","finding_id":"GW-2026-0422-009","date":"2026-04-22","dept":"Quality","area":"Retain Area","focus":"Productivity","desc":"Retain area has totes with no labels on them.","risk":"High","owner":"QA Lead","due":"2026-04-29","status":"Open","days":15},{"action_id":"ACT-054","finding_id":"GW-2026-0422-010","date":"2026-04-22","dept":"Quality","area":"Holding Area","focus":"Productivity","desc":"Holding Area needs to be counted weekly and scrap needs resolution; some dates are hitting 2-year mark. Would benefit from a monthly meeting to address and track.","risk":"High","owner":"Operations / Warehouse Lead","due":"2026-04-29","status":"Open","days":15},{"action_id":"ACT-055","finding_id":"GW-2026-0422-011","date":"2026-04-22","dept":"Quality","area":"Holding Area","focus":"Productivity","desc":"Additional racking is needed to put like items back with like items.","risk":"Medium","owner":"Operations","due":"2026-04-29","status":"Open","days":15},{"action_id":"ACT-056","finding_id":"GW-2026-0424-001","date":"2026-04-24","dept":"Logistics","area":"Dock Area","focus":"Housekeeping","desc":"Logistics dock area has wasted material on floor; floor and dock door need to be swept.","risk":"High","owner":"Logistics Lead","due":"2026-04-26","status":"Open","days":13},{"action_id":"ACT-057","finding_id":"GW-2026-0424-002","date":"2026-04-24","dept":"Logistics","area":"Dock Doors","focus":"Housekeeping","desc":"Dock doors should be 5S for uniformity; some are cluttered with mess.","risk":"High","owner":"Logistics Lead","due":"2026-04-26","status":"Open","days":13},{"action_id":"ACT-058","finding_id":"GW-2026-0424-003","date":"2026-04-24","dept":"Logistics","area":"Dock Area","focus":"Safety","desc":"No visible dock locking system or visual indicator for in use vs not in use.","risk":"High","owner":"Maintenance / Logistics Lead","due":"2026-04-24","status":"Open","days":13},{"action_id":"ACT-059","finding_id":"GW-2026-0424-004","date":"2026-04-24","dept":"Logistics","area":"Charging Stations","focus":"Safety","desc":"Quite a bit of items leaning against wall and underneath charging stations.","risk":"High","owner":"Logistics Lead","due":"2026-04-24","status":"Open","days":13},{"action_id":"ACT-060","finding_id":"GW-2026-0424-005","date":"2026-04-24","dept":"Logistics","area":"Tote Area","focus":"Housekeeping","desc":"Totes area needs organization.","risk":"High","owner":"Logistics Lead","due":"2026-04-26","status":"Open","days":13},{"action_id":"ACT-061","finding_id":"GW-2026-0424-006","date":"2026-04-24","dept":"Logistics","area":"Warehouse","focus":"Productivity","desc":"Random stuff on pallets needs to be put away.","risk":"High","owner":"Logistics Lead","due":"2026-05-01","status":"Open","days":13},{"action_id":"ACT-062","finding_id":"GW-2026-0424-007","date":"2026-04-24","dept":"Logistics","area":"Warehouse","focus":"Housekeeping","desc":"Quite a bit of items seem to be candidates for red tag program.","risk":"High","owner":"Operations / Logistics Lead","due":"2026-04-26","status":"Open","days":13},{"action_id":"ACT-063","finding_id":"GW-2026-0424-008","date":"2026-04-24","dept":"Logistics","area":"Warehouse","focus":"Housekeeping","desc":"Crushed blue drums in area; general housekeeping is not to standard.","risk":"Medium","owner":"Logistics Lead","due":"2026-04-26","status":"Open","days":13},{"action_id":"ACT-064","finding_id":"GW-2026-0424-009","date":"2026-04-24","dept":"Logistics","area":"Warehouse","focus":"Safety","desc":"Old forklift forks on floor as well as straps.","risk":"High","owner":"Logistics Lead / Maintenance","due":"2026-04-24","status":"Open","days":13},{"action_id":"ACT-065","finding_id":"GW-2026-0427-001","date":"2026-04-27","dept":"Quality","area":"Line 6","focus":"Productivity","desc":"Production floor pallet with glue sitting on the floor behind Line 6; only what is being used should remain and rest should be put away properly.","risk":"High","owner":"Production Lead / Material Handler","due":"2026-05-04","status":"Open","days":10},{"action_id":"ACT-066","finding_id":"GW-2026-0427-002","date":"2026-04-27","dept":"Quality","area":"Line 7","focus":"Housekeeping","desc":"QA line standards need to be consolidated and stored properly; Line 7 had line standard sitting on floor.","risk":"High","owner":"QA Lead","due":"2026-04-29","status":"Open","days":10},{"action_id":"ACT-067","finding_id":"GW-2026-0427-003","date":"2026-04-27","dept":"Quality","area":"Production Floor","focus":"Housekeeping","desc":"Mop buckets and chairs on the lines need to be put in appropriate areas.","risk":"Medium","owner":"Production Lead","due":"2026-04-29","status":"Open","days":10},{"action_id":"ACT-068","finding_id":"GW-2026-0427-004","date":"2026-04-27","dept":"Quality","area":"Line 7","focus":"Productivity","desc":"Trial packet sitting in grey bin on the floor on Line 7 with no labeling or known disposition.","risk":"High","owner":"QA Lead / Production Lead","due":"2026-05-04","status":"Open","days":10},{"action_id":"ACT-069","finding_id":"GW-2026-0427-005","date":"2026-04-27","dept":"Quality","area":"Line 5","focus":"Productivity","desc":"Line 5 has kids kits on the line, but running men’s texturizers. Line 7 components are on a pallet on Line 5. CRITICAL LINE CLEARANCE ESCALATION.","risk":"High","owner":"Production Supervisor/ Line leads","due":"2026-05-04","status":"Open","days":10},{"action_id":"ACT-070","finding_id":"GW-2026-0427-006","date":"2026-04-27","dept":"Quality","area":"Line 2","focus":"Housekeeping","desc":"Components on Line 2 in trash.","risk":"High","owner":"Production Supervisor/ Line leads","due":"2026-04-29","status":"Open","days":10},{"action_id":"ACT-071","finding_id":"GW-2026-0427-007","date":"2026-04-27","dept":"Quality","area":"Line 11","focus":"Safety","desc":"Line 11 is slippery from oil on floor. CRITICAL SAFETY ESCALATION.","risk":"High","owner":"Supervisor / Production Lead","due":"2026-04-27","status":"Open","days":10},{"action_id":"ACT-072","finding_id":"GW-2026-0427-008","date":"2026-04-27","dept":"Quality","area":"Line 10","focus":"Housekeeping","desc":"QA retain cart on the floor posted up by Line 10 and not in correct location.","risk":"Medium","owner":"QA Lead","due":"2026-04-29","status":"Open","days":10},{"action_id":"ACT-073","finding_id":"GW-2026-0427-009","date":"2026-04-27","dept":"Quality","area":"Line 1","focus":"Productivity","desc":"Poor line clearance on Line 1; previous two finished-good items showing on racks. CRITICAL LINE CLEARANCE ESCALATION.","risk":"High","owner":"Production Supervisor/ Line leads","due":"2026-05-04","status":"Open","days":10}];
+const RED_TAGS  = [{"id":"1","date":"2026-04-16","area":"production","line":"7","item":"bundler line","reason":"old equipment ","owner":"Willie/ Rusty","disposition":"to be sold (still on line waiting to be moved)","status":"open","closed":"","notes":"see rusty for detail"},{"id":"2","date":"2026-04-16","area":"production","line":"7","item":"turntable","reason":"old equipment ","owner":"Willie/ Rusty","disposition":"to be sold (still on line waiting to be moved)","status":"open","closed":"","notes":"see rusty for detail"},{"id":"3","date":"2026-04-16","area":"production","line":"7","item":"heat seal","reason":"old equipment ","owner":"Willie/ Rusty","disposition":"to be sold (still on line waiting to be moved)","status":"open","closed":"","notes":"see rusty for detail"},{"id":"4","date":"2026-04-20","area":"production","line":"7","item":"desk","reason":"extra","owner":"Willie/ Paul ","disposition":"to be clean out and moved to compound(still on line)","status":"open","closed":"","notes":"see peanut for detail"},{"id":"5","date":"2026-04-20","area":"production","line":"2","item":"clutter","reason":"tools /machine good","owner":"Josh","disposition":"remove clutter under stacker roller rack","status":"open","closed":"","notes":"see josh for detail"},{"id":"7","date":"2026-04-20","area":"production","line":"3","item":"capper","reason":"extra","owner":"Josh","disposition":"remove additional equipement from line( relocate)","status":"open","closed":"","notes":"see josh for detail/ possible sell if not needed "},{"id":"8","date":"2026-04-20","area":"production","line":"3","item":"desk/rack items","reason":"other","owner":"Josh","disposition":"scrap unneeded items ","status":"open","closed":"","notes":"see josh for detail"},{"id":"9","date":"2026-04-22","area":"production","line":"14","item":"fsd compound ","reason":"machine","owner":"Willie","disposition":"to be sold (still on line waiting to be moved)","status":"open","closed":"","notes":"see rusty for detail"}];
+const CALENDAR  = [{"week_of":"2026-04-13","date":"2026-04-13","day":"Monday","dept":"Production","theme":"Housekeeping","due_std":"48 hours"},{"week_of":"2026-04-13","date":"2026-04-15","day":"Wednesday","dept":"Logistics","theme":"Housekeeping","due_std":"48 hours"},{"week_of":"2026-04-13","date":"2026-04-17","day":"Friday","dept":"Quality","theme":"Housekeeping","due_std":"48 hours"},{"week_of":"2026-04-20","date":"2026-04-20","day":"Monday","dept":"Compounding","theme":"Productivity","due_std":"1 week"},{"week_of":"2026-04-20","date":"2026-04-22","day":"Wednesday","dept":"Production","theme":"Productivity","due_std":"1 week"},{"week_of":"2026-04-20","date":"2026-04-24","day":"Friday","dept":"Logistics","theme":"Productivity","due_std":"1 week"},{"week_of":"2026-04-27","date":"2026-04-27","day":"Monday","dept":"Quality","theme":"Housekeeping","due_std":"48 hours"},{"week_of":"2026-04-27","date":"2026-04-29","day":"Wednesday","dept":"Compounding","theme":"Housekeeping","due_std":"48 hours"},{"week_of":"2026-04-27","date":"2026-05-01","day":"Friday","dept":"Production","theme":"Housekeeping","due_std":"48 hours"},{"week_of":"2026-05-04","date":"2026-05-04","day":"Monday","dept":"Logistics","theme":"Productivity","due_std":"1 week"},{"week_of":"2026-05-04","date":"2026-05-06","day":"Wednesday","dept":"Quality","theme":"Productivity","due_std":"1 week"},{"week_of":"2026-05-04","date":"2026-05-08","day":"Friday","dept":"Compounding","theme":"Productivity","due_std":"1 week"},{"week_of":"2026-05-11","date":"2026-05-11","day":"Monday","dept":"Production","theme":"Housekeeping","due_std":"48 hours"},{"week_of":"2026-05-11","date":"2026-05-13","day":"Wednesday","dept":"Logistics","theme":"Housekeeping","due_std":"48 hours"},{"week_of":"2026-05-11","date":"2026-05-15","day":"Friday","dept":"Quality","theme":"Housekeeping","due_std":"48 hours"},{"week_of":"2026-05-18","date":"2026-05-18","day":"Monday","dept":"Compounding","theme":"Productivity","due_std":"1 week"},{"week_of":"2026-05-18","date":"2026-05-20","day":"Wednesday","dept":"Production","theme":"Productivity","due_std":"1 week"},{"week_of":"2026-05-18","date":"2026-05-22","day":"Friday","dept":"Logistics","theme":"Productivity","due_std":"1 week"},{"week_of":"2026-05-25","date":"2026-05-25","day":"Monday","dept":"Quality","theme":"Housekeeping","due_std":"48 hours"},{"week_of":"2026-05-25","date":"2026-05-27","day":"Wednesday","dept":"Compounding","theme":"Housekeeping","due_std":"48 hours"},{"week_of":"2026-05-25","date":"2026-05-29","day":"Friday","dept":"Production","theme":"Housekeeping","due_std":"48 hours"},{"week_of":"2026-06-01","date":"2026-06-01","day":"Monday","dept":"Logistics","theme":"Productivity","due_std":"1 week"},{"week_of":"2026-06-01","date":"2026-06-03","day":"Wednesday","dept":"Quality","theme":"Productivity","due_std":"1 week"},{"week_of":"2026-06-01","date":"2026-06-05","day":"Friday","dept":"Compounding","theme":"Productivity","due_std":"1 week"},{"week_of":"2026-06-08","date":"2026-06-08","day":"Monday","dept":"Production","theme":"Housekeeping","due_std":"48 hours"},{"week_of":"2026-06-08","date":"2026-06-10","day":"Wednesday","dept":"Logistics","theme":"Housekeeping","due_std":"48 hours"},{"week_of":"2026-06-08","date":"2026-06-12","day":"Friday","dept":"Quality","theme":"Housekeeping","due_std":"48 hours"},{"week_of":"2026-06-15","date":"2026-06-15","day":"Monday","dept":"Compounding","theme":"Productivity","due_std":"1 week"},{"week_of":"2026-06-15","date":"2026-06-17","day":"Wednesday","dept":"Production","theme":"Productivity","due_std":"1 week"},{"week_of":"2026-06-15","date":"2026-06-19","day":"Friday","dept":"Logistics","theme":"Productivity","due_std":"1 week"},{"week_of":"2026-06-22","date":"2026-06-22","day":"Monday","dept":"Quality","theme":"Housekeeping","due_std":"48 hours"},{"week_of":"2026-06-22","date":"2026-06-24","day":"Wednesday","dept":"Compounding","theme":"Housekeeping","due_std":"48 hours"},{"week_of":"2026-06-22","date":"2026-06-26","day":"Friday","dept":"Production","theme":"Housekeeping","due_std":"48 hours"},{"week_of":"2026-06-29","date":"2026-06-29","day":"Monday","dept":"Logistics","theme":"Productivity","due_std":"1 week"},{"week_of":"2026-06-29","date":"2026-07-01","day":"Wednesday","dept":"Quality","theme":"Productivity","due_std":"1 week"},{"week_of":"2026-06-29","date":"2026-07-03","day":"Friday","dept":"Compounding","theme":"Productivity","due_std":"1 week"},{"week_of":"2026-07-06","date":"2026-07-06","day":"Monday","dept":"Production","theme":"Housekeeping","due_std":"48 hours"},{"week_of":"2026-07-06","date":"2026-07-08","day":"Wednesday","dept":"Logistics","theme":"Housekeeping","due_std":"48 hours"},{"week_of":"2026-07-06","date":"2026-07-10","day":"Friday","dept":"Quality","theme":"Housekeeping","due_std":"48 hours"},{"week_of":"2026-07-13","date":"2026-07-13","day":"Monday","dept":"Compounding","theme":"Productivity","due_std":"1 week"},{"week_of":"2026-07-13","date":"2026-07-15","day":"Wednesday","dept":"Production","theme":"Productivity","due_std":"1 week"},{"week_of":"2026-07-13","date":"2026-07-17","day":"Friday","dept":"Logistics","theme":"Productivity","due_std":"1 week"},{"week_of":"2026-07-20","date":"2026-07-20","day":"Monday","dept":"Quality","theme":"Housekeeping","due_std":"48 hours"},{"week_of":"2026-07-20","date":"2026-07-22","day":"Wednesday","dept":"Compounding","theme":"Housekeeping","due_std":"48 hours"},{"week_of":"2026-07-20","date":"2026-07-24","day":"Friday","dept":"Production","theme":"Housekeeping","due_std":"48 hours"},{"week_of":"2026-07-27","date":"2026-07-27","day":"Monday","dept":"Logistics","theme":"Productivity","due_std":"1 week"},{"week_of":"2026-07-27","date":"2026-07-29","day":"Wednesday","dept":"Quality","theme":"Productivity","due_std":"1 week"},{"week_of":"2026-07-27","date":"2026-07-31","day":"Friday","dept":"Compounding","theme":"Productivity","due_std":"1 week"},{"week_of":"2026-08-03","date":"2026-08-03","day":"Monday","dept":"Production","theme":"Housekeeping","due_std":"48 hours"},{"week_of":"2026-08-03","date":"2026-08-05","day":"Wednesday","dept":"Logistics","theme":"Housekeeping","due_std":"48 hours"},{"week_of":"2026-08-03","date":"2026-08-07","day":"Friday","dept":"Quality","theme":"Housekeeping","due_std":"48 hours"},{"week_of":"2026-08-10","date":"2026-08-10","day":"Monday","dept":"Compounding","theme":"Productivity","due_std":"1 week"}];
+
+
+// ═══════════════════════════════════════════════════════════════════
+// HOC SHARED SYNC BUS  —  all 3 tools read + write hoc_sync_v1
+// Schema: { batchId: { prod:{status,actqty,dt,name,notes,ts},
+//                      cmpd:{status,actual,tank,lbs,notes,updater,ts},
+//                      qc:{status,ph,visc,dens,color,odor,appear,release,hrs,tech,notes,ts} } }
+// ═══════════════════════════════════════════════════════════════════
+const SYNC_KEY = 'hoc_sync_v1';
+
+function syncRead() {
+  try { return JSON.parse(localStorage.getItem(SYNC_KEY) || '{}'); } catch(e) { return {}; }
+}
+function syncWrite(data) {
+  try { localStorage.setItem(SYNC_KEY, JSON.stringify(data)); } catch(e) {}
+}
+function syncGet(batchId) {
+  return syncRead()[batchId] || { prod:{}, cmpd:{}, qc:{} };
+}
+function syncSet(batchId, section, fields) {
+  const all = syncRead();
+  if (!all[batchId]) all[batchId] = { prod:{}, cmpd:{}, qc:{} };
+  all[batchId][section] = { ...all[batchId][section], ...fields, ts: new Date().toISOString() };
+  syncWrite(all);
+  return all[batchId];
+}
+function syncClear() { localStorage.removeItem(SYNC_KEY); }
+function syncCount() { return Object.keys(syncRead()).length; }
+function syncCountSection(sec) { return Object.values(syncRead()).filter(v=>v[sec]&&Object.keys(v[sec]).length>1).length; }
+
+// Get effective production status (sync overrides Excel)
+function getStatus(b) {
+  const s = syncGet(b.batch);
+  return (s.prod && s.prod.status) ? s.prod.status : b.status;
+}
+// Get effective compound status
+function getCmpd(batchId, fallback) {
+  const s = syncGet(batchId);
+  return (s.cmpd && s.cmpd.cmpd_status) ? s.cmpd.cmpd_status : (fallback||'');
+}
+// Get effective QC status
+function getQC(batchId) {
+  const s = syncGet(batchId);
+  return (s.qc && s.qc.qc_status) ? s.qc.qc_status : '';
+}
+
+
+const N  = n => typeof n==='number' ? n.toLocaleString() : (n||'—');
+function _excelToDate(serial){var n=Number(serial);if(isNaN(n)||n<1||n>200000)return null;return new Date(Math.round((n-25569)*86400*1000));}
+const fD = s => {if(!s)return'—';try{if(typeof s==='number'||(typeof s==='string'&&/^\d{4,6}(\.\d+)?$/.test(s.trim()))){var ed=_excelToDate(s);if(ed&&!isNaN(ed.getTime()))return ed.toLocaleDateString('en-US',{month:'numeric',day:'numeric'});}return new Date(s+'T12:00:00').toLocaleDateString('en-US',{month:'numeric',day:'numeric'});}catch{return s;}};
+const fDL= s => {if(!s)return'—';try{if(typeof s==='number'||(typeof s==='string'&&/^\d{4,6}(\.\d+)?$/.test(s.trim()))){var ed=_excelToDate(s);if(ed&&!isNaN(ed.getTime()))return ed.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});}return new Date(s+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});}catch{return s;}};
+
+function stBadge(b) {
+  const st=getStatus(b);
+  if(st==='COMPLETED') return '<span class="pill p-done">COMPLETED</span>';
+  if(st==='RUNNING')   return '<span class="pill p-run">RUNNING</span>';
+  if(st==='ON HOLD'||st==='SHORT RUN') return '<span class="pill p-hold">'+st+'</span>';
+  return '<span class="pill p-ns">NOT STARTED</span>';
+}
+function cmpdBadge(c) {
+  if(!c) return '<span class="t3">—</span>';
+  const s=c.replace('COMPOUND ','');
+  if(c.includes('OVERDUE')||c.includes('CRITICAL')) return '<span class="pill p-od">'+s+'</span>';
+  if(c.includes('AT RISK'))  return '<span class="pill p-ar">'+s+'</span>';
+  if(c.includes('ON TRACK')) return '<span class="pill p-ot">'+s+'</span>';
+  if(c.includes('FILLING')||c.includes('COMPLETE')) return '<span class="pill p-run">'+s+'</span>';
+  return '<span class="pill p-ns">'+s+'</span>';
+}
+function sigBadge(s) {
+  if(s==='⚠ CRITICAL') return '<span class="pill p-od">⚠ CRITICAL</span>';
+  if(s==='! WATCH')    return '<span class="pill p-ar">! WATCH</span>';
+  if(s==='LINE OFF')   return '<span class="pill p-ns">LINE OFF</span>';
+  return '<span class="pill p-ot">✓ MONITOR</span>';
+}
+function qcBadge(st) {
+  if(!st) return '<span class="t3">—</span>';
+  if(st==='QC RELEASED') return '<span class="pill p-rel">QC RELEASED</span>';
+  if(st==='IN PROCESS')  return '<span class="pill p-qc">IN PROCESS</span>';
+  if(st==='QC HOLD')     return '<span class="pill p-ar">QC HOLD</span>';
+  if(st==='APPROVED')    return '<span class="pill p-ot">APPROVED</span>';
+  if(st==='REJECTED')    return '<span class="pill p-od">REJECTED</span>';
+  return '<span class="pill p-ns">'+st+'</span>';
+}
+function priBadge(p) {
+  if(p==='MUST RUN')   return '<span class="pill p-must">MUST</span>';
+  if(p==='SHOULD RUN') return '<span class="pill p-should">SHOULD</span>';
+  return '<span class="pill p-ns">NEXT WK</span>';
+}
+function syncBadge(batchId) {
+  const s=syncRead()[batchId];
+  if(!s) return '';
+  const parts=[];
+  if(s.prod&&s.prod.status) parts.push(s.prod.status);
+  if(s.cmpd&&s.cmpd.cmpd_status) parts.push(s.cmpd.cmpd_status);
+  if(s.qc&&s.qc.qc_status) parts.push(s.qc.qc_status);
+  return parts.length ? '<span class="pill p-sync" style="font-size:7px">⚡ '+parts.join(' · ')+'</span>' : '';
+}
+
+
+
+function exportAllCSV() {
+  const all=syncRead();
+  if(!Object.keys(all).length){alert('No floor updates to export.');return;}
+  const hdrs=['Batch','Section','Status','ActQty','CmpdStatus','QCStatus','pH','Viscosity','Density','Tech','Notes','Timestamp'];
+  const rows=[];
+  Object.entries(all).forEach(([id,s])=>{
+    if(s.prod&&s.prod.status) rows.push([id,'PRODUCTION',s.prod.status,s.prod.actqty||'','','','','','',s.prod.name||'',s.prod.notes||'',s.prod.ts||'']);
+    if(s.cmpd&&s.cmpd.cmpd_status) rows.push([id,'COMPOUND','','' ,s.cmpd.cmpd_status,'','','','',s.cmpd.updater||'',s.cmpd.notes||'',s.cmpd.ts||'']);
+    if(s.qc&&s.qc.qc_status) rows.push([id,'QC','','','',s.qc.qc_status,s.qc.ph||'',s.qc.visc||'',s.qc.dens||'',s.qc.tech||'',s.qc.notes||'',s.qc.ts||'']);
+  });
+  const csv=[hdrs,...rows].map(r=>r.map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='hoc_floor_updates_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+function showPage(id, map) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.nb')[map[id]].classList.add('active');
+}
+
+function pct(v){return typeof v==='number'?(Math.round(v*1000)/10)+'%':'—';}
+
+var PM={cmd:0,findings:1,actions:2,redtags:3,calendar:4,newwalk:5};
+function P(id){
+  showPage(id,PM);
+  if(id==='findings') renderFindings();
+  if(id==='actions')  renderActions();
+  if(id==='redtags')  renderRedTags();
+  if(id==='calendar') renderCalendar();
+}
+
+var NEW_FINDINGS_KEY='hoc_gemba_new_v1';
+function getNewFindings(){try{return JSON.parse(localStorage.getItem(NEW_FINDINGS_KEY)||'[]');}catch(e){return[];}}
+function saveNewFindings(d){try{localStorage.setItem(NEW_FINDINGS_KEY,JSON.stringify(d));}catch(e){}}
+
+function riskClass(r){return'risk-'+r.charAt(0);}
+function statusClass(s){
+  if(s==='Open')return'st-open';
+  if(s==='In Progress')return'st-prog';
+  if(s==='On Hold')return'st-hold';
+  return'st-closed';
+}
+function riskBadge(r){
+  var c=r==='High'?'var(--red)':r==='Medium'?'var(--amber)':r==='Low'?'var(--green)':'var(--text3)';
+  return'<span style="font-size:9px;font-weight:700;color:'+c+'">'+r+'</span>';
+}
+function focusBadge(f){
+  var c=f==='Safety'?'var(--red)':f==='Productivity'?'var(--blue)':'var(--teal)';
+  return'<span style="font-size:9px;padding:1px 6px;border-radius:8px;background:'+c+'22;color:'+c+'">'+f+'</span>';
+}
+
+// ── Dashboard ────────────────────────────────────────────────────────
+function renderAll(){
+  renderSyncBar(document.getElementById('sync-bar'));
+  renderBadges();
+  renderCmdKPIs();
+  renderAreaChart();
+  renderDeptChart();
+  renderHighRisk();
+  pushGembaToSync();
+}
+
+function renderBadges(){
+  var open=FINDINGS.filter(function(f){return f.status==='Open';}).length;
+  var high=FINDINGS.filter(function(f){return f.risk==='High'&&f.status==='Open';}).length;
+  var safety=FINDINGS.filter(function(f){return f.focus==='Safety'&&f.status==='Open';}).length;
+  document.getElementById('badges').innerHTML=
+    (high?'<span class="badge b-red">'+high+' HIGH RISK</span>':'')+
+    (safety?'<span class="badge b-red">'+safety+' SAFETY</span>':'')+
+    '<span class="badge b-amb">'+open+' OPEN</span>';
+}
+
+function renderCmdKPIs(){
+  var all=FINDINGS.length;
+  var open=FINDINGS.filter(function(f){return f.status==='Open';}).length;
+  var prog=FINDINGS.filter(function(f){return f.status==='In Progress';}).length;
+  var closed=FINDINGS.filter(function(f){return f.status==='Closed';}).length;
+  var high=FINDINGS.filter(function(f){return f.risk==='High'&&f.status==='Open';}).length;
+  var safety=FINDINGS.filter(function(f){return f.focus==='Safety'&&f.status==='Open';}).length;
+  var overdue=ACTIONS.filter(function(a){return a.status!=='Closed'&&a.days>0;}).length;
+  var rt_open=RED_TAGS.filter(function(r){return r.status==='open';}).length;
+  document.getElementById('cmd-kpis').innerHTML=[
+    {l:'Total Findings',v:all,s:'Since Apr 13',c:'var(--text)'},
+    {l:'Open',v:open,s:'Need action',c:open?'var(--red)':'var(--green)'},
+    {l:'In Progress',v:prog,s:'Being addressed',c:'var(--amber)'},
+    {l:'Closed',v:closed,s:'Resolved',c:'var(--green)'},
+    {l:'High Risk Open',v:high,s:'Immediate action',c:high?'var(--red)':'var(--green)'},
+    {l:'Safety Open',v:safety,s:'Safety findings',c:safety?'var(--red)':'var(--green)'},
+    {l:'Overdue Actions',v:overdue,s:'Past due date',c:overdue?'var(--red)':'var(--green)'},
+    {l:'Open Red Tags',v:rt_open,s:'Equipment/items',c:rt_open?'var(--amber)':'var(--green)'},
+  ].map(function(k){return'<div class="kpi"><div class="kl">'+k.l+'</div><div class="kv" style="color:'+k.c+'">'+k.v+'</div><div class="ks">'+k.s+'</div></div>';}).join('');
+}
+
+function renderAreaChart(){
+  var open=FINDINGS.filter(function(f){return f.status==='Open'||f.status==='In Progress';});
+  var areas={};
+  open.forEach(function(f){
+    var a=f.area||'Unknown';
+    if(!areas[a])areas[a]={total:0,high:0};
+    areas[a].total++;
+    if(f.risk==='High')areas[a].high++;
+  });
+  var sorted=Object.entries(areas).sort(function(a,b){return b[1].total-a[1].total;}).slice(0,10);
+  var max=sorted.length?sorted[0][1].total:1;
+  document.getElementById('area-chart').innerHTML=sorted.map(function(e){
+    var area=e[0],d=e[1];
+    var w=Math.round(d.total/max*100);
+    var wh=Math.round(d.high/max*100);
+    return'<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:9px">'+
+      '<span style="min-width:110px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+area+'</span>'+
+      '<div style="flex:1;height:14px;background:var(--gray-l);border-radius:3px;overflow:hidden;position:relative">'+
+        '<div style="width:'+w+'%;height:100%;background:var(--teal);border-radius:3px;opacity:.6"></div>'+
+        '<div style="position:absolute;top:0;left:0;width:'+wh+'%;height:100%;background:var(--red);border-radius:3px;opacity:.8"></div>'+
+      '</div>'+
+      '<span style="min-width:20px;text-align:right;font-weight:700;color:var(--text)">'+d.total+'</span>'+
+      (d.high?'<span style="color:var(--red);font-size:8px">'+d.high+' H</span>':'<span style="width:20px"></span>')+
+    '</div>';
+  }).join('')+'<div style="font-size:9px;color:var(--text3);margin-top:4px"><span style="color:var(--red)">■</span> High Risk &nbsp; <span style="color:var(--teal);opacity:.6">■</span> Total Open</div>';
+}
+
+function renderDeptChart(){
+  var depts=['Production','Compound','Quality','Logistics'];
+  var focusTypes=['Housekeeping','Safety','Productivity'];
+  var open=FINDINGS.filter(function(f){return f.status==='Open'||f.status==='In Progress';});
+  document.getElementById('dept-chart').innerHTML=depts.map(function(dept){
+    var df=open.filter(function(f){return f.dept===dept;});
+    if(!df.length)return'';
+    var byFocus={};
+    focusTypes.forEach(function(ft){byFocus[ft]=df.filter(function(f){return f.focus===ft;}).length;});
+    return'<div style="margin-bottom:8px">'+
+      '<div style="font-size:9px;font-weight:700;color:var(--text2);margin-bottom:3px">'+dept+' ('+df.length+' open)</div>'+
+      focusTypes.map(function(ft){
+        var n=byFocus[ft]||0;
+        if(!n)return'';
+        var c=ft==='Safety'?'var(--red)':ft==='Productivity'?'var(--blue)':'var(--teal)';
+        var w=Math.round(n/df.length*100);
+        return'<div style="display:flex;align-items:center;gap:6px;font-size:9px;margin-bottom:2px">'+
+          '<span style="min-width:80px;color:var(--text3)">'+ft+'</span>'+
+          '<div style="flex:1;height:10px;background:var(--gray-l);border-radius:3px;overflow:hidden">'+
+            '<div style="width:'+w+'%;height:100%;background:'+c+';border-radius:3px"></div>'+
+          '</div>'+
+          '<span style="min-width:20px;text-align:right;color:'+c+';font-weight:700">'+n+'</span>'+
+        '</div>';
+      }).join('')+
+    '</div>';
+  }).join('');
+}
+
+function renderHighRisk(){
+  var high=FINDINGS.filter(function(f){return f.risk==='High'&&(f.status==='Open'||f.status==='In Progress');})
+    .sort(function(a,b){return b.days_open-a.days_open;});
+  var cnt=document.getElementById('high-count');
+  if(cnt)cnt.textContent=' — '+high.length+' items';
+  document.getElementById('high-risk-list').innerHTML=high.map(function(f){
+    var fc=f.focus==='Safety'?'var(--red)':f.focus==='Productivity'?'var(--blue)':'var(--teal)';
+    var dayColor=f.days_open>10?'var(--red)':f.days_open>5?'var(--amber)':'var(--text2)';
+    return'<div style="padding:8px 10px;margin-bottom:4px;border-radius:6px;background:rgba(239,68,68,.06);border-left:3px solid var(--red)">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">'+
+        '<div style="display:flex;gap:8px;align-items:center">'+
+          '<span style="font-size:9px;font-weight:700;color:var(--text3)">'+f.id+'</span>'+
+          focusBadge(f.focus)+
+          '<span style="font-size:9px;color:var(--text3)">'+f.dept+' · '+f.area+'</span>'+
+        '</div>'+
+        '<div style="font-size:9px;color:'+dayColor+';font-weight:700">'+f.days_open+'d open</div>'+
+      '</div>'+
+      '<div style="font-size:10px;color:var(--text)">'+f.desc+'</div>'+
+      (f.owner?'<div style="font-size:9px;color:var(--text3);margin-top:3px">Owner: '+f.owner+'</div>':
+               '<div style="font-size:9px;color:var(--red);margin-top:3px">⚠ No owner assigned</div>')+
+    '</div>';
+  }).join('');
+}
+
+// ── All Findings ─────────────────────────────────────────────────────
+function filterFindings(){
+  var dept  =document.getElementById('f-dept').value;
+  var status=document.getElementById('f-status').value;
+  var risk  =document.getElementById('f-risk').value;
+  var focus =document.getElementById('f-focus').value;
+  var newF  =getNewFindings();
+  var all   =[...FINDINGS,...newF];
+  var filtered=all.filter(function(f){
+    return(!dept  ||f.dept===dept)&&
+           (!status||f.status===status)&&
+           (!risk  ||f.risk===risk)&&
+           (!focus ||f.focus===focus);
+  });
+  var cnt=document.getElementById('findings-count');
+  if(cnt)cnt.textContent='Showing '+filtered.length+' of '+all.length+' findings';
+  document.getElementById('findings-list').innerHTML=filtered.map(function(f){
+    var dayColor=f.days_open>10?'var(--red)':f.days_open>5?'var(--amber)':'var(--text3)';
+    return'<div class="finding-row">'+
+      '<span style="font-size:9px;font-weight:700;color:var(--text3)">'+f.id+'</span>'+
+      '<span class="t3">'+fD(f.date)+'</span>'+
+      '<span class="t3" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+f.area+'</span>'+
+      focusBadge(f.focus)+
+      '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+f.desc+'">'+f.desc+'</span>'+
+      riskBadge(f.risk)+
+      '<span class="'+statusClass(f.status)+'" style="font-size:10px;font-weight:600">'+f.status+'</span>'+
+      '<span class="t3" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+( f.owner||'—')+'</span>'+
+    '</div>';
+  }).join('');
+}
+function renderFindings(){filterFindings();}
+
+// ── Action Tracker ────────────────────────────────────────────────────
+function renderActions(){
+  var open=ACTIONS.filter(function(a){return a.status!=='Closed';}).length;
+  var overdue=ACTIONS.filter(function(a){return a.status!=='Closed'&&a.days>0;}).length;
+  var high=ACTIONS.filter(function(a){return a.risk==='High'&&a.status!=='Closed';}).length;
+  document.getElementById('act-kpis').innerHTML=[
+    {l:'Total Actions',v:ACTIONS.length,s:'All time',c:'var(--text)'},
+    {l:'Open',v:open,s:'Not closed',c:open?'var(--amber)':'var(--green)'},
+    {l:'Overdue',v:overdue,s:'Past due date',c:overdue?'var(--red)':'var(--green)'},
+    {l:'High Risk Open',v:high,s:'Urgent',c:high?'var(--red)':'var(--green)'},
+  ].map(function(k){return'<div class="kpi"><div class="kl">'+k.l+'</div><div class="kv" style="color:'+k.c+'">'+k.v+'</div><div class="ks">'+k.s+'</div></div>';}).join('');
+
+  var stored=JSON.parse(localStorage.getItem('hoc_gemba_actions')||'{}');
+  document.getElementById('actions-tbody').innerHTML=ACTIONS.map(function(a){
+    var saved=stored[a.action_id]||{};
+    var cur_status=saved.status||a.status;
+    var cur_owner=saved.owner||a.owner||'';
+    var dayColor=a.days>10?'var(--red)':a.days>5?'var(--amber)':'var(--text3)';
+    return'<tr>'+
+      '<td style="font-size:9px;font-weight:700;color:var(--teal)">'+a.action_id+'</td>'+
+      '<td style="font-size:9px;color:var(--text3)">'+a.finding_id+'</td>'+
+      '<td>'+fD(a.date)+'</td>'+
+      '<td class="t3">'+a.dept+'</td>'+
+      '<td class="t3" style="max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+a.area+'</td>'+
+      '<td>'+focusBadge(a.focus)+'</td>'+
+      '<td style="font-size:10px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+a.desc+'">'+a.desc+'</td>'+
+      '<td>'+riskBadge(a.risk)+'</td>'+
+      '<td style="font-size:10px">'+cur_owner+'</td>'+
+      '<td>'+fD(a.due)+'</td>'+
+      '<td class="'+statusClass(cur_status)+'" style="font-size:10px;font-weight:600">'+cur_status+'</td>'+
+      '<td style="text-align:right;color:'+dayColor+';font-weight:700">'+a.days+'d</td>'+
+      '<td><select onchange="updateAction(\''+a.action_id+'\',this.value,\''+cur_owner+'\')" style="font:inherit;font-size:9px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:2px 4px">'+
+        ['Open','In Progress','On Hold','Closed'].map(function(s){return'<option'+(s===cur_status?' selected':'')+'>'+s+'</option>';}).join('')+
+      '</select></td>'+
+    '</tr>';
+  }).join('');
+}
+function updateAction(id,status,owner){
+  var d=JSON.parse(localStorage.getItem('hoc_gemba_actions')||'{}');
+  d[id]={status:status,owner:owner,ts:new Date().toISOString()};
+  localStorage.setItem('hoc_gemba_actions',JSON.stringify(d));
+  pushGembaToSync();
+}
+
+// ── Red Tags ──────────────────────────────────────────────────────────
+function renderRedTags(){
+  var open=RED_TAGS.filter(function(r){return r.status==='open';});
+  var closed=RED_TAGS.filter(function(r){return r.status!=='open';});
+  document.getElementById('rt-kpis').innerHTML=[
+    {l:'Total Red Tags',v:RED_TAGS.length,s:'All time',c:'var(--text)'},
+    {l:'Open',v:open.length,s:'Need disposition',c:open.length?'var(--red)':'var(--green)'},
+    {l:'Closed',v:closed.length,s:'Resolved',c:'var(--green)'},
+    {l:'All Production',v:RED_TAGS.filter(function(r){return r.area==='production';}).length,s:'Area',c:'var(--text2)'},
+  ].map(function(k){return'<div class="kpi"><div class="kl">'+k.l+'</div><div class="kv" style="color:'+k.c+'">'+k.v+'</div><div class="ks">'+k.s+'</div></div>';}).join('');
+  document.getElementById('redtag-list').innerHTML=RED_TAGS.map(function(r){
+    var isOpen=r.status==='open';
+    return'<div class="rtag" style="'+(isOpen?'':'opacity:.5')+' border-color:'+(isOpen?'rgba(239,68,68,.3)':'rgba(34,197,94,.2)')+'">'+
+      '<div style="display:flex;justify-content:space-between;margin-bottom:3px">'+
+        '<span style="font-weight:700;color:'+(isOpen?'var(--red)':'var(--green)')+'">Red Tag #'+r.id+' — '+r.item+'</span>'+
+        '<span style="font-size:9px;color:'+(isOpen?'var(--red)':'var(--green)')+'">'+r.status.toUpperCase()+'</span>'+
+      '</div>'+
+      '<div style="font-size:9px;color:var(--text2)">'+r.area+' · Line '+r.line+' · Found: '+fD(r.date)+'</div>'+
+      '<div style="font-size:9px;color:var(--text3);margin-top:3px">Reason: '+r.reason+' | Disposition: '+r.disposition+'</div>'+
+      '<div style="font-size:9px;color:var(--text3)">Owner: '+r.owner+' | '+r.notes+'</div>'+
+    '</div>';
+  }).join('');
+}
+
+// ── Calendar ──────────────────────────────────────────────────────────
+function renderCalendar(){
+  var today=new Date().toISOString().slice(0,10);
+  document.getElementById('calendar-list').innerHTML=CALENDAR.map(function(c){
+    var isPast=c.date<today;
+    var isToday=c.date===today;
+    var cls=isToday?'cal-row today':isPast?'cal-row past':'cal-row upcoming';
+    var themeColor=c.theme==='Housekeeping'?'var(--teal)':c.theme==='Safety'?'var(--red)':'var(--blue)';
+    return'<div class="'+cls+'">'+
+      '<span class="t3">'+fD(c.week_of)+'</span>'+
+      '<span style="font-weight:600">'+fD(c.date)+'</span>'+
+      '<span class="t3">'+c.day+'</span>'+
+      '<span class="dept-chip dept-'+c.dept+'">'+c.dept+'</span>'+
+      '<span style="font-size:9px;font-weight:700;color:'+themeColor+'">'+c.theme+'</span>'+
+      '<span class="t3">'+c.due_std+'</span>'+
+    '</div>';
+  }).join('');
+}
+
+// ── Log New Finding ───────────────────────────────────────────────────
+var newFindingsSession=[];
+function saveNewFinding(){
+  var desc=document.getElementById('nw-desc').value.trim();
+  if(!desc){alert('Enter a finding description.');return;}
+  var dept=document.getElementById('nw-dept').value;
+  var area=document.getElementById('nw-area').value.trim();
+  var focus=document.getElementById('nw-focus').value;
+  var risk=document.getElementById('nw-risk').value;
+  var date=document.getElementById('nw-date').value||new Date().toISOString().slice(0,10);
+  var obs=document.getElementById('nw-observer').value.trim();
+  var imm=document.getElementById('nw-immediate').value;
+  var owner=document.getElementById('nw-owner').value.trim();
+  var newF=getNewFindings();
+  var id='GW-'+date.replace(/-/g,'')+'-NEW-'+(newF.length+1);
+  var finding={id:id,date:date,dept:dept,area:area,focus:focus,risk:risk,desc:desc,
+    observer:obs,immediate:imm,owner:owner,status:'Open',days_open:0,comments:''};
+  newF.push(finding);saveNewFindings(newF);
+  newFindingsSession.push(finding);
+  document.getElementById('nw-saved').classList.add('show');
+  setTimeout(function(){document.getElementById('nw-saved').classList.remove('show');},2500);
+  ['nw-desc','nw-area','nw-observer','nw-owner'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('new-findings-list').innerHTML=
+    '<div style="font-size:10px;color:var(--green);margin-bottom:4px">✓ '+newFindingsSession.length+' finding'+(newFindingsSession.length>1?'s':'')+' logged this session</div>'+
+    newFindingsSession.map(function(f){
+      return'<div style="padding:5px 8px;background:var(--bg2);border-radius:5px;margin-bottom:3px;font-size:10px">'+
+        '<b style="color:var(--teal)">'+f.id+'</b> · '+f.dept+' · '+f.area+' · <span style="color:'+(f.risk==='High'?'var(--red)':f.risk==='Medium'?'var(--amber)':'var(--green)')+'">'+f.risk+'</span> · '+f.desc.slice(0,50)+'</div>';
+    }).join('');
+  pushGembaToSync();
+}
+
+// ── Push to sync bus ──────────────────────────────────────────────────
+function pushGembaToSync(){
+  try{
+    var all=FINDINGS.concat(getNewFindings());
+    var stored=JSON.parse(localStorage.getItem('hoc_gemba_actions')||'{}');
+    var open=all.filter(function(f){return f.status==='Open';}).length;
+    var high=all.filter(function(f){return f.risk==='High'&&f.status==='Open';}).length;
+    var safety=all.filter(function(f){return f.focus==='Safety'&&f.status==='Open';}).length;
+    var overdue=ACTIONS.filter(function(a){return(stored[a.action_id]?stored[a.action_id].status:a.status)!=='Closed'&&a.days>0;}).length;
+    var d=JSON.parse(localStorage.getItem('hoc_sync_v1')||'{}');
+    d.__gemba={ts:new Date().toISOString(),open:open,high_risk:high,safety_open:safety,
+      overdue_actions:overdue,red_tags_open:RED_TAGS.filter(function(r){return r.status==='open';}).length};
+    localStorage.setItem('hoc_sync_v1',JSON.stringify(d));
+  }catch(e){}
+}
+
+// ── CSV Exports ───────────────────────────────────────────────────────
+function csvCell(v){var q=String.fromCharCode(34);var s=String(v===null||v===undefined?'':v);return q+s.split(q).join(q+q)+q;}
+function exportFindings(){
+  var hdrs=['ID','Date','Dept','Area','Shift','Observer','Focus','Description','Risk','Immediate','Owner','Due','Days','Status','Comments'];
+  var rows=FINDINGS.concat(getNewFindings()).map(function(f){return[f.id,f.date,f.dept,f.area,f.shift||'',f.observer||'',f.focus,f.desc,f.risk,f.immediate||'',f.owner||'',f.due,f.days_open,f.status,f.comments||''];});
+  var csv=[hdrs,...rows].map(function(r){return r.map(csvCell).join(',');}).join(String.fromCharCode(10));
+  var a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='gemba_findings_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+}
+function exportActions(){
+  var hdrs=['Action ID','Finding ID','Date','Dept','Area','Focus','Description','Risk','Owner','Due','Status','Days'];
+  var stored=JSON.parse(localStorage.getItem('hoc_gemba_actions')||'{}');
+  var rows=ACTIONS.map(function(a){var s=stored[a.action_id]||{};return[a.action_id,a.finding_id,a.date,a.dept,a.area,a.focus,a.desc,a.risk,s.owner||a.owner||'',a.due,s.status||a.status,a.days];});
+  var csv=[hdrs,...rows].map(function(r){return r.map(csvCell).join(',');}).join(String.fromCharCode(10));
+  var a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='gemba_actions_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+}
+
+// ── Auto-refresh ──────────────────────────────────────────────────────
+window.addEventListener('storage',function(e){if(e.key==='hoc_sync_v1'){try{renderAll();}catch(err){}}});
+setInterval(function(){try{renderAll();}catch(err){}},30000);
+
+// ── Init ──────────────────────────────────────────────────────────────
+document.getElementById('nw-date').value=new Date().toISOString().slice(0,10);
+renderAll();
+</script>
+
+<script>
+// Auto-update date displays
+(function(){
+  var today = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  var shortDate = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  document.querySelectorAll('.brand-sub,.brand-sub *,[class*="brand-sub"]').forEach(function(el){
+    if(el.children.length === 0){
+      el.textContent = el.textContent.replace(/(?:January|February|March|April|May|June|July|August|September|October|November|December) \d{1,2},? \d{4}/g, today);
+      el.textContent = el.textContent.replace(/(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2},? \d{4}/g, shortDate);
+    }
+  });
+  // Also fix any standalone date text nodes
+  var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  var node;
+  var dateRe = /(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2},? \d{4}/g;
+  while(node = walker.nextNode()){
+    if(dateRe.test(node.textContent)){
+      node.textContent = node.textContent.replace(dateRe, shortDate);
+    }
+  }
+})();
+</script>
+
+<script src="hoc_events.js"></script>
+<script>
+// Auto-update header date placeholder
+(function(){
+  var today = new Date().toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'});
+  document.querySelectorAll('.js-today-date').forEach(function(el){ el.textContent = today; });
+})();
+</script>
+</body></html>

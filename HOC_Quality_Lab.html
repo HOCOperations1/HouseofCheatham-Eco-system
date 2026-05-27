@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HOC Quality Lab</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0B0E17;--bg2:#111520;--bg3:#161C28;
+  --border:#1E293B;--text:#DDE4F0;--text2:#8899AA;--text3:#4A5570;
+  --green:#22C55E;--red:#EF4444;--amber:#F59E0B;--blue:#3B82F6;
+  --purple:#8B5CF6;--teal:#10B981;
+  --green-l:rgba(34,197,94,.1);--red-l:rgba(239,68,68,.1);
+  --amber-l:rgba(245,158,11,.1);--blue-l:rgba(59,130,246,.1);
+}
+body{font-family:ui-monospace,monospace;background:var(--bg);color:var(--text);font-size:11px;min-height:100vh}
+.topbar{display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.back{padding:3px 8px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text2);font-size:9px;font-weight:700;text-decoration:none;cursor:pointer}
+.brand-name{font-size:13px;font-weight:700;color:var(--text)}
+.brand-sub{font-size:9px;color:var(--text3)}
+.logo{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;background:linear-gradient(135deg,#8B5CF6,#6D28D9)}
+.nav{display:flex;gap:2px;flex:1;overflow-x:auto}
+.nb{padding:5px 12px;border-radius:6px;font:inherit;font-size:10px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--text2);border-bottom:2px solid transparent;white-space:nowrap}
+.nb:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.nb.active{color:var(--purple);border-bottom-color:var(--purple)}
+.badges{display:flex;gap:4px;flex-wrap:wrap}
+.badge{font-size:9px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.b-grn{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.25)}
+.b-red{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.25)}
+.b-amb{background:rgba(245,158,11,.12);color:var(--amber);border:1px solid rgba(245,158,11,.25)}
+.b-blu{background:rgba(59,130,246,.12);color:var(--blue);border:1px solid rgba(59,130,246,.25)}
+.b-pur{background:rgba(139,92,246,.12);color:var(--purple);border:1px solid rgba(139,92,246,.25)}
+.page{display:none}.page.active{display:block}
+.content{padding:14px 16px;max-width:1400px;margin:0 auto}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.card-title{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:12px}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.kl{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.kv{font-size:22px;font-weight:700;line-height:1;margin-bottom:2px}
+.ks{font-size:9px;color:var(--text3)}
+.sync-bar{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 12px;margin-bottom:10px;font-size:9px;color:var(--text3);display:flex;align-items:center;gap:8px}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:10px}
+th{text-align:left;padding:5px 8px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:5px 8px;border-bottom:1px solid rgba(30,41,59,.5)}
+tr:hover td{background:rgba(255,255,255,.02)}
+.btn{padding:5px 10px;border-radius:6px;font:inherit;font-size:10px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text)}
+.btn:hover{background:rgba(255,255,255,.04)}
+.btn-pri{background:var(--purple);color:#fff;border-color:var(--purple)}
+.btn-pri:hover{background:#7C3AED}
+.btn-grn{background:var(--green);color:#fff;border-color:var(--green)}
+.btn-amb{background:var(--amber);color:#fff;border-color:var(--amber)}
+.btn-red{background:var(--red);color:#fff;border-color:var(--red)}
+.btn-sm{padding:3px 8px;font-size:9px}
+.inp,.sel,.txa{width:100%;padding:6px 10px;font-family:ui-monospace,monospace;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text)}
+.txa{resize:vertical;min-height:60px;line-height:1.4}
+.lbl{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:4px;display:block}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:flex-start;justify-content:center;overflow-y:auto;padding:30px 14px}
+.modal.show{display:flex}
+.modal-body{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px;width:100%;max-width:560px;color:var(--text)}
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px}
+.field{margin-bottom:8px}
+.spec-pill{display:inline-block;padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700;margin-left:4px}
+.spec-in{background:var(--green-l);color:var(--green)}
+.spec-out{background:var(--red-l);color:var(--red)}
+.spec-na{background:rgba(74,85,112,.2);color:var(--text3)}
+.toggle{display:flex;gap:4px}
+.toggle button{flex:1;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font:inherit;font-size:10px;cursor:pointer}
+.toggle button.on-pass{background:var(--green-l);border-color:var(--green);color:var(--green)}
+.toggle button.on-fail{background:var(--red-l);border-color:var(--red);color:var(--red)}
+.disp{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.disp button{padding:10px;border-radius:8px;border:2px solid var(--border);background:var(--bg3);color:var(--text);font:inherit;font-size:11px;font-weight:700;cursor:pointer}
+.disp button.on-rel{background:var(--green-l);border-color:var(--green);color:var(--green)}
+.disp button.on-hld{background:var(--amber-l);border-color:var(--amber);color:var(--amber)}
+.disp button.on-rej{background:var(--red-l);border-color:var(--red);color:var(--red)}
+.queue-item{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:6px;cursor:pointer;transition:all .15s}
+.queue-item:hover{background:rgba(255,255,255,.04);border-color:var(--purple)}
+.queue-age-old{border-left:3px solid var(--red)}
+.queue-age-mid{border-left:3px solid var(--amber)}
+.queue-age-new{border-left:3px solid var(--green)}
+.empty{text-align:center;padding:30px 20px;color:var(--text3);font-size:10px}
+.muted{color:var(--text3)}
+@media (max-width:720px){
+  .row-2,.row-3{grid-template-columns:1fr}
+  .disp{grid-template-columns:1fr}
+  .content{padding:10px}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <a class="back" href="index.html">← HOC-OES</a>
+    <div class="logo">QL</div>
+    <div>
+      <div class="brand-name">Quality Lab</div>
+      <div class="brand-sub" id="brand-sub">House of Cheatham · QC Validation</div>
+    </div>
+  </div>
+  <div class="nav">
+    <button class="nb active" id="tab-queue"    onclick="P('queue')">Queue</button>
+    <button class="nb"        id="tab-intest"   onclick="P('intest')">In Test</button>
+    <button class="nb"        id="tab-history"  onclick="P('history')">History</button>
+    <button class="nb"        id="tab-specs"    onclick="P('specs')">Manage Specs</button>
+    <button class="nb"        id="tab-audit"    onclick="P('audit')">Audit Log</button>
+  </div>
+  <div class="badges" id="badges"></div>
+</div>
+
+<!-- ─── QUEUE PAGE ─────────────────────────────────────────────── -->
+<div class="page active" id="page-queue"><div class="content">
+  <div class="sync-bar"><span class="sync-dot"></span>HOC-OES Sync · Last update: <span id="sync-ts">—</span></div>
+
+  <!-- Will Miss escalation strip (top of page) — batches that compound is overdue/critical -->
+  <div class="card" id="ql-willmiss-card" style="display:none;border-left:3px solid var(--red);background:rgba(239,68,68,.04)">
+    <div class="card-title" style="color:var(--red)">⛔ WILL MISS — QC release will not happen in time for these batches</div>
+    <div id="ql-willmiss-strip" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px"></div>
+  </div>
+
+  <div class="kpi-grid" id="queue-kpis"></div>
+
+  <!-- Production by Line (attachment 7 style) — what's running, what's coming, QC load per line -->
+  <div class="card">
+    <div class="card-title"><span>Production by Line — QC Load & Coverage</span></div>
+    <div id="ql-by-line-table"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><span>Queue by Line</span></div>
+    <div id="queue-by-line"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">
+      <span>Awaiting QC Test <span class="muted" id="queue-count" style="font-weight:400"></span></span>
+      <button class="btn btn-sm" onclick="renderAll()">↻ Refresh</button>
+    </div>
+    <div id="queue-list"></div>
+  </div>
+</div></div>
+
+<!-- ─── IN TEST PAGE ──────────────────────────────────────────── -->
+<div class="page" id="page-intest"><div class="content">
+  <div class="sync-bar"><span class="sync-dot"></span>Active tests · pick from queue to start</div>
+  <div class="card">
+    <div class="card-title"><span>Tests In Progress (this session)</span></div>
+    <div id="intest-list"><div class="empty">No active tests. Open a batch from the Queue tab to begin.</div></div>
+  </div>
+</div></div>
+
+<!-- ─── HISTORY PAGE ──────────────────────────────────────────── -->
+<div class="page" id="page-history"><div class="content">
+  <div class="sync-bar"><span class="sync-dot"></span>Tests logged · append-only chronological record</div>
+  <div class="card">
+    <div class="card-title">
+      <span>Filters</span>
+    </div>
+    <div class="row-3">
+      <div class="field">
+        <label class="lbl">Disposition</label>
+        <select class="sel" id="filt-disp" onchange="renderHistory()">
+          <option value="">All</option>
+          <option value="RELEASED">Released</option>
+          <option value="HOLD">Hold</option>
+          <option value="REJECTED">Rejected</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="lbl">Tested By</label>
+        <select class="sel" id="filt-by" onchange="renderHistory()">
+          <option value="">All</option>
+          <option>Makia Lindsey</option>
+          <option>Zaynah Powell</option>
+          <option>Nia Harrell</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="lbl">Search</label>
+        <input class="inp" id="filt-q" oninput="renderHistory()" placeholder="Batch, item, notes...">
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">
+      <span>QC Test History</span>
+      <button class="btn btn-sm" onclick="exportHistoryCSV()">⬇ Export CSV</button>
+    </div>
+    <div class="tbl-wrap"><table id="history-table">
+      <thead><tr>
+        <th>When</th><th>Batch</th><th>Item</th><th>pH</th><th>Visc</th><th>Density</th><th>Visual</th><th>Disposition</th><th>Tested By</th><th>Notes</th>
+      </tr></thead>
+      <tbody id="history-body"></tbody>
+    </table></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span>📄 Release PDFs</span></div>
+    <div id="pdf-list"><div class="empty muted">Release PDFs appear here after batches are released</div></div>
+  </div>
+</div></div>
+
+<!-- ─── SPECS PAGE ────────────────────────────────────────────── -->
+<div class="page" id="page-specs"><div class="content">
+  <div class="sync-bar"><span class="sync-dot"></span>Per-formula test specs · used by auto-spec-check</div>
+  <div class="card">
+    <div class="card-title">
+      <span>Add / Edit Spec</span>
+      <span class="muted" style="font-weight:400">Bulk import → paste from Excel below</span>
+    </div>
+    <div class="row-3">
+      <div class="field">
+        <label class="lbl">Item ID</label>
+        <input class="inp" id="spec-item" placeholder="1-552-12-1200">
+      </div>
+      <div class="field">
+        <label class="lbl">Description</label>
+        <input class="inp" id="spec-desc" placeholder="ORI Cocoa Butter Bundle">
+      </div>
+      <div class="field">
+        <label class="lbl">Updated By</label>
+        <input class="inp" id="spec-by" placeholder="Makia Lindsey">
+      </div>
+    </div>
+    <div class="row-3">
+      <div class="field"><label class="lbl">pH Min</label><input class="inp" id="spec-ph-min" type="number" step="0.1"></div>
+      <div class="field"><label class="lbl">pH Max</label><input class="inp" id="spec-ph-max" type="number" step="0.1"></div>
+      <div class="field"><label class="lbl">Visual / Color / Smell Notes</label><input class="inp" id="spec-visual" placeholder="Cream / opaque white / mild floral"></div>
+    </div>
+    <div class="row-2">
+      <div class="field"><label class="lbl">Viscosity Min (cP)</label><input class="inp" id="spec-visc-min" type="number"></div>
+      <div class="field"><label class="lbl">Viscosity Max (cP)</label><input class="inp" id="spec-visc-max" type="number"></div>
+    </div>
+    <div class="row-2">
+      <div class="field"><label class="lbl">Density Min (g/mL)</label><input class="inp" id="spec-dens-min" type="number" step="0.01"></div>
+      <div class="field"><label class="lbl">Density Max (g/mL)</label><input class="inp" id="spec-dens-max" type="number" step="0.01"></div>
+    </div>
+    <button class="btn btn-pri" onclick="saveSpec()">💾 Save Spec</button>
+    <span id="spec-status" class="muted" style="margin-left:10px;font-size:10px"></span>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span>📋 Bulk Import from Spreadsheet</span>
+    </div>
+    <div class="muted" style="font-size:10px;margin-bottom:8px">
+      Paste rows from Excel with columns: <b>Item | Description | pH_min | pH_max | Visc_min | Visc_max | Dens_min | Dens_max | Visual</b>
+    </div>
+    <textarea class="txa" id="bulk-paste" style="min-height:100px;font-size:10px" placeholder="Paste TSV here..."></textarea>
+    <div style="margin-top:8px">
+      <button class="btn btn-pri" onclick="bulkImportSpecs()">Import Pasted Specs</button>
+      <span id="bulk-status" class="muted" style="margin-left:10px;font-size:10px"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span>Current Specs <span class="muted" id="specs-count" style="font-weight:400"></span></span>
+      <button class="btn btn-sm" onclick="loadSpecs(true)">↻ Refresh</button>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Item</th><th>Description</th><th>pH</th><th>Visc (cP)</th><th>Dens (g/mL)</th><th>Visual</th><th>Updated</th><th></th></tr></thead>
+      <tbody id="specs-body"><tr><td colspan="8" class="empty">Loading...</td></tr></tbody>
+    </table></div>
+  </div>
+</div></div>
+
+<!-- ─── AUDIT LOG PAGE (v6.34a) ─────────────────────────────────── -->
+<div class="page" id="page-audit"><div class="content">
+  <div class="sync-bar"><span class="sync-dot"></span>Audit Log · Cross-dashboard event history from <code>hoc_events</code> table</div>
+  <div class="card">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+      <span>Recent Events</span>
+      <span style="display:flex;gap:6px;align-items:center">
+        <select id="audit-filter-type" onchange="renderAudit()" style="font-size:10px;padding:3px 5px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:4px">
+          <option value="">All event types</option>
+          <option value="compound_complete">compound_complete</option>
+          <option value="qc_release">qc_release</option>
+          <option value="qc_hold">qc_hold</option>
+          <option value="qc_failed">qc_failed</option>
+          <option value="qc_reject">qc_reject</option>
+          <option value="material_blocker">material_blocker</option>
+          <option value="cc_verified">cc_verified</option>
+        </select>
+        <select id="audit-filter-sev" onchange="renderAudit()" style="font-size:10px;padding:3px 5px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:4px">
+          <option value="">All severities</option>
+          <option value="info">info</option>
+          <option value="warning">warning</option>
+          <option value="critical">critical</option>
+        </select>
+        <button onclick="exportAuditCSV()" style="font-size:10px;padding:4px 10px;background:var(--blue);color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:700">Export CSV</button>
+        <button onclick="refreshAudit()" style="font-size:10px;padding:4px 10px;background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:4px;cursor:pointer">↻ Refresh</button>
+      </span>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Time</th><th>Event</th><th>Severity</th><th>Batch</th><th>Source</th><th>Message</th></tr></thead>
+      <tbody id="audit-body"><tr><td colspan="6" class="empty">Click "Audit Log" tab to load events.</td></tr></tbody>
+    </table></div>
+  </div>
+</div></div>
+
+<!-- ─── TEST MODAL ────────────────────────────────────────────── -->
+<div class="modal" id="test-modal">
+  <div class="modal-body">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+      <div>
+        <div style="font-size:14px;font-weight:700" id="m-batch">—</div>
+        <div class="muted" style="font-size:10px" id="m-desc">—</div>
+      </div>
+      <button class="btn btn-sm" onclick="closeTestModal()">✕</button>
+    </div>
+
+    <div id="m-spec-banner" class="muted" style="font-size:9px;margin-bottom:10px;padding:6px 8px;background:var(--bg3);border-radius:6px"></div>
+
+    <div class="row-3">
+      <div class="field">
+        <label class="lbl">pH <span id="m-ph-pill" class="spec-pill spec-na">no spec</span></label>
+        <input class="inp" id="m-ph" type="number" step="0.01" oninput="checkSpec()">
+      </div>
+      <div class="field">
+        <label class="lbl">Viscosity (cP) <span id="m-visc-pill" class="spec-pill spec-na">no spec</span></label>
+        <input class="inp" id="m-visc" type="number" oninput="checkSpec()">
+      </div>
+      <div class="field">
+        <label class="lbl">&nbsp;</label>
+        <button class="btn btn-sm" onclick="loadHistoryForBatch()" style="width:100%">📜 Prior tests</button>
+      </div>
+    </div>
+
+    <div class="row-3">
+      <div class="field"><label class="lbl">Density Top</label><input class="inp" id="m-dens-top" type="number" step="0.001" oninput="updateDensAvg()"></div>
+      <div class="field"><label class="lbl">Density Bot</label><input class="inp" id="m-dens-bot" type="number" step="0.001" oninput="updateDensAvg()"></div>
+      <div class="field"><label class="lbl">Density Avg <span id="m-dens-pill" class="spec-pill spec-na">no spec</span></label><input class="inp" id="m-dens-avg" readonly style="background:rgba(255,255,255,.04)"></div>
+    </div>
+
+    <div class="field">
+      <label class="lbl">Visual Check (vs. approved sample)</label>
+      <div class="row-2">
+        <div>
+          <div class="muted" style="font-size:9px;margin-bottom:3px">Color</div>
+          <div class="toggle" id="m-color"><button onclick="toggleVis('color',true)">Pass</button><button onclick="toggleVis('color',false)">Fail</button></div>
+        </div>
+        <div>
+          <div class="muted" style="font-size:9px;margin-bottom:3px">Texture</div>
+          <div class="toggle" id="m-texture"><button onclick="toggleVis('texture',true)">Pass</button><button onclick="toggleVis('texture',false)">Fail</button></div>
+        </div>
+      </div>
+      <div class="row-2" style="margin-top:6px">
+        <div>
+          <div class="muted" style="font-size:9px;margin-bottom:3px">Consistency</div>
+          <div class="toggle" id="m-consistency"><button onclick="toggleVis('consistency',true)">Pass</button><button onclick="toggleVis('consistency',false)">Fail</button></div>
+        </div>
+        <div>
+          <div class="muted" style="font-size:9px;margin-bottom:3px">Smell</div>
+          <div class="toggle" id="m-smell"><button onclick="toggleVis('smell',true)">Pass</button><button onclick="toggleVis('smell',false)">Fail</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="lbl">Disposition</label>
+      <div class="disp" id="m-disp">
+        <button onclick="setDisp('RELEASED')">✓ RELEASE</button>
+        <button onclick="setDisp('HOLD')">⚠ HOLD for Adjust</button>
+        <button onclick="setDisp('REJECTED')">✗ REJECT → R&amp;D</button>
+      </div>
+    </div>
+
+    <div class="field" id="m-reason-wrap" style="display:none">
+      <label class="lbl" id="m-reason-lbl">Reason</label>
+      <textarea class="txa" id="m-reason" rows="2"></textarea>
+    </div>
+
+    <div class="row-2">
+      <div class="field">
+        <label class="lbl">Tested By</label>
+        <select class="sel" id="m-by" onchange="toggleByOther()">
+          <option value="">— Select —</option>
+          <option>Makia Lindsey</option>
+          <option>Zaynah Powell</option>
+          <option>Nia Harrell</option>
+          <option value="__OTHER__">Other (type below)</option>
+        </select>
+      </div>
+      <div class="field" id="m-by-other-wrap" style="display:none">
+        <label class="lbl">Other Name</label>
+        <input class="inp" id="m-by-other">
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="lbl">Notes (optional)</label>
+      <textarea class="txa" id="m-notes" rows="2"></textarea>
+    </div>
+
+    <div id="m-prior" style="margin-bottom:8px;display:none">
+      <label class="lbl">Prior tests for this batch</label>
+      <div id="m-prior-list" style="background:var(--bg3);padding:8px;border-radius:6px;font-size:9px;max-height:120px;overflow-y:auto"></div>
+    </div>
+
+    <div style="display:flex;gap:6px">
+      <button class="btn btn-pri" style="flex:1;padding:10px" onclick="saveTest()">💾 Save Test → Dashboards + Event</button>
+      <button class="btn" onclick="closeTestModal()">Cancel</button>
+    </div>
+    <div id="m-status" class="muted" style="font-size:10px;margin-top:8px"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+// ═══════════════════════════════════════════════════════════════════
+// HOC Quality Lab v2 — connected to the shared schedule + event engine
+// ═══════════════════════════════════════════════════════════════════
+
+var SUPA_URL = 'https://yemtpvrumqvbzrzpwnyy.supabase.co';
+var SUPA_KEY = 'sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl';
+var UPLOAD_KEY = 'hoc_upload_v1';
+var FLOOR_KEY  = 'hoc_floor_v1';
+
+var _UPLOAD = {};
+var _FLOOR  = {};
+var _SPECS  = {};        // {item_id: {ph_min, ph_max, ...}}
+var _TESTS  = [];        // recent history rows
+var _IN_TEST = {};       // session-only: batches currently being tested {batch_id: true}
+var _CURRENT = null;     // currently-open test in the modal
+
+function H(){ return {'apikey':SUPA_KEY, 'Authorization':'Bearer '+SUPA_KEY}; }
+function HJ(){ return Object.assign({'Content-Type':'application/json'}, H()); }
+
+// ── Helpers ─────────────────────────────────────────────────────────
+function fD(s){ if(!s) return '—'; try{return new Date(s+'T12:00:00').toLocaleDateString('en-US',{month:'numeric',day:'numeric'});}catch(e){return s;} }
+function fDT(s){ if(!s) return '—'; try{return new Date(s).toLocaleString('en-US',{month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'});}catch(e){return s;} }
+function ageHours(s){ if(!s) return 0; return (Date.now() - new Date(s).getTime()) / 3600000; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function N(n){ return typeof n === 'number' ? n.toLocaleString() : (n||'—'); }
+
+// ── Page tabs ───────────────────────────────────────────────────────
+function P(p){
+  document.querySelectorAll('.page').forEach(function(el){ el.classList.remove('active'); });
+  document.querySelectorAll('.nb').forEach(function(el){ el.classList.remove('active'); });
+  var pg = document.getElementById('page-'+p);
+  var tb = document.getElementById('tab-'+p);
+  if(pg) pg.classList.add('active');
+  if(tb) tb.classList.add('active');
+  if(p === 'history') renderHistory();
+  if(p === 'specs')   renderSpecsTable();
+  if(p === 'audit')   refreshAudit();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// v6.34a — Audit Log tab
+// Pure reader. Pulls last 200 events from hoc_events Supabase table.
+// No event firing. No modifications to any other dashboard. Safe to
+// remove this tab without affecting anything else.
+// ═══════════════════════════════════════════════════════════════════
+var _AUDIT_EVENTS = [];
+
+function refreshAudit(){
+  var tbody = document.getElementById('audit-body');
+  if(!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="6" class="empty">Loading from hoc_events…</td></tr>';
+  // Use the same Supabase config the existing QL queue uses
+  try {
+    fetch('https://yemtpvrumqvbzrzpwnyy.supabase.co/rest/v1/hoc_events?select=*&order=created_at.desc&limit=200', {
+      headers: {
+        'apikey': 'sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl',
+        'Authorization': 'Bearer sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl'
+      }
+    }).then(function(r){
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      return r.json();
+    }).then(function(rows){
+      _AUDIT_EVENTS = rows || [];
+      renderAudit();
+    }).catch(function(err){
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">Failed to load events: '+String(err).replace(/</g,'&lt;')+'</td></tr>';
+    });
+  } catch(e){
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">Network unavailable.</td></tr>';
+  }
+}
+
+function renderAudit(){
+  var tbody = document.getElementById('audit-body');
+  if(!tbody) return;
+  var typeFilter = (document.getElementById('audit-filter-type') || {}).value || '';
+  var sevFilter  = (document.getElementById('audit-filter-sev')  || {}).value || '';
+  var rows = _AUDIT_EVENTS;
+  if(typeFilter) rows = rows.filter(function(r){ return r.event_type === typeFilter; });
+  if(sevFilter)  rows = rows.filter(function(r){ return r.severity === sevFilter; });
+  if(!rows.length){
+    tbody.innerHTML = '<tr><td colspan="6" class="empty">No events match filter.</td></tr>';
+    return;
+  }
+  var sevColor = function(s){
+    if(s === 'critical') return '#EF4444';
+    if(s === 'warning')  return '#F59E0B';
+    return '#64748B';
+  };
+  tbody.innerHTML = rows.map(function(r){
+    var p = r.payload || {};
+    var msg = p.message || p.notes || p.hold_reason || p.reject_reason || '';
+    var ts = r.created_at ? new Date(r.created_at).toLocaleString() : '';
+    var sev = r.severity || 'info';
+    var src = p.source || '';
+    return '<tr>'+
+      '<td style="font-size:10px;white-space:nowrap">'+ts+'</td>'+
+      '<td style="font-size:10px;font-weight:700">'+(r.event_type||'')+'</td>'+
+      '<td><span style="background:'+sevColor(sev)+';color:#fff;padding:2px 6px;border-radius:3px;font-size:9px;font-weight:700">'+sev.toUpperCase()+'</span></td>'+
+      '<td style="font-size:10px;font-family:monospace">'+(r.batch_id||p.batch||'')+'</td>'+
+      '<td style="font-size:10px;color:var(--text2)">'+src+'</td>'+
+      '<td style="font-size:10px">'+String(msg).replace(/</g,'&lt;').slice(0,160)+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+function exportAuditCSV(){
+  if(!_AUDIT_EVENTS.length){ alert('No events to export. Click ↻ Refresh first.'); return; }
+  var typeFilter = (document.getElementById('audit-filter-type') || {}).value || '';
+  var sevFilter  = (document.getElementById('audit-filter-sev')  || {}).value || '';
+  var rows = _AUDIT_EVENTS;
+  if(typeFilter) rows = rows.filter(function(r){ return r.event_type === typeFilter; });
+  if(sevFilter)  rows = rows.filter(function(r){ return r.severity === sevFilter; });
+  var headers = ['id','created_at','event_type','severity','batch_id','source','message','payload_json'];
+  var csvEsc = function(v){
+    if(v === null || v === undefined) return '';
+    var s = String(v).replace(/"/g, '""');
+    return /[",\n]/.test(s) ? '"'+s+'"' : s;
+  };
+  var lines = [headers.join(',')];
+  rows.forEach(function(r){
+    var p = r.payload || {};
+    lines.push([
+      r.id || '',
+      r.created_at || '',
+      r.event_type || '',
+      r.severity || '',
+      r.batch_id || p.batch || '',
+      p.source || '',
+      p.message || p.notes || '',
+      JSON.stringify(p)
+    ].map(csvEsc).join(','));
+  });
+  var blob = new Blob([lines.join('\n')], {type:'text/csv'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'hoc_audit_log_'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+}
+
+// ── Load local state + remote schedule ─────────────────────────────
+function loadLocal(){
+  try{ var u=localStorage.getItem(UPLOAD_KEY); if(u) _UPLOAD=JSON.parse(u); }catch(e){}
+  try{ var f=localStorage.getItem(FLOOR_KEY);  if(f) _FLOOR =JSON.parse(f); }catch(e){}
+}
+
+function pullScheduleFromSupabase(cb){
+  fetch(SUPA_URL+'/rest/v1/hoc_schedule?id=eq.1', {headers:H()})
+    .then(function(r){ return r.ok ? r.json() : []; })
+    .then(function(rows){
+      if(!rows || !rows.length || !rows[0].data) return;
+      var remote; try{ remote = JSON.parse(rows[0].data); }catch(e){ return; }
+      var rTs = new Date(remote._updated||0).getTime();
+      var lTs = new Date((_UPLOAD&&_UPLOAD._updated)||0).getTime();
+      if(rTs > lTs){
+        _UPLOAD = remote;
+        localStorage.setItem(UPLOAD_KEY, JSON.stringify(remote));
+        if(cb) cb();
+      }
+    }).catch(function(){});
+}
+
+function pullFloorFromSupabase(cb){
+  fetch(SUPA_URL+'/rest/v1/hoc_batches?select=*', {headers:H()})
+    .then(function(r){ return r.ok ? r.json() : []; })
+    .then(function(rows){
+      if(!Array.isArray(rows)) return;
+      var fl = {};
+      rows.forEach(function(r){
+        try { fl[r.batch_id] = typeof r.data === 'string' ? JSON.parse(r.data) : r.data; }
+        catch(e){}
+      });
+      _FLOOR = fl;
+      localStorage.setItem(FLOOR_KEY, JSON.stringify(_FLOOR));
+      if(cb) cb();
+    }).catch(function(){});
+}
+
+function loadSpecs(force){
+  fetch(SUPA_URL+'/rest/v1/hoc_qc_specs?select=*', {headers:H()})
+    .then(function(r){ return r.ok ? r.json() : []; })
+    .then(function(rows){
+      _SPECS = {};
+      (rows||[]).forEach(function(s){ _SPECS[s.item_id] = s; });
+      if(force) renderSpecsTable();
+    }).catch(function(){});
+}
+
+function loadTests(){
+  // Pull last 200 tests for history page
+  fetch(SUPA_URL+'/rest/v1/hoc_qc_tests?select=*&order=tested_at.desc&limit=200', {headers:H()})
+    .then(function(r){ return r.ok ? r.json() : []; })
+    .then(function(rows){
+      _TESTS = rows || [];
+      renderHistory();
+    }).catch(function(){});
+}
+
+function loadPDFList(){
+  fetch(SUPA_URL+'/rest/v1/hoc_events?select=*&event_type=eq.qc_release&order=created_at.desc&limit=30', {headers:H()})
+    .then(function(r){ return r.ok ? r.json() : []; })
+    .then(function(rows){
+      var el = document.getElementById('pdf-list');
+      var pdfs = (rows||[]).filter(function(r){ return r.pdf_url; });
+      if(!pdfs.length){ el.innerHTML = '<div class="empty muted">No release PDFs yet</div>'; return; }
+      el.innerHTML = pdfs.map(function(r){
+        return '<div style="padding:6px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px">' +
+          '<div style="min-width:0;flex:1"><div style="font-weight:700">'+esc(r.batch_id)+'</div><div class="muted" style="font-size:9px">'+fDT(r.created_at)+'</div></div>' +
+          '<a class="btn btn-sm" href="'+esc(r.pdf_url)+'" target="_blank">⬇ PDF</a>' +
+        '</div>';
+      }).join('');
+    });
+}
+
+// ── Get the working batch list (with floor merges + latest QC) ─────
+var _LATEST_QC = {};  // batch_id → latest hoc_qc_tests row
+function indexLatestQC(){
+  _LATEST_QC = {};
+  _TESTS.forEach(function(t){
+    var cur = _LATEST_QC[t.batch_id];
+    if(!cur || new Date(t.tested_at) > new Date(cur.tested_at)){
+      _LATEST_QC[t.batch_id] = t;
+    }
+  });
+}
+
+function getEffectiveBatches(){
+  var out = (_UPLOAD.batches||[]).map(function(b){
+    var f = _FLOOR[b.batch] || {};
+    var qc = _LATEST_QC[b.batch] || null;
+    var merged = Object.assign({}, b, f, {
+      qc_disposition: qc ? qc.disposition : null,
+      qc_tested_at:   qc ? qc.tested_at  : null,
+      qc_tested_by:   qc ? qc.tested_by  : null,
+      qc_test_id:     qc ? qc.id         : null,
+      compound_status: f.cmpd || f.cmpd_status || b.cmpd || b.cmpd_status || '',
+    });
+    return merged;
+  });
+  return out;
+}
+
+function getQueueBatches(){
+  // Batches that are compound-complete and either never tested or last test was HOLD/REJECT and they're back
+  var all = getEffectiveBatches();
+  return all.filter(function(b){
+    var cmpd = String(b.compound_status||'').toUpperCase();
+    if(cmpd.indexOf('COMPLETE') < 0 && cmpd.indexOf('FILLING') < 0) return false;
+    // Skip if currently released
+    if(b.qc_disposition === 'RELEASED') return false;
+    return true;
+  }).sort(function(a,b){
+    return new Date(a.date||0) - new Date(b.date||0);
+  });
+}
+
+// ── KPIs ────────────────────────────────────────────────────────────
+function renderKPIs(){
+  var q = getQueueBatches();
+  var today = new Date().toISOString().slice(0,10);
+  var todayTests = _TESTS.filter(function(t){ return (t.tested_at||'').slice(0,10) === today; });
+  var released = todayTests.filter(function(t){ return t.disposition === 'RELEASED'; }).length;
+  var hold     = todayTests.filter(function(t){ return t.disposition === 'HOLD'; }).length;
+  var rejected = todayTests.filter(function(t){ return t.disposition === 'REJECTED'; }).length;
+  var oldQ     = q.filter(function(b){ return ageHours(b.batch_date || b.date) > 24; }).length;
+
+  // Additional metrics matching attachment 8 — Will Miss, Comp Cleared, Coverage
+  var all = getEffectiveBatches();
+  var willMissCount = all.filter(function(b){
+    var cmpd = String(b.compound_status||'').toUpperCase();
+    return (cmpd.indexOf('OVERDUE')>=0 || cmpd.indexOf('CRITICAL')>=0) && b.qc_disposition !== 'RELEASED';
+  }).length;
+  var compCleared = all.filter(function(b){ return b.qc_disposition === 'RELEASED'; }).length;
+  var specsCount = (typeof _SPECS !== 'undefined' && _SPECS) ? Object.keys(_SPECS).length : 0;
+
+  document.getElementById('queue-kpis').innerHTML = [
+    {l:'In Queue',          v:q.length,    s:'awaiting QC',           c:q.length>5?'var(--red)':q.length>2?'var(--amber)':'var(--green)'},
+    {l:'Will Miss',         v:willMissCount, s:'Cmpd overdue → QC late', c:willMissCount?'var(--red)':'var(--green)'},
+    {l:'Released Today',    v:released,    s:'send for shipping',     c:'var(--green)'},
+    {l:'Comp Cleared',      v:compCleared, s:'Ready to fill',          c:compCleared?'var(--green)':'var(--text3)'},
+    {l:'Hold Today',        v:hold,        s:'back to compound',      c:hold?'var(--amber)':'var(--text3)'},
+    {l:'Rejected Today',    v:rejected,    s:'NOA → R&D',             c:rejected?'var(--red)':'var(--text3)'},
+    {l:'Stale (>24h)',      v:oldQ,        s:'in queue too long',     c:oldQ?'var(--red)':'var(--text3)'},
+    {l:'Specs On File',     v:specsCount,  s:'Coverage library',       c:'var(--text)'},
+  ].map(function(k){
+    return '<div class="kpi"><div class="kl">'+k.l+'</div><div class="kv" style="color:'+k.c+'">'+k.v+'</div><div class="ks">'+k.s+'</div></div>';
+  }).join('');
+
+  // Top-bar badges
+  document.getElementById('badges').innerHTML =
+    (willMissCount? '<span class="badge b-red">'+willMissCount+' WILL MISS</span>' : '') +
+    (q.length     ? '<span class="badge b-pur">'+q.length+' QUEUED</span>'   : '') +
+    (released     ? '<span class="badge b-grn">'+released+' RELEASED</span>' : '') +
+    (hold         ? '<span class="badge b-amb">'+hold+' HOLD</span>'         : '') +
+    (rejected     ? '<span class="badge b-red">'+rejected+' REJECT</span>'   : '');
+
+  document.getElementById('sync-ts').textContent = new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+}
+
+// ── Queue render ────────────────────────────────────────────────────
+function renderQueue(){
+  var q = getQueueBatches();
+  document.getElementById('queue-count').textContent = q.length ? '('+q.length+')' : '';
+  var el = document.getElementById('queue-list');
+  if(!q.length){ el.innerHTML = '<div class="empty">Queue is clear ✓ — no batches awaiting QC test</div>'; return; }
+  el.innerHTML = q.map(function(b){
+    var age = ageHours(b.batch_date || b.date);
+    var cls = age > 24 ? 'queue-age-old' : age > 8 ? 'queue-age-mid' : 'queue-age-new';
+    var priorBadge = '';
+    if(b.qc_disposition){
+      priorBadge = '<span class="badge ' + (b.qc_disposition==='HOLD'?'b-amb':'b-red') + '" style="margin-left:6px">PRIOR: '+esc(b.qc_disposition)+'</span>';
+    }
+    var floor = (typeof _FLOOR !== 'undefined' && _FLOOR[b.batch]) ? _FLOOR[b.batch] : {};
+    var cmpdrTag = floor.assigned ? '<span style="font-size:9px;color:var(--pri);font-weight:700">Compounder: '+esc(floor.assigned)+'</span>' : '';
+    var tankTag  = floor.tank ? '<span style="font-size:9px;color:var(--muted)">Tank '+esc(floor.tank)+'</span>' : '';
+    var lbsTag   = b.lbs ? '<span style="font-size:9px;color:var(--muted)">'+numFmt(b.lbs)+' lbs</span>' : '';
+    var ageColor = age > 24 ? 'var(--red)' : age > 8 ? 'var(--amb)' : 'var(--muted)';
+    var meta = [cmpdrTag, tankTag, lbsTag].filter(Boolean).join(' · ');
+    return '<div class="queue-item '+cls+'" onclick="openTest(\''+esc(b.batch)+'\')">'+
+      '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center">'+
+        '<div style="min-width:0;flex:1">'+
+          '<div style="font-weight:700">'+esc(b.batch)+' · '+esc(b.item||'')+' '+priorBadge+'</div>'+
+          '<div class="muted" style="font-size:10px">'+esc((b.desc||'').slice(0,60))+'</div>'+
+          (meta ? '<div style="margin-top:3px">'+meta+'</div>' : '') +
+        '</div>'+
+        '<div style="display:flex;gap:6px;align-items:center;flex-shrink:0">'+
+          '<div style="font-size:10px;text-align:right">'+
+            '<div class="muted">L'+esc(b.line||'?')+' · '+fD(b.date)+'</div>'+
+            '<div style="color:'+ageColor+';font-weight:700">'+Math.round(age)+'h waiting</div>'+
+          '</div>'+
+          '<button class="btn btn-pri btn-sm" onclick="event.stopPropagation();openTest(\''+esc(b.batch)+'\')">TEST</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+// ── In Test render ──────────────────────────────────────────────────
+function renderInTest(){
+  var keys = Object.keys(_IN_TEST);
+  var el = document.getElementById('intest-list');
+  if(!keys.length){ el.innerHTML = '<div class="empty">No active tests. Open a batch from the Queue tab to begin.</div>'; return; }
+  el.innerHTML = keys.map(function(bid){
+    var meta = _IN_TEST[bid];
+    return '<div class="queue-item queue-age-new" onclick="openTest(\''+esc(bid)+'\')">'+
+      '<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center">'+
+        '<div style="min-width:0;flex:1">'+
+          '<div style="font-weight:700">'+esc(bid)+' <span class="badge b-pur">IN TEST</span></div>'+
+          '<div class="muted" style="font-size:10px">'+esc(meta.desc||'')+' · started '+fDT(meta.started_at)+'</div>'+
+        '</div>'+
+        '<button class="btn btn-pri btn-sm" onclick="event.stopPropagation();openTest(\''+esc(bid)+'\')">Continue</button>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+// ── History render ──────────────────────────────────────────────────
+function renderHistory(){
+  var disp = document.getElementById('filt-disp').value;
+  var by   = document.getElementById('filt-by').value;
+  var q    = (document.getElementById('filt-q').value||'').toLowerCase().trim();
+  var rows = _TESTS.filter(function(t){
+    if(disp && t.disposition !== disp) return false;
+    if(by){
+      if(by === 'Other'){ if(['Makia Lindsey','Zaynah Powell','Nia Harrell'].indexOf(t.tested_by) >= 0) return false; }
+      else if(t.tested_by !== by) return false;
+    }
+    if(q){
+      var hay = (t.batch_id+' '+(t.item_id||'')+' '+(t.notes||'')+' '+(t.hold_reason||'')+' '+(t.reject_reason||'')).toLowerCase();
+      if(hay.indexOf(q) < 0) return false;
+    }
+    return true;
+  });
+  var body = document.getElementById('history-body');
+  if(!rows.length){ body.innerHTML = '<tr><td colspan="10" class="empty">No tests match filters</td></tr>'; return; }
+  body.innerHTML = rows.map(function(t){
+    var visual = ['color_pass','texture_pass','consistency_pass','smell_pass']
+      .map(function(k){ return t[k] === true ? '✓' : t[k] === false ? '✗' : '·'; }).join('');
+    var dispCls = t.disposition==='RELEASED' ? 'b-grn' : t.disposition==='HOLD' ? 'b-amb' : 'b-red';
+    return '<tr>'+
+      '<td>'+fDT(t.tested_at)+'</td>'+
+      '<td style="font-weight:700">'+esc(t.batch_id)+'</td>'+
+      '<td>'+esc(t.item_id||'')+'</td>'+
+      '<td>'+(t.ph!=null?t.ph:'—')+'</td>'+
+      '<td>'+(t.viscosity!=null?t.viscosity:'—')+'</td>'+
+      '<td>'+(t.density_avg!=null?t.density_avg:'—')+'</td>'+
+      '<td style="font-family:ui-monospace;font-size:11px">'+visual+'</td>'+
+      '<td><span class="badge '+dispCls+'">'+esc(t.disposition||'')+'</span></td>'+
+      '<td>'+esc(t.tested_by||'')+'</td>'+
+      '<td class="muted" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc((t.notes||t.hold_reason||t.reject_reason||'').slice(0,40))+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+function exportHistoryCSV(){
+  var hdr = ['When','Batch','Item','pH','Visc','DensTop','DensBot','DensAvg','Color','Texture','Consistency','Smell','Disposition','TestedBy','Notes','HoldReason','RejectReason'];
+  var rows = _TESTS.map(function(t){
+    return [
+      t.tested_at, t.batch_id, t.item_id||'',
+      t.ph||'', t.viscosity||'', t.density_top||'', t.density_bottom||'', t.density_avg||'',
+      t.color_pass===true?'pass':t.color_pass===false?'fail':'',
+      t.texture_pass===true?'pass':t.texture_pass===false?'fail':'',
+      t.consistency_pass===true?'pass':t.consistency_pass===false?'fail':'',
+      t.smell_pass===true?'pass':t.smell_pass===false?'fail':'',
+      t.disposition||'', t.tested_by||'', (t.notes||'').replace(/"/g,'""'),
+      (t.hold_reason||'').replace(/"/g,'""'), (t.reject_reason||'').replace(/"/g,'""')
+    ].map(function(v){ return '"'+v+'"'; }).join(',');
+  });
+  var csv = hdr.join(',') + '\n' + rows.join('\n');
+  var blob = new Blob([csv], {type:'text/csv'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'qc_history_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+// ── Spec management ─────────────────────────────────────────────────
+function specCheck(value, min, max){
+  if(value == null || value === '') return 'na';
+  if(min == null && max == null) return 'na';
+  var v = parseFloat(value);
+  if(min != null && v < parseFloat(min)) return 'out';
+  if(max != null && v > parseFloat(max)) return 'out';
+  return 'in';
+}
+
+function checkSpec(){
+  if(!_CURRENT) return;
+  var spec = _SPECS[_CURRENT.item] || {};
+  var ph   = document.getElementById('m-ph').value;
+  var visc = document.getElementById('m-visc').value;
+  var davg = document.getElementById('m-dens-avg').value;
+  var setPill = function(id, status){
+    var el = document.getElementById(id);
+    el.className = 'spec-pill spec-'+(status==='in'?'in':status==='out'?'out':'na');
+    el.textContent = status==='in'?'in spec':status==='out'?'OUT':'no spec';
+  };
+  setPill('m-ph-pill',   specCheck(ph,   spec.ph_min,        spec.ph_max));
+  setPill('m-visc-pill', specCheck(visc, spec.viscosity_min, spec.viscosity_max));
+  setPill('m-dens-pill', specCheck(davg, spec.density_min,   spec.density_max));
+}
+
+function updateDensAvg(){
+  var t = parseFloat(document.getElementById('m-dens-top').value);
+  var b = parseFloat(document.getElementById('m-dens-bot').value);
+  if(!isNaN(t) && !isNaN(b)){
+    document.getElementById('m-dens-avg').value = Math.round((t+b)/2 * 1000)/1000;
+  } else if(!isNaN(t)){
+    document.getElementById('m-dens-avg').value = t;
+  } else if(!isNaN(b)){
+    document.getElementById('m-dens-avg').value = b;
+  } else {
+    document.getElementById('m-dens-avg').value = '';
+  }
+  checkSpec();
+}
+
+function saveSpec(){
+  var item = (document.getElementById('spec-item').value||'').trim();
+  if(!item){ document.getElementById('spec-status').textContent = 'Item ID required'; return; }
+  var body = {
+    item_id:       item,
+    description:   document.getElementById('spec-desc').value || null,
+    ph_min:        parseFloat(document.getElementById('spec-ph-min').value)   || null,
+    ph_max:        parseFloat(document.getElementById('spec-ph-max').value)   || null,
+    viscosity_min: parseFloat(document.getElementById('spec-visc-min').value) || null,
+    viscosity_max: parseFloat(document.getElementById('spec-visc-max').value) || null,
+    density_min:   parseFloat(document.getElementById('spec-dens-min').value) || null,
+    density_max:   parseFloat(document.getElementById('spec-dens-max').value) || null,
+    visual_notes:  document.getElementById('spec-visual').value || null,
+    updated_by:    document.getElementById('spec-by').value || null,
+    updated_at:    new Date().toISOString()
+  };
+  fetch(SUPA_URL+'/rest/v1/hoc_qc_specs', {
+    method:'POST',
+    headers: Object.assign({'Prefer':'resolution=merge-duplicates,return=minimal'}, HJ()),
+    body: JSON.stringify(body)
+  }).then(function(r){
+    if(r.ok){
+      document.getElementById('spec-status').textContent = '✓ Saved';
+      _SPECS[item] = body;
+      renderSpecsTable();
+    } else {
+      document.getElementById('spec-status').textContent = '✗ Save failed ('+r.status+')';
+    }
+  }).catch(function(e){
+    document.getElementById('spec-status').textContent = '✗ '+e.message;
+  });
+}
+
+function renderSpecsTable(){
+  var keys = Object.keys(_SPECS).sort();
+  document.getElementById('specs-count').textContent = keys.length ? '('+keys.length+' formulas)' : '';
+  var body = document.getElementById('specs-body');
+  if(!keys.length){ body.innerHTML = '<tr><td colspan="8" class="empty">No specs yet. Add one above or bulk-import.</td></tr>'; return; }
+  body.innerHTML = keys.map(function(k){
+    var s = _SPECS[k];
+    var rng = function(mn, mx){ if(mn==null && mx==null) return '—'; return (mn==null?'?':mn) + ' – ' + (mx==null?'?':mx); };
+    return '<tr>'+
+      '<td style="font-weight:700">'+esc(k)+'</td>'+
+      '<td class="muted">'+esc((s.description||'').slice(0,40))+'</td>'+
+      '<td>'+rng(s.ph_min, s.ph_max)+'</td>'+
+      '<td>'+rng(s.viscosity_min, s.viscosity_max)+'</td>'+
+      '<td>'+rng(s.density_min, s.density_max)+'</td>'+
+      '<td class="muted" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc((s.visual_notes||'').slice(0,30))+'</td>'+
+      '<td class="muted" style="font-size:9px">'+fD((s.updated_at||'').slice(0,10))+'</td>'+
+      '<td><button class="btn btn-sm" onclick="editSpec(\''+esc(k)+'\')">edit</button></td>'+
+    '</tr>';
+  }).join('');
+}
+
+function editSpec(item){
+  var s = _SPECS[item];
+  if(!s) return;
+  document.getElementById('spec-item').value     = s.item_id || '';
+  document.getElementById('spec-desc').value     = s.description || '';
+  document.getElementById('spec-ph-min').value   = s.ph_min ?? '';
+  document.getElementById('spec-ph-max').value   = s.ph_max ?? '';
+  document.getElementById('spec-visc-min').value = s.viscosity_min ?? '';
+  document.getElementById('spec-visc-max').value = s.viscosity_max ?? '';
+  document.getElementById('spec-dens-min').value = s.density_min ?? '';
+  document.getElementById('spec-dens-max').value = s.density_max ?? '';
+  document.getElementById('spec-visual').value   = s.visual_notes || '';
+  document.getElementById('spec-by').value       = s.updated_by || '';
+  document.getElementById('spec-item').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function bulkImportSpecs(){
+  var raw = document.getElementById('bulk-paste').value;
+  if(!raw.trim()){ document.getElementById('bulk-status').textContent = 'Empty'; return; }
+  var lines = raw.replace(/\r\n/g,'\n').split('\n').filter(function(l){return l.trim();});
+  if(lines.length < 2){ document.getElementById('bulk-status').textContent = 'Need header + at least one data row'; return; }
+  var sep = lines[0].indexOf('\t') >= 0 ? '\t' : ',';
+  var hdr = lines[0].split(sep).map(function(h){ return h.trim().toLowerCase(); });
+  var ix = function(name){
+    var aliases = {item:['item','item_id','itemid'], desc:['desc','description'],
+                   ph_min:['ph_min','phmin'], ph_max:['ph_max','phmax'],
+                   visc_min:['visc_min','viscmin','viscosity_min'], visc_max:['visc_max','viscmax','viscosity_max'],
+                   dens_min:['dens_min','densmin','density_min'], dens_max:['dens_max','densmax','density_max'],
+                   visual:['visual','visual_notes']};
+    var as = aliases[name] || [name];
+    for(var i=0;i<hdr.length;i++) if(as.indexOf(hdr[i])>=0) return i;
+    return -1;
+  };
+  var iItem=ix('item'),iDesc=ix('desc'),iPhM=ix('ph_min'),iPhX=ix('ph_max'),
+      iVcM=ix('visc_min'),iVcX=ix('visc_max'),iDsM=ix('dens_min'),iDsX=ix('dens_max'),iVis=ix('visual');
+  if(iItem < 0){ document.getElementById('bulk-status').textContent = 'No Item column found'; return; }
+
+  var bodies = [];
+  for(var li=1; li<lines.length; li++){
+    var cols = lines[li].split(sep);
+    var item = (cols[iItem]||'').trim();
+    if(!item) continue;
+    bodies.push({
+      item_id: item,
+      description:  iDesc>=0 ? (cols[iDesc]||'').trim() : null,
+      ph_min:       iPhM>=0 ? (parseFloat(cols[iPhM])||null) : null,
+      ph_max:       iPhX>=0 ? (parseFloat(cols[iPhX])||null) : null,
+      viscosity_min:iVcM>=0 ? (parseFloat(cols[iVcM])||null) : null,
+      viscosity_max:iVcX>=0 ? (parseFloat(cols[iVcX])||null) : null,
+      density_min:  iDsM>=0 ? (parseFloat(cols[iDsM])||null) : null,
+      density_max:  iDsX>=0 ? (parseFloat(cols[iDsX])||null) : null,
+      visual_notes: iVis>=0 ? (cols[iVis]||'').trim() : null,
+      updated_at:   new Date().toISOString(),
+      updated_by:   'bulk import'
+    });
+  }
+  if(!bodies.length){ document.getElementById('bulk-status').textContent = 'No data rows found'; return; }
+
+  fetch(SUPA_URL+'/rest/v1/hoc_qc_specs', {
+    method:'POST',
+    headers: Object.assign({'Prefer':'resolution=merge-duplicates,return=minimal'}, HJ()),
+    body: JSON.stringify(bodies)
+  }).then(function(r){
+    if(r.ok){
+      document.getElementById('bulk-status').textContent = '✓ Imported '+bodies.length+' specs';
+      document.getElementById('bulk-paste').value = '';
+      loadSpecs(true);
+    } else {
+      r.text().then(function(t){
+        document.getElementById('bulk-status').textContent = '✗ Failed ('+r.status+'): '+t.slice(0,80);
+      });
+    }
+  }).catch(function(e){
+    document.getElementById('bulk-status').textContent = '✗ '+e.message;
+  });
+}
+
+// ── Test modal ──────────────────────────────────────────────────────
+var _M_VIS = {color:null, texture:null, consistency:null, smell:null};
+var _M_DISP = null;
+
+function openTest(batchId){
+  var batches = getEffectiveBatches();
+  var b = batches.find(function(x){ return x.batch === batchId; });
+  if(!b){ alert('Batch not found: '+batchId); return; }
+  _CURRENT = b;
+  _IN_TEST[batchId] = {desc: b.desc, started_at: new Date().toISOString()};
+
+  document.getElementById('m-batch').textContent = b.batch + ' · ' + (b.item||'');
+  document.getElementById('m-desc').textContent  = b.desc || '';
+
+  var spec = _SPECS[b.item] || {};
+  var hasSpec = spec.ph_min != null || spec.viscosity_min != null || spec.density_min != null;
+  var banner = document.getElementById('m-spec-banner');
+  if(hasSpec){
+    banner.innerHTML = '✓ Spec on file. ' +
+      (spec.ph_min!=null   ? 'pH '+spec.ph_min+'–'+spec.ph_max+' · ' : '') +
+      (spec.viscosity_min!=null ? 'Visc '+spec.viscosity_min+'–'+spec.viscosity_max+' cP · ' : '') +
+      (spec.density_min!=null  ? 'Dens '+spec.density_min+'–'+spec.density_max+' g/mL' : '') +
+      (spec.visual_notes ? '<br>Visual: '+esc(spec.visual_notes) : '');
+    banner.style.color = 'var(--text2)';
+  } else {
+    banner.innerHTML = '⚠ No spec on file for item <b>'+esc(b.item||'?')+'</b>. Auto-check disabled. Add a spec in Manage Specs.';
+    banner.style.color = 'var(--amber)';
+  }
+
+  // Reset modal
+  ['m-ph','m-visc','m-dens-top','m-dens-bot','m-dens-avg','m-reason','m-notes','m-by-other'].forEach(function(id){
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('m-by').value = '';
+  _M_VIS = {color:null, texture:null, consistency:null, smell:null};
+  _M_DISP = null;
+  document.querySelectorAll('#test-modal .toggle button').forEach(function(b){ b.classList.remove('on-pass','on-fail'); });
+  document.querySelectorAll('#m-disp button').forEach(function(b){ b.classList.remove('on-rel','on-hld','on-rej'); });
+  document.getElementById('m-reason-wrap').style.display = 'none';
+  document.getElementById('m-by-other-wrap').style.display = 'none';
+  document.getElementById('m-prior').style.display = 'none';
+  document.getElementById('m-status').textContent = '';
+  checkSpec();
+  document.getElementById('test-modal').classList.add('show');
+  P('intest');
+  renderInTest();
+}
+
+function closeTestModal(){
+  document.getElementById('test-modal').classList.remove('show');
+  _CURRENT = null;
+}
+
+function toggleVis(field, pass){
+  _M_VIS[field] = pass;
+  var wrap = document.getElementById('m-'+field);
+  var btns = wrap.querySelectorAll('button');
+  btns[0].classList.toggle('on-pass', pass === true);
+  btns[1].classList.toggle('on-fail', pass === false);
+}
+
+function setDisp(d){
+  _M_DISP = d;
+  var btns = document.querySelectorAll('#m-disp button');
+  btns[0].classList.toggle('on-rel', d === 'RELEASED');
+  btns[1].classList.toggle('on-hld', d === 'HOLD');
+  btns[2].classList.toggle('on-rej', d === 'REJECTED');
+  var wrap = document.getElementById('m-reason-wrap');
+  if(d === 'HOLD'){
+    wrap.style.display = 'block';
+    document.getElementById('m-reason-lbl').textContent = 'Hold Reason (required) — what needs adjustment?';
+  } else if(d === 'REJECTED'){
+    wrap.style.display = 'block';
+    document.getElementById('m-reason-lbl').textContent = 'Reject Reason (required) — basis for R&D NOA';
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
+function toggleByOther(){
+  var v = document.getElementById('m-by').value;
+  document.getElementById('m-by-other-wrap').style.display = v === '__OTHER__' ? 'block' : 'none';
+}
+
+function loadHistoryForBatch(){
+  if(!_CURRENT) return;
+  var prior = _TESTS.filter(function(t){ return t.batch_id === _CURRENT.batch; });
+  document.getElementById('m-prior').style.display = 'block';
+  var list = document.getElementById('m-prior-list');
+  if(!prior.length){ list.innerHTML = '<i>No prior tests recorded</i>'; return; }
+  list.innerHTML = prior.map(function(t){
+    return '<div style="padding:3px 0;border-bottom:1px solid var(--border)">' +
+      '<b>'+fDT(t.tested_at)+'</b> · ' +
+      '<span class="badge ' + (t.disposition==='RELEASED'?'b-grn':t.disposition==='HOLD'?'b-amb':'b-red') + '">'+esc(t.disposition||'')+'</span>' +
+      ' · pH '+(t.ph||'—')+' · visc '+(t.viscosity||'—')+' · dens '+(t.density_avg||'—') +
+      ' · by '+esc(t.tested_by||'') +
+      (t.hold_reason||t.reject_reason ? '<br><i style="color:var(--text3)">'+esc(t.hold_reason||t.reject_reason)+'</i>' : '') +
+      '</div>';
+  }).join('');
+}
+
+function saveTest(){
+  if(!_CURRENT){ alert('No batch loaded'); return; }
+  if(!_M_DISP){ document.getElementById('m-status').textContent = '✗ Pick a disposition first'; return; }
+  var byVal = document.getElementById('m-by').value;
+  var by = byVal === '__OTHER__' ? (document.getElementById('m-by-other').value||'').trim() : byVal;
+  if(!by){ document.getElementById('m-status').textContent = '✗ Select or type your name'; return; }
+  if((_M_DISP === 'HOLD' || _M_DISP === 'REJECTED') && !(document.getElementById('m-reason').value||'').trim()){
+    document.getElementById('m-status').textContent = '✗ Reason required for ' + _M_DISP;
+    return;
+  }
+
+  var spec = _SPECS[_CURRENT.item] || {};
+  var ph   = parseFloat(document.getElementById('m-ph').value);
+  var visc = parseFloat(document.getElementById('m-visc').value);
+  var dT   = parseFloat(document.getElementById('m-dens-top').value);
+  var dB   = parseFloat(document.getElementById('m-dens-bot').value);
+  var dA   = parseFloat(document.getElementById('m-dens-avg').value);
+
+  var spec_check = {
+    ph:        specCheck(ph,   spec.ph_min,        spec.ph_max),
+    viscosity: specCheck(visc, spec.viscosity_min, spec.viscosity_max),
+    density:   specCheck(dA,   spec.density_min,   spec.density_max)
+  };
+
+  // Find prior test for retest_of linkage
+  var priorTest = _LATEST_QC[_CURRENT.batch];
+
+  var body = {
+    batch_id:       _CURRENT.batch,
+    item_id:        _CURRENT.item || null,
+    description:    _CURRENT.desc || null,
+    ph:             isNaN(ph)?null:ph,
+    viscosity:      isNaN(visc)?null:visc,
+    density_top:    isNaN(dT)?null:dT,
+    density_bottom: isNaN(dB)?null:dB,
+    density_avg:    isNaN(dA)?null:dA,
+    color_pass:       _M_VIS.color,
+    texture_pass:     _M_VIS.texture,
+    consistency_pass: _M_VIS.consistency,
+    smell_pass:       _M_VIS.smell,
+    disposition:    _M_DISP,
+    hold_reason:    _M_DISP === 'HOLD'     ? document.getElementById('m-reason').value : null,
+    reject_reason:  _M_DISP === 'REJECTED' ? document.getElementById('m-reason').value : null,
+    tested_by:      by,
+    tested_at:      new Date().toISOString(),
+    notes:          document.getElementById('m-notes').value || null,
+    spec_check:     spec_check,
+    retest_of:      priorTest && priorTest.disposition !== 'RELEASED' ? priorTest.id : null
+  };
+
+  document.getElementById('m-status').textContent = '⏳ Saving...';
+
+  // 1. Insert into hoc_qc_tests
+  fetch(SUPA_URL+'/rest/v1/hoc_qc_tests', {
+    method:'POST',
+    headers: Object.assign({'Prefer':'return=representation'}, HJ()),
+    body: JSON.stringify(body)
+  }).then(function(r){
+    if(!r.ok) throw new Error('QC test insert HTTP '+r.status);
+    return r.json();
+  }).then(function(inserted){
+    var testRow = (inserted && inserted[0]) || body;
+    // 2. Update shared hoc_batches floor-update so other dashboards see qc_status
+    var floorBody = {
+      batch_id:   _CURRENT.batch,
+      data:       JSON.stringify(Object.assign({}, _FLOOR[_CURRENT.batch] || {}, {
+        qc_status:     _M_DISP,
+        qc_tested_at:  body.tested_at,
+        qc_tested_by:  by,
+        qc_hold_reason: body.hold_reason,
+        qc_reject_reason: body.reject_reason
+      })),
+      updated_at: body.tested_at
+    };
+    fetch(SUPA_URL+'/rest/v1/hoc_batches', {
+      method:'POST',
+      headers: Object.assign({'Prefer':'resolution=merge-duplicates,return=minimal'}, HJ()),
+      body: JSON.stringify(floorBody)
+    });
+
+    // 3. Generate PDF if Released and upload to Storage
+    var pdfPromise = Promise.resolve(null);
+    if(_M_DISP === 'RELEASED'){
+      pdfPromise = generateAndUploadPDF(testRow);
+    }
+
+    return pdfPromise.then(function(pdfUrl){
+      // 4. Emit event for the Event Engine
+      var eventType = _M_DISP === 'RELEASED' ? 'qc_release'
+                    : _M_DISP === 'HOLD'     ? 'qc_hold'
+                    : 'qc_reject';
+      var severity = _M_DISP === 'REJECTED' ? 'critical' : _M_DISP === 'HOLD' ? 'warning' : 'info';
+      // Notification targets by disposition
+      var targets = _M_DISP === 'RELEASED'
+        ? ['production_coordinator','production_supervisor','leadership','demand_supply']
+        : _M_DISP === 'HOLD'
+        ? ['compound_coordinator','compound_scheduler','production_coordinator','leadership']
+        : ['compound_coordinator','leadership','production_coordinator','demand_supply']; // REJECTED
+      var ev = {
+        event_type: eventType,
+        severity:   severity,
+        batch_id:   _CURRENT.batch,
+        item_id:    _CURRENT.item || null,
+        source:     'quality_lab',
+        pdf_url:    pdfUrl,
+        payload: {
+          targets:     targets,
+          message:     'Batch '+_CURRENT.batch+' '+_M_DISP+(body.hold_reason?' · '+body.hold_reason:'')+(body.reject_reason?' · '+body.reject_reason:''),
+          tested_by:   by,
+          tested_at:   body.tested_at,
+          ph:          body.ph,
+          viscosity:   body.viscosity,
+          density_avg: body.density_avg,
+          description: body.description,
+          hold_reason: body.hold_reason,
+          reject_reason: body.reject_reason,
+          spec_check:  spec_check
+        }
+      };
+      return fetch(SUPA_URL+'/rest/v1/hoc_events', {
+        method:'POST', headers:HJ(), body: JSON.stringify(ev)
+      });
+    });
+  }).then(function(){
+    document.getElementById('m-status').textContent = '✓ Saved · event emitted · dashboards updating';
+    delete _IN_TEST[_CURRENT.batch];
+    setTimeout(function(){ closeTestModal(); loadTests(); pullFloorFromSupabase(renderAll); renderAll(); }, 700);
+  }).catch(function(err){
+    document.getElementById('m-status').textContent = '✗ Save failed: '+err.message;
+  });
+}
+
+// ── PDF generation + Storage upload ────────────────────────────────
+function generateAndUploadPDF(testRow){
+  return new Promise(function(resolve){
+    try{
+      var jsPDF = window.jspdf.jsPDF;
+      var doc = new jsPDF({unit:'pt', format:'letter'});
+      var pad = 50, y = pad;
+      doc.setFont('helvetica','bold'); doc.setFontSize(16);
+      doc.text('HOUSE OF CHEATHAM', pad, y); y += 22;
+      doc.setFontSize(13); doc.text('QC RELEASE CERTIFICATE', pad, y); y += 18;
+      doc.setFont('helvetica','normal'); doc.setFontSize(9);
+      doc.setTextColor(120);
+      doc.text('Quality Lab · Released for filling & packaging', pad, y); y += 18;
+      doc.setDrawColor(180); doc.line(pad, y, 612-pad, y); y += 16;
+      doc.setTextColor(0);
+
+      var rows = [
+        ['Batch',           testRow.batch_id || ''],
+        ['Item',            testRow.item_id || ''],
+        ['Description',     (testRow.description || '').slice(0,60)],
+        ['Tested At',       new Date(testRow.tested_at).toLocaleString()],
+        ['Tested By',       testRow.tested_by || ''],
+        ['',                ''],
+        ['pH',              (testRow.ph != null ? String(testRow.ph) : 'n/a')],
+        ['Viscosity',       (testRow.viscosity != null ? testRow.viscosity + ' cP' : 'n/a')],
+        ['Density Top',     (testRow.density_top != null ? testRow.density_top + ' g/mL' : 'n/a')],
+        ['Density Bottom',  (testRow.density_bottom != null ? testRow.density_bottom + ' g/mL' : 'n/a')],
+        ['Density Avg',     (testRow.density_avg != null ? testRow.density_avg + ' g/mL' : 'n/a')],
+        ['',                ''],
+        ['Color',           testRow.color_pass === true ? 'PASS' : testRow.color_pass === false ? 'FAIL' : '—'],
+        ['Texture',         testRow.texture_pass === true ? 'PASS' : testRow.texture_pass === false ? 'FAIL' : '—'],
+        ['Consistency',     testRow.consistency_pass === true ? 'PASS' : testRow.consistency_pass === false ? 'FAIL' : '—'],
+        ['Smell',           testRow.smell_pass === true ? 'PASS' : testRow.smell_pass === false ? 'FAIL' : '—'],
+        ['',                ''],
+        ['Disposition',     'RELEASED']
+      ];
+      doc.setFontSize(10);
+      rows.forEach(function(r){
+        if(r[0] === ''){ y += 6; return; }
+        doc.setFont('helvetica','bold'); doc.text(r[0]+':', pad, y);
+        doc.setFont('helvetica','normal'); doc.text(String(r[1]), pad+120, y);
+        y += 16;
+      });
+      y += 14;
+      doc.setDrawColor(180); doc.line(pad, y, 612-pad, y); y += 16;
+      doc.setFontSize(8); doc.setTextColor(120);
+      doc.text('This certificate is auto-generated by HOC-OES Quality Lab.', pad, y); y += 11;
+      doc.text('Test record: hoc_qc_tests row id ' + (testRow.id || 'pending'), pad, y);
+
+      var blob = doc.output('blob');
+      var fname = 'qc_release_' + (testRow.batch_id || 'batch') + '_' +
+                  new Date(testRow.tested_at || Date.now()).toISOString().replace(/[:.]/g,'-').slice(0,19) + '.pdf';
+
+      // Upload to Supabase Storage
+      fetch(SUPA_URL+'/storage/v1/object/qc-release-pdfs/' + encodeURIComponent(fname), {
+        method:'POST',
+        headers: Object.assign({'Content-Type':'application/pdf','x-upsert':'true'}, H()),
+        body: blob
+      }).then(function(r){
+        if(!r.ok) throw new Error('Storage HTTP '+r.status);
+        var publicUrl = SUPA_URL + '/storage/v1/object/public/qc-release-pdfs/' + encodeURIComponent(fname);
+        resolve(publicUrl);
+      }).catch(function(e){
+        console.error('PDF upload failed', e);
+        resolve(null);   // continue without PDF rather than fail the whole save
+      });
+    } catch(e){
+      console.error('PDF generation failed', e);
+      resolve(null);
+    }
+  });
+}
+
+// ── Queue by Line render ──────────────────────────────────────────────
+function renderQueueByLine(){
+  var el = document.getElementById('queue-by-line');
+  if(!el) return;
+  var q = getQueueBatches();
+  if(!q.length){ el.innerHTML = '<div class="empty" style="padding:14px;font-size:11px">No batches in queue</div>'; return; }
+  var byLine = {};
+  q.forEach(function(b){
+    if(!byLine[b.line]) byLine[b.line] = {count:0, oldest:0, lbs:0};
+    byLine[b.line].count++;
+    byLine[b.line].lbs += (b.lbs || 0);
+    var age = ageHours(b.batch_date || b.date);
+    if(age > byLine[b.line].oldest) byLine[b.line].oldest = age;
+  });
+  el.innerHTML = Object.keys(byLine).sort(function(a,b){return a-b;}).map(function(line){
+    var L = byLine[line];
+    var ageColor = L.oldest > 24 ? 'var(--red)' : L.oldest > 8 ? 'var(--amb)' : 'var(--text)';
+    return '<div style="display:grid;grid-template-columns:80px 1fr 100px 120px;gap:8px;padding:6px 10px;border-bottom:1px solid var(--gray-l);align-items:center;font-size:11px">' +
+      '<div style="font-weight:700;color:var(--pri)">Line '+line+'</div>' +
+      '<div class="muted">'+L.count+' batches awaiting test</div>' +
+      '<div style="text-align:right">'+(L.lbs?numFmt(L.lbs)+' lbs':'—')+'</div>' +
+      '<div style="text-align:right;color:'+ageColor+';font-weight:700">oldest: '+Math.round(L.oldest)+'h</div>' +
+    '</div>';
+  }).join('');
+}
+
+// helper for renderQueueByLine
+function numFmt(n){ if(typeof N === 'function') return N(n); return Math.round(n).toLocaleString(); }
+
+// ── Will Miss strip ─────────────────────────────────────────────────
+// Batches that compound has flagged OVERDUE/CRITICAL — QC release will likely not happen in time
+function renderWillMiss(){
+  var card = document.getElementById('ql-willmiss-card');
+  var strip = document.getElementById('ql-willmiss-strip');
+  if(!card || !strip) return;
+  var all = getEffectiveBatches();
+  var willMiss = all.filter(function(b){
+    var cmpd = String(b.compound_status||'').toUpperCase();
+    return (cmpd.indexOf('OVERDUE')>=0 || cmpd.indexOf('CRITICAL')>=0) && b.qc_disposition !== 'RELEASED';
+  });
+  if(!willMiss.length){ card.style.display='none'; return; }
+  card.style.display = 'block';
+  strip.innerHTML = willMiss.slice(0,8).map(function(b){
+    var cmpd = b.compound_status || '';
+    var risk = cmpd.indexOf('OVERDUE')>=0 ? 'OVERDUE' : 'CRITICAL';
+    return '<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:6px;padding:8px">' +
+      '<div style="font-size:9px;color:var(--red);font-weight:700">Ln '+(b.line||'?')+' · '+(b.batch||'')+'</div>' +
+      '<div style="font-size:11px;font-weight:600;margin:2px 0">'+String(b.description||'').slice(0,42)+'</div>' +
+      '<div style="font-size:9px;color:var(--text3)">'+(b.item||'')+' · <span style="color:var(--red);font-weight:700">'+risk+'</span></div>' +
+      '<div style="font-size:9px;color:var(--text3);margin-top:2px">QC: '+(b.qc_disposition||'—')+' · Cmpd: '+(cmpd||'—')+'</div>' +
+    '</div>';
+  }).join('');
+}
+
+// ── Production by Line table (attachment 7 style) ────────────────────
+function renderProductionByLine(){
+  var el = document.getElementById('ql-by-line-table');
+  if(!el) return;
+  var all = getEffectiveBatches();
+  // Also pull live line status from Production Supervisor
+  var lineStatus = {};
+  try { var raw = localStorage.getItem('hoc_line_status'); if(raw){ lineStatus = (JSON.parse(raw).lines)||{}; } } catch(e){}
+
+  var byLine = {};
+  all.forEach(function(b){
+    if(!b.line) return;
+    if(!byLine[b.line]) byLine[b.line] = {total:0, open:0, running:0, done:0, qc_queue:0, qc_released:0, qc_blocked:0, will_miss:0};
+    var L = byLine[b.line];
+    L.total++;
+    var st = String(b.status||'').toUpperCase();
+    if(st === 'NOT STARTED') L.open++;
+    else if(st === 'RUNNING') L.running++;
+    else if(st === 'COMPLETED') L.done++;
+    var cmpd = String(b.compound_status||'').toUpperCase();
+    var qc = b.qc_disposition || '';
+    if(qc === 'RELEASED') L.qc_released++;
+    if(qc === 'HOLD' || qc === 'REJECTED') L.qc_blocked++;
+    // In QC queue = compound-complete/filling but not yet released
+    if((cmpd.indexOf('COMPLETE')>=0 || cmpd.indexOf('FILLING')>=0) && qc !== 'RELEASED') L.qc_queue++;
+    if((cmpd.indexOf('OVERDUE')>=0 || cmpd.indexOf('CRITICAL')>=0) && qc !== 'RELEASED') L.will_miss++;
+  });
+
+  var rows = Object.keys(byLine).sort(function(a,b){return parseInt(a)-parseInt(b);}).map(function(line){
+    var L = byLine[line];
+    var ls = lineStatus[line] || {};
+    var sigColor = ls.signal && ls.signal.indexOf('CRITICAL')>=0 ? 'var(--red)' : ls.signal && ls.signal.indexOf('WATCH')>=0 ? 'var(--amber)' : ls.signal ? 'var(--green)' : 'var(--text3)';
+    var sigTxt = ls.signal ? '<div style="font-size:8px;color:'+sigColor+';font-weight:700">PS: '+ls.signal+'</div>' : '';
+    return '<tr>' +
+      '<td style="font-weight:700;color:var(--blue)">Line '+line+sigTxt+'</td>' +
+      '<td style="text-align:right">'+L.total+'</td>' +
+      '<td style="text-align:right;color:var(--text3)">'+L.open+'</td>' +
+      '<td style="text-align:right;color:'+(L.running?'var(--amber)':'var(--text3)')+';font-weight:'+(L.running?'700':'400')+'">'+L.running+'</td>' +
+      '<td style="text-align:right;color:'+(L.done?'var(--green)':'var(--text3)')+'">'+L.done+'</td>' +
+      '<td style="text-align:right;color:'+(L.qc_queue?'var(--purple)':'var(--text3)')+';font-weight:'+(L.qc_queue?'700':'400')+'">'+L.qc_queue+'</td>' +
+      '<td style="text-align:right;color:'+(L.qc_released?'var(--green)':'var(--text3)')+';font-weight:'+(L.qc_released?'700':'400')+'">'+L.qc_released+'</td>' +
+      '<td style="text-align:right;color:'+(L.qc_blocked?'var(--red)':'var(--text3)')+';font-weight:'+(L.qc_blocked?'700':'400')+'">'+L.qc_blocked+'</td>' +
+      '<td style="text-align:right;color:'+(L.will_miss?'var(--red)':'var(--text3)')+';font-weight:'+(L.will_miss?'700':'400')+'">'+L.will_miss+'</td>' +
+    '</tr>';
+  }).join('');
+
+  el.innerHTML = '<div class="tbl-wrap"><table>' +
+    '<thead><tr><th>Line</th><th style="text-align:right">Total</th><th style="text-align:right">Open</th><th style="text-align:right">Running</th><th style="text-align:right">Done</th><th style="text-align:right">QC Queue</th><th style="text-align:right">QC Released</th><th style="text-align:right">QC Blocked</th><th style="text-align:right">Will Miss</th></tr></thead>' +
+    '<tbody>'+(rows||'<tr><td colspan="9" style="text-align:center;padding:12px;color:var(--text3);font-size:11px">No batches</td></tr>')+'</tbody></table></div>';
+}
+
+// ── Master render ───────────────────────────────────────────────────
+function renderAll(){
+  indexLatestQC();
+  renderKPIs();
+  renderWillMiss();
+  renderProductionByLine();
+  renderQueueByLine();
+  renderQueue();
+  renderInTest();
+}
+
+// ── Init ────────────────────────────────────────────────────────────
+window.addEventListener('load', function(){
+  loadLocal();
+  loadSpecs();
+  loadTests();
+  loadPDFList();
+  renderAll();
+  pullScheduleFromSupabase(function(){ renderAll(); });
+  pullFloorFromSupabase(function(){ renderAll(); });
+  setInterval(function(){
+    pullScheduleFromSupabase(renderAll);
+    pullFloorFromSupabase(renderAll);
+    loadTests();
+  }, 30000);
+});
+
+window.addEventListener('storage', function(e){
+  if(e.key === UPLOAD_KEY){ loadLocal(); renderAll(); }
+  if(e.key === FLOOR_KEY ){ loadLocal(); renderAll(); }
+});
+</script>
+<script src="hoc_events.js"></script>
+</body>
+</html>

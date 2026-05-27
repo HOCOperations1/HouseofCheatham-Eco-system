@@ -1,0 +1,1219 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HOC Roll Call</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0B0E17;--bg2:#111520;--bg3:#161C28;--border:#1E293B;
+  --text:#DDE4F0;--text2:#8A97B4;--text3:#4A5570;
+  --green:#22C55E;--green-l:rgba(34,197,94,.09);
+  --blue:#3B82F6;--blue-l:rgba(59,130,246,.12);
+  --amber:#F59E0B;--amber-l:rgba(245,158,11,.12);
+  --red:#EF4444;--red-l:rgba(239,68,68,.12);
+  --teal:#10B981;--teal-l:rgba(16,185,129,.1);
+  --purple:#8B5CF6;--purple-l:rgba(139,92,246,.1);
+  --gray-l:#1E2535;
+  font-family:ui-monospace,"Cascadia Code","Fira Code",monospace;
+}
+body{background:var(--bg);color:var(--text);min-height:100vh;font-size:12px}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 14px;display:flex;align-items:stretch;position:sticky;top:0;z-index:100}
+.brand{display:flex;align-items:center;gap:8px;padding:9px 13px 9px 0;border-right:1px solid var(--border);margin-right:11px;flex-shrink:0}
+.logo{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.brand-name{font-weight:700;font-size:12px}.brand-sub{font-size:9px;color:var(--text3)}
+.nav{display:flex;flex:1;overflow-x:auto}
+.nb{padding:0 11px;background:none;border:none;border-bottom:2px solid transparent;color:var(--text2);cursor:pointer;font:inherit;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;transition:all .15s;white-space:nowrap}
+.nb:hover{color:var(--text)}
+.badges{display:flex;gap:5px;align-items:center;padding:7px 0;margin-left:auto;flex-shrink:0}
+.badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:.04em}
+.b-red{background:var(--red-l);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.b-amb{background:var(--amber-l);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.b-grn{background:var(--green-l);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.b-blu{background:var(--blue-l);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.b-teal{background:var(--teal-l);color:var(--teal);border:1px solid rgba(16,185,129,.3)}
+.b-gry{background:var(--gray-l);color:var(--text2);border:1px solid var(--border)}
+.b-pur{background:var(--purple-l);color:var(--purple);border:1px solid rgba(139,92,246,.3)}
+.content{padding:13px;max-width:1600px;margin:0 auto}
+.page{display:none}.page.active{display:block}
+.card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px}
+.card-title{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:6px;margin-bottom:10px}
+.kpi{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 11px}
+.kl{font-size:8px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.kv{font-size:22px;font-weight:700;line-height:1}.ks{font-size:9px;color:var(--text3);margin-top:3px}
+.tbl-wrap{border-radius:8px;border:1px solid var(--border);overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{padding:5px 8px;font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);text-align:left;border-bottom:1px solid var(--border);background:var(--bg2);white-space:nowrap}
+td{padding:5px 8px;border-bottom:1px solid rgba(30,41,59,.5);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.015)}
+.pill{display:inline-flex;font-size:8px;font-weight:700;padding:2px 6px;border-radius:3px;letter-spacing:.05em;white-space:nowrap}
+.p-done{background:rgba(148,163,184,.08);color:#475569;border:1px solid #334155}
+.p-run{background:var(--blue-l);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.p-ns{background:var(--gray-l);color:var(--text3);border:1px solid var(--border)}
+.p-od{background:var(--red-l);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.p-ar{background:var(--amber-l);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.p-ot{background:var(--green-l);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.p-qc{background:var(--teal-l);color:var(--teal);border:1px solid rgba(16,185,129,.3)}
+.p-rel{background:var(--purple-l);color:var(--purple);border:1px solid rgba(139,92,246,.3)}
+.p-hold{background:var(--amber-l);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.p-must{background:var(--red-l);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.p-should{background:var(--amber-l);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.p-sync{background:rgba(139,92,246,.12);color:var(--purple);border:1px solid rgba(139,92,246,.3)}
+.filter-row{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
+.fb{padding:4px 9px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font:inherit;font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;transition:all .15s}
+.fb:hover{color:var(--text)}
+.detail{border-radius:10px;padding:12px;margin:8px 0 10px;display:none}
+.detail.open{display:block}
+.dg{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:8px 0;font-size:11px}
+.df label{font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);display:block;margin-bottom:2px}
+.df span{color:var(--text);font-weight:600}
+.close-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:17px;line-height:1}
+.upd-panel{margin-top:10px;padding:10px 12px;border-radius:7px}
+.upd-section{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.upd-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:7px}
+.upd-label{font-size:10px;color:var(--text2);white-space:nowrap;min-width:130px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px}
+.fld{display:flex;flex-direction:column;gap:3px}
+.fld label{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3)}
+select,input[type=text],input[type=date],input[type=number],textarea{background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:5px;padding:4px 8px;font:inherit;font-size:10px}
+textarea{width:100%;resize:vertical;min-height:46px;margin-top:4px}
+.btn{padding:5px 14px;border-radius:5px;font:inherit;font-size:10px;font-weight:700;cursor:pointer;border:1px solid}
+.saved-msg{font-size:10px;display:none}.saved-msg.show{display:inline}
+.line-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(248px,1fr));gap:8px;margin-bottom:10px}
+.lc{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 13px;cursor:pointer;transition:border-color .15s}
+.lc:hover{border-color:#253047}
+.lc-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.lc-row{display:flex;justify-content:space-between;font-size:10px;color:var(--text2);padding:2px 0}
+.lc-row span{color:var(--text);font-weight:600}
+.pb{height:5px;background:var(--gray-l);border-radius:3px;margin:5px 0 3px;overflow:hidden}
+.pb-fill{height:100%;border-radius:3px}
+.alert-s{border-radius:10px;padding:10px 12px;margin-bottom:10px}
+.at{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
+.ag{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:6px}
+.ai{border-radius:6px;padding:7px 9px}
+.t3{color:var(--text3)}.done-row td{opacity:.4}.run-row td{background:rgba(59,130,246,.04)}
+.must-row td{background:rgba(239,68,68,.04)}.should-row td{background:rgba(245,158,11,.03)}
+.no-fit td{border-left:3px solid var(--red)!important}
+.num-red{color:var(--red);font-weight:700}.num-grn{color:var(--green);font-weight:700}
+.sync-bar{background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:8px;padding:7px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;font-size:10px;flex-wrap:wrap}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--purple);display:inline-block;margin-right:4px}
+.fc-lhdr{background:#16213a;padding:7px 12px;border-radius:6px;margin:10px 0 2px;display:flex;justify-content:space-between;align-items:center}
+.fc-lhdr-l{font-size:11px;font-weight:700;color:var(--text)}
+.fc-lhdr-r{font-size:9px;color:var(--text3);display:flex;gap:10px}
+.fc-bar{height:4px;border-radius:2px;margin:2px 0;overflow:hidden;background:rgba(255,255,255,.08)}
+.fc-bar-fill{height:100%;border-radius:2px}
+.exp-step{font-size:10px;color:var(--text2);margin-bottom:6px;padding:7px 10px;background:var(--bg2);border-radius:6px;border-left:3px solid}
+.logo{background:linear-gradient(135deg,#7C3AED,#4F46E5)}
+.nb.active{color:var(--purple);border-bottom-color:var(--purple)}
+.btn-p{background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.3);color:var(--purple);padding:4px 12px;border-radius:5px;font:inherit;font-size:10px;font-weight:700;cursor:pointer}
+.btn-p:hover{background:rgba(124,58,237,.2)}
+.emp-row{display:grid;grid-template-columns:36px 1fr 140px 130px auto;gap:8px;align-items:center;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);margin-bottom:4px;transition:background .1s}
+.emp-row:hover{background:var(--bg3)}
+.emp-id{font-size:9px;color:var(--text3);font-weight:700}
+.emp-name{font-size:11px;font-weight:600}
+.emp-subdept{font-size:9px;color:var(--text3)}
+.pts-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;text-align:center;min-width:40px}
+.pts-0{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.25)}
+.pts-low{background:rgba(245,158,11,.1);color:var(--amber);border:1px solid rgba(245,158,11,.25)}
+.pts-high{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.25)}
+.pts-term{background:rgba(239,68,68,.2);color:var(--red);border:1px solid var(--red);animation:pulse-red 2s infinite}
+@keyframes pulse-red{0%,100%{opacity:1}50%{opacity:.6}}
+.flag-badge{font-size:8px;padding:2px 6px;border-radius:8px;font-weight:700}
+.flag-verbal{background:rgba(245,158,11,.15);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.flag-written{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.flag-suspend{background:rgba(239,68,68,.2);color:var(--red);border:1px solid var(--red)}
+.flag-term{background:var(--red);color:#fff}
+.section-hdr{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);padding:8px 10px 4px;display:flex;align-items:center;gap:8px}
+.section-hdr::after{content:'';flex:1;height:1px;background:var(--border)}
+.line-card{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:6px}
+.lc-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.lc-title{font-size:11px;font-weight:700}
+.lc-badge{font-size:9px;padding:2px 8px;border-radius:10px}
+.hc-bar{height:8px;background:var(--gray-l);border-radius:4px;overflow:hidden;margin:4px 0}
+.hc-fill{height:100%;border-radius:4px;transition:width .3s}
+.assign-row{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border)}
+.assign-row:last-child{border:none}
+.assign-name{font-size:10px;flex:1}
+.assign-line{font-size:9px;color:var(--text3);min-width:80px}
+.note-input{width:100%;font:inherit;font-size:9px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:3px 6px;resize:none}
+.status-select{font:inherit;font-size:9px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:2px 4px}
+.shift-tab{padding:5px 14px;border-radius:6px;font:inherit;font-size:10px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2);margin-right:4px}
+.shift-tab.active{background:rgba(124,58,237,.15);border-color:rgba(124,58,237,.4);color:var(--purple)}
+.summary-kpi{text-align:center;padding:10px;background:var(--bg3);border-radius:8px;border:1px solid var(--border)}
+.kpi-big{font-size:24px;font-weight:700;line-height:1}
+.quick-count{display:flex;align-items:center;justify-content:space-between;padding:5px 10px;border-radius:6px;margin-bottom:3px;font-size:10px}
+
+/* ── Auth overlay ────────────────────────────────────────────── */
+#auth-overlay {
+  position:fixed;inset:0;z-index:99999;
+  background:#0B0E17;
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;
+}
+.auth-box {
+  background:#111520;border:1px solid #1E293B;border-radius:16px;
+  padding:40px;width:340px;text-align:center;
+}
+.auth-logo {
+  width:56px;height:56px;border-radius:14px;margin:0 auto 16px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;font-weight:700;color:#fff;
+}
+.auth-title {font-size:16px;font-weight:700;color:#DDE4F0;margin-bottom:4px}
+.auth-sub  {font-size:11px;color:#4A5570;margin-bottom:24px}
+.auth-label{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#4A5570;text-align:left;margin-bottom:6px}
+.auth-pin  {
+  width:100%;font-family:ui-monospace,monospace;font-size:22px;font-weight:700;
+  text-align:center;letter-spacing:.3em;padding:12px;
+  background:#161C28;border:1px solid #1E293B;border-radius:8px;
+  color:#DDE4F0;outline:none;margin-bottom:12px;
+  -webkit-text-security:disc;
+}
+.auth-pin:focus{border-color:var(--accent,#8B5CF6)}
+.auth-btn  {
+  width:100%;padding:12px;border-radius:8px;font-weight:700;font-size:12px;
+  cursor:pointer;border:none;
+  background:var(--accent,#8B5CF6);color:#fff;margin-bottom:10px;
+  transition:opacity .15s;
+}
+.auth-btn:hover{opacity:.85}
+.auth-btn:disabled{opacity:.4;cursor:not-allowed}
+.auth-err  {font-size:11px;color:#EF4444;min-height:18px;margin-bottom:8px}
+.auth-attempts{font-size:9px;color:#4A5570}
+.auth-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 10px;border-radius:20px;font-size:9px;font-weight:700;
+  background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.25);color:#8B5CF6;
+  margin-bottom:20px;
+}
+.auth-locked{font-size:13px;color:#EF4444;margin-bottom:8px}
+
+</style><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<script>var HOC_OES_VERSION="1778588401";</script>
+</head><body>
+
+
+<div id="auth-overlay" style="position:fixed;inset:0;z-index:99999;background:#0B0E17;display:flex;align-items:center;justify-content:center;flex-direction:column">
+  <div style="background:#111520;border:1px solid #1E293B;border-radius:16px;padding:40px;width:340px;text-align:center">
+    <div style="width:56px;height:56px;border-radius:14px;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;background:#7C3AED">RC</div>
+    <div style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:9px;font-weight:700;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.25);color:#8B5CF6;margin-bottom:20px;font-family:ui-monospace,monospace">🔒 Restricted Access</div>
+    <div style="font-size:16px;font-weight:700;color:#DDE4F0;margin-bottom:4px;font-family:ui-monospace,monospace">Employee Roll Call</div>
+    <div style="font-size:11px;color:#4A5570;margin-bottom:24px;font-family:ui-monospace,monospace">Supervisor access access required · Phase 1 PIN</div>
+    <div style="font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#4A5570;text-align:left;margin-bottom:6px;font-family:ui-monospace,monospace">Enter PIN</div>
+    <input type="password" id="auth-pin-input" maxlength="8" placeholder="••••" autocomplete="off"
+      style="width:100%;font-family:ui-monospace,monospace;font-size:22px;font-weight:700;text-align:center;letter-spacing:.3em;padding:12px;background:#161C28;border:1px solid #1E293B;border-radius:8px;color:#DDE4F0;outline:none;margin-bottom:12px;-webkit-text-security:disc">
+    <div id="auth-err" style="font-size:11px;color:#EF4444;min-height:18px;margin-bottom:8px;font-family:ui-monospace,monospace"></div>
+    <button id="auth-btn" onclick="__submitPIN()"
+      style="width:100%;padding:12px;border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;border:none;background:#7C3AED;color:#fff;margin-bottom:10px;font-family:ui-monospace,monospace">
+      Unlock Dashboard
+    </button>
+    <div style="font-size:9px;color:#4A5570;font-family:ui-monospace,monospace">3 attempts · 30s lockout · Audit logged</div>
+  </div>
+</div>
+<div class="topbar">
+  <div class="brand">
+    <a href="index.html" style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text2);text-decoration:none;font-size:9px;font-weight:700;flex-shrink:0;white-space:nowrap">← HOC-OES</a>
+    <div class="logo">RC</div>
+    <div>
+      <div class="brand-name">Employee Roll Call</div>
+      <div class="brand-sub">Shift attendance · Points tracking · HC vs standard · <span class="js-today-date">May 17, 2026</span></div>
+    </div>
+  </div>
+  <nav class="nav">
+    <button class="nb active" onclick="P('cmd')">Shift Summary</button>
+    <button class="nb" onclick="P('mfg')">Manufacturing</button>
+    <button class="nb" onclick="P('compound')">Compounding</button>
+    <button class="nb" onclick="P('quality')">Quality</button>
+    <button class="nb" onclick="P('contract')">Contract</button>
+    <button class="nb" onclick="P('hc')">HC vs Standard</button>
+    <button class="nb" onclick="P('points')">Points & Flags</button>
+  </nav>
+  <div class="badges" id="badges"></div>
+</div>
+
+<!-- SHIFT SUMMARY PAGE -->
+<div class="page active" id="page-cmd"><div class="content">
+  <div class="sync-bar" id="sync-bar"></div>
+  <div id="alert-area"></div>
+
+  <!-- Shift selector -->
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+    <div style="font-size:10px;font-weight:700;color:var(--text3)">CURRENT SHIFT:</div>
+    <button class="shift-tab active" id="st-day"  onclick="setShift('Day')">Day Shift</button>
+    <button class="shift-tab" id="st-aft"  onclick="setShift('Afternoon')">Afternoon Shift</button>
+    <button class="shift-tab" id="st-night" onclick="setShift('Night')">Night Shift</button>
+    <div style="margin-left:auto;font-size:9px;color:var(--text3)" id="shift-date-display"></div>
+  </div>
+
+  <!-- KPI row -->
+  <div class="kpi-grid" id="cmd-kpis"></div>
+
+  <!-- Quick counts -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+    <div class="card">
+      <div class="card-title">Today — Attendance by Department</div>
+      <div id="dept-summary"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Points Consequence Flags — Current Week</div>
+      <div id="flags-summary"></div>
+    </div>
+  </div>
+
+  <!-- Absent / at-risk today -->
+  <div class="card">
+    <div class="card-title">Not Present Today
+      <span class="t3" style="font-size:9px;font-weight:400;letter-spacing:0" id="absent-count"></span>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>ID</th><th>Name</th><th>Dept</th><th>Status</th><th>Week Pts</th><th>Flag</th><th>Notes</th></tr></thead>
+      <tbody id="absent-tbody"></tbody>
+    </table></div>
+  </div>
+</div></div>
+
+<!-- MANUFACTURING PAGE -->
+<div class="page" id="page-mfg"><div class="content">
+  <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+    <button class="shift-tab active" id="mfg-a" onclick="setMfgView('A shift')">A Shift (Day)</button>
+    <button class="shift-tab" id="mfg-b" onclick="setMfgView('B shift')">B Shift (Afternoon)</button>
+    <button class="shift-tab" id="mfg-2nd" onclick="setMfgView('2nd shift')">2nd Shift (Night)</button>
+  </div>
+  <div class="card">
+    <div class="card-title">Manufacturing — Attendance
+      <button onclick="saveAllMfg()" style="float:right;margin-top:-2px" class="btn-p">⟳ Save All</button>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>ID</th><th>Name</th><th>Today Status</th><th>Line Assignment</th><th>Week Pts</th><th>Flag</th><th>Notes</th></tr></thead>
+      <tbody id="mfg-tbody"></tbody>
+    </table></div>
+  </div>
+</div></div>
+
+<!-- COMPOUNDING PAGE -->
+<div class="page" id="page-compound"><div class="content">
+  <div class="card">
+    <div class="card-title">Compounding — Attendance
+      <button onclick="saveDeptAttendance('Compounding')" style="float:right;margin-top:-2px" class="btn-p">⟳ Save</button>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>ID</th><th>Name</th><th>Shift</th><th>Today Status</th><th>Week Pts</th><th>Flag</th><th>Notes</th></tr></thead>
+      <tbody id="compound-tbody"></tbody>
+    </table></div>
+  </div>
+</div></div>
+
+<!-- QUALITY PAGE -->
+<div class="page" id="page-quality"><div class="content">
+  <div class="card">
+    <div class="card-title">Quality — Attendance
+      <button onclick="saveDeptAttendance('Quality')" style="float:right;margin-top:-2px" class="btn-p">⟳ Save</button>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>ID</th><th>Name</th><th>Shift</th><th>Today Status</th><th>Week Pts</th><th>Flag</th><th>Notes</th></tr></thead>
+      <tbody id="quality-tbody"></tbody>
+    </table></div>
+  </div>
+</div></div>
+
+<!-- CONTRACT PAGE -->
+<div class="page" id="page-contract"><div class="content">
+  <div class="card">
+    <div class="card-title">Contract Employees — Attendance
+      <button onclick="saveDeptAttendance('Contract Employee')" style="float:right;margin-top:-2px" class="btn-p">⟳ Save</button>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>ID</th><th>Name</th><th>Shift</th><th>Today Status</th><th>Week Pts</th><th>Flag</th><th>Notes</th></tr></thead>
+      <tbody id="contract-tbody"></tbody>
+    </table></div>
+  </div>
+</div></div>
+
+<!-- HC vs STANDARD PAGE -->
+<div class="page" id="page-hc"><div class="content">
+  <p style="font-size:10px;color:var(--text2);margin-bottom:10px">
+    Headcount vs standard for each area based on today's roster.
+    Updates automatically when attendance is saved. Feeds Production Supervisor speed engine.
+  </p>
+  <div class="kpi-grid" id="hc-kpis"></div>
+  <div id="hc-line-grid"></div>
+</div></div>
+
+<!-- POINTS & FLAGS PAGE -->
+<div class="page" id="page-points"><div class="content">
+  <div class="kpi-grid" id="pts-kpis"></div>
+  <div class="card">
+    <div class="card-title">All Employees — Points Register
+      <button onclick="exportPoints()" style="float:right;margin-top:-2px;padding:3px 10px;background:var(--blue-l);border:1px solid rgba(59,130,246,.3);border-radius:5px;color:var(--blue);font:inherit;font-size:9px;font-weight:700;cursor:pointer">⬇ Export CSV</button>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>ID</th><th>Name</th><th>Dept</th><th>Week Pts</th><th>Total Pts</th><th>Flag</th><th>Action Required</th></tr></thead>
+      <tbody id="points-tbody"></tbody>
+    </table></div>
+  </div>
+</div></div>
+
+<script>
+// ── Supabase Real-time Sync Layer ────────────────────────────────────
+// Replaces localStorage hoc_sync_v1 with live Supabase database
+// All 19 tools share the same real-time data across all devices
+
+var SB_URL  = 'https://yemtpvrumqvbzrzpwnyy.supabase.co';
+var SB_ANON = 'sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl';
+
+// ── Core fetch helper ─────────────────────────────────────────────────
+function sbFetch(method, table, body, params) {
+  var url = SB_URL + '/rest/v1/' + table;
+  if (params) url += '?' + params;
+  var opts = {
+    method: method,
+    headers: {
+      'apikey': SB_ANON,
+      'Authorization': 'Bearer ' + SB_ANON,
+      'Content-Type': 'application/json',
+      'Prefer': method === 'POST' ? 'resolution=merge-duplicates,return=minimal' : 'return=minimal'
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  return fetch(url, opts).catch(function(e) {
+    console.warn('Supabase fetch failed, using localStorage fallback:', e.message);
+    return null;
+  });
+}
+
+// ── Sync bus: write to Supabase AND localStorage (fallback) ───────────
+function syncSet(batch, section, data) {
+  // Always write to localStorage first (instant, works offline)
+  try {
+    var local = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+    if (!local[batch]) local[batch] = {};
+    local[batch][section] = Object.assign(local[batch][section] || {}, data);
+    localStorage.setItem('hoc_sync_v1', JSON.stringify(local));
+  } catch(e) {}
+
+  // Then mirror full localStorage state to Supabase single-row heartbeat.
+  // hoc_sync_bus has schema { id=1, updated_at, payload jsonb } and is upserted
+  // by every device. Use Prefer: resolution=merge-duplicates so id=1 conflicts
+  // don't error — they update the existing row instead.
+  try {
+    var fullState = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+    sbFetch('POST', 'hoc_sync_bus', {
+      id: 1,
+      payload: fullState,
+      updated_at: new Date().toISOString()
+    }, null).then(function(r) {
+      if (r && !r.ok) console.warn('Supabase sync write failed:', r.status);
+    });
+  } catch(e) { console.warn('Sync write threw:', e); }
+}
+
+// ── Sync bus: read from Supabase, fallback to localStorage ────────────
+function syncRead() {
+  // Return localStorage immediately (no await needed for real-time tools)
+  try {
+    return JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+  } catch(e) { return {}; }
+}
+
+// ── Sync bus: read specific batch+section from Supabase ───────────────
+function syncGet(batch) {
+  // Sync from Supabase in background, return localStorage now
+  sbFetch('GET', 'hoc_sync_bus', null, 
+    'batch=eq.' + encodeURIComponent(batch) + '&select=section,data'
+  ).then(function(r) {
+    if (!r || !r.ok) return;
+    return r.json();
+  }).then(function(rows) {
+    if (!rows || !rows.length) return;
+    // Merge Supabase data into localStorage
+    try {
+      var local = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+      if (!local[batch]) local[batch] = {};
+      rows.forEach(function(row) {
+        local[batch][row.section] = Object.assign(
+          local[batch][row.section] || {}, row.data
+        );
+      });
+      localStorage.setItem('hoc_sync_v1', JSON.stringify(local));
+    } catch(e) {}
+  }).catch(function() {});
+  
+  // Return localStorage immediately
+  try {
+    var all = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+    return all[batch] || {};
+  } catch(e) { return {}; }
+}
+
+// ── Real-time subscription: listen for changes from OTHER devices ──────
+function initSupabaseRealtime() {
+  // Poll Supabase every 15 seconds for changes (WebSocket in Phase 3)
+  // This is the cross-device sync - catches updates from other users
+  // Cross-device sync — heartbeat pattern.
+  // hoc_sync_bus has ONE row (id=1) with a 'payload' jsonb column. All devices
+  // upsert to that row; all devices poll it. If updated_at moved forward and
+  // payload differs from what we last saw, merge it into localStorage.
+  var lastUpdatedAt = null;
+
+  setInterval(function() {
+    sbFetch('GET', 'hoc_sync_bus', null,
+      'id=eq.1&select=updated_at,payload'
+    ).then(function(r) {
+      if (!r || !r.ok) return;
+      return r.json();
+    }).then(function(rows) {
+      if (!rows || !rows.length) return;
+      var row = rows[0];
+      if (!row || !row.updated_at) return;
+      if (lastUpdatedAt && row.updated_at <= lastUpdatedAt) return;
+      lastUpdatedAt = row.updated_at;
+      var remote = row.payload;
+      if (!remote || typeof remote !== 'object') return;
+      try {
+        var local = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+        var hasChanges = false;
+        Object.keys(remote).forEach(function(batch) {
+          var sections = remote[batch];
+          if (typeof sections !== 'object' || !sections) return;
+          if (!local[batch]) local[batch] = {};
+          Object.keys(sections).forEach(function(section) {
+            local[batch][section] = Object.assign(
+              local[batch][section] || {}, sections[section] || {}
+            );
+            hasChanges = true;
+          });
+        });
+        if (hasChanges) {
+          localStorage.setItem('hoc_sync_v1', JSON.stringify(local));
+          try { renderAll(); } catch(e) {
+            try { renderBadges(); } catch(e2) {}
+          }
+        }
+      } catch(e) {}
+    }).catch(function() {});
+  }, 15000); // Check every 15 seconds
+}
+
+// ── Sync bus bar: show Supabase connection status ─────────────────────
+function renderSyncBar(el) {
+  if (!el) return;
+  var now = new Date().toLocaleTimeString('en-US', {hour:'numeric',minute:'2-digit',second:'2-digit'});
+  el.innerHTML = 
+    '<span style="color:var(--green);font-weight:700">● LIVE</span>' +
+    '<span style="color:var(--text3)">Supabase real-time sync active</span>' +
+    '<span style="color:var(--text3)">Last check: ' + now + '</span>' +
+    '<span style="color:var(--text3)">Cross-device sync: 15s</span>';
+}
+
+// Start real-time sync on load
+initSupabaseRealtime();
+
+
+
+const EMPLOYEES = [{"id":"470","name":"Rashida Abu Kassim","dept":"Manufacturing","subdept":"Manufacturing A shift","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"593","name":"Manal Aljibawi","dept":"Manufacturing","subdept":"Manufacturing A shift","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"414","name":"Kidus Ayele","dept":"Manufacturing","subdept":"Manufacturing A shift","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"651","name":"Sita Azizi","dept":"Manufacturing","subdept":"Manufacturing A shift","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"640","name":"Teon Capel","dept":"Manufacturing","subdept":"Manufacturing A shift","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"581","name":"Mentewb Eshtu","dept":"Manufacturing","subdept":"Manufacturing A shift","type":"Regular","week_pts":2,"daily":{"Mon":"Unscheduled Abs","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":2},{"id":"60","name":"Elisenia GaliciaLopez","dept":"Manufacturing","subdept":"Manufacturing A shift","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"590","name":"Jamuna Gurung","dept":"Manufacturing","subdept":"Manufacturing A shift","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"328","name":"Karna Gurung","dept":"Manufacturing","subdept":"Manufacturing A shift","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"PTO/Approved","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"616","name":"Jei Hamilton","dept":"Manufacturing","subdept":"Manufacturing A shift","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Scheduled Off","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"450","name":"Pah Htoo","dept":"Manufacturing","subdept":"Manufacturing A shift","type":"Regular","week_pts":2,"daily":{"Mon":"Unscheduled Abs","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":2},{"id":"335","name":"Kadiatu Kabba","dept":"Manufacturing","subdept":"Manufacturing A shift","type":"Regular","week_pts":4,"daily":{"Mon":"Unscheduled Abs","Tue":"Unscheduled Abs","Wed":"Present","Thu":"Present","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":4},{"id":"657","name":"Karelia Paguaga Iglesias","dept":"Manufacturing","subdept":"Manufacturing B shift","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"602","name":"Lambert Lwebula","dept":"Manufacturing","subdept":"Manufacturing A shift","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"607","name":"Kias McNease","dept":"Manufacturing","subdept":"Manufacturing A shift","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"402","name":"Birtukan Mehretu","dept":"Manufacturing","subdept":"Manufacturing A shift","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"652","name":"Freshta Mirzaie","dept":"Manufacturing","subdept":"Manufacturing A shift","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"605","name":"LaTonya Moss","dept":"Manufacturing","subdept":"Manufacturing B shift","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"696","name":"Myriam Ngandu","dept":"Manufacturing","subdept":"Manufacturing A shift","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"469","name":"Santi Rai","dept":"Manufacturing","subdept":"Manufacturing A shift","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"289","name":"Isaura Reducindo","dept":"Manufacturing","subdept":"Manufacturing A shift","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"596","name":"Miche Beby Saint Germain","dept":"Manufacturing","subdept":"Manufacturing A shift","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"396","name":"Khaliq Sakhi Dad","dept":"Manufacturing","subdept":"Manufacturing A shift","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"353","name":"Lidiya Stepanova","dept":"Manufacturing","subdept":"Manufacturing A shift","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Scheduled Off","Wed":"Present","Thu":"Present","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"484","name":"Yeshiwork Tasew","dept":"Manufacturing","subdept":"Manufacturing A shift","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"464","name":"Elsa Tesfamariam","dept":"Manufacturing","subdept":"Manufacturing A shift","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"179","name":"Rodney Barbary","dept":"Manufacturing","subdept":"Manufacturing B shift","type":"Regular","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Present","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"477","name":"Dinkenesh Bedasa","dept":"Manufacturing","subdept":"Manufacturing B shift","type":"Regular","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Scheduled Off","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"656","name":"Jaqueline Blandon Paguaga","dept":"Manufacturing","subdept":"Manufacturing B shift","type":"Regular","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Present","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"329","name":"Phal Chap","dept":"Manufacturing","subdept":"Manufacturing B shift","type":"Regular","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Scheduled Off","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"476","name":"Biz  Dansou","dept":"Manufacturing","subdept":"Manufacturing B shift","type":"Regular","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Scheduled Off","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"376","name":"Selina Dansou","dept":"Manufacturing","subdept":"Manufacturing B shift","type":"Regular","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Scheduled Off","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"673","name":"Dom Etheridge","dept":"Manufacturing","subdept":"Manufacturing B shift","type":"Regular","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Present","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"672","name":"Shay George","dept":"Manufacturing","subdept":"Manufacturing B shift","type":"Regular","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Present","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"688","name":"Zamaiya Harrell","dept":"Manufacturing","subdept":"Manufacturing B shift","type":"Regular","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Present","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"618","name":"Juan Luciano","dept":"Manufacturing","subdept":"Manufacturing B shift","type":"Regular","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Present","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"702","name":"Emmanuel Martin","dept":"Manufacturing","subdept":"Manufacturing B shift","type":"Regular","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Scheduled Off","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"454","name":"Aaida Mohamed","dept":"Manufacturing","subdept":"Manufacturing B shift","type":"Regular","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Present","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"281","name":"Husniya Mohamed","dept":"Manufacturing","subdept":"Manufacturing B shift","type":"Regular","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Scheduled Off","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"375","name":"Denise Murekatete","dept":"Manufacturing","subdept":"Manufacturing B shift","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"691","name":"Sothy Pang","dept":"Manufacturing","subdept":"Manufacturing B shift","type":"Regular","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Scheduled Off","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"654","name":"Carlos Pinto","dept":"Manufacturing","subdept":"Manufacturing B shift","type":"Regular","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Present","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"595","name":"Bhim Rai","dept":"Manufacturing","subdept":"Manufacturing B shift","type":"Regular","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Scheduled Off","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"697","name":"PATRICK SMITH","dept":"Manufacturing","subdept":"Manufacturing B shift","type":"Regular","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Present","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"598","name":"Chunku Siwa","dept":"Manufacturing","subdept":"Manufacturing B shift","type":"Regular","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Present","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"436","name":"Mike Stuart","dept":"Manufacturing","subdept":"Manufacturing B shift","type":"Regular","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Present","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"277","name":"Courtney Wilhite","dept":"Manufacturing","subdept":"Manufacturing B shift","type":"Regular","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Present","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"695","name":"Tasharah Wright","dept":"Manufacturing","subdept":"Manufacturing B shift","type":"Regular","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Scheduled Off","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"600","name":"Angela Slaugther","dept":"Manufacturing","subdept":"Manufacturing 2nd shift","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Scheduled Off","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"","name":"Diluzeyi, Blaise","dept":"Contract Employee","subdept":"Manufacturing A shift","type":"Contract","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Scheduled Off","Wed":"Scheduled Off","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"","name":"Hamid, Nemat","dept":"Contract Employee","subdept":"Manufacturing A shift","type":"Contract","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Scheduled Off","Wed":"Scheduled Off","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"","name":"Masango, Rene","dept":"Contract Employee","subdept":"Manufacturing A shift","type":"Contract","week_pts":2,"daily":{"Mon":"Scheduled Off","Tue":"Scheduled Off","Wed":"Scheduled Off","Thu":"Scheduled Off","Fri":"Unscheduled Abs","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":2},{"id":"","name":"Muhindani, Samuel","dept":"Contract Employee","subdept":"Manufacturing A shift","type":"Contract","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Scheduled Off","Wed":"Scheduled Off","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"","name":"Mvumbi, Vangu","dept":"Contract Employee","subdept":"Manufacturing A shift","type":"Contract","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Scheduled Off","Wed":"Scheduled Off","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"","name":"Ngoyi, Sara","dept":"Contract Employee","subdept":"Manufacturing A shift","type":"Contract","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Scheduled Off","Wed":"Scheduled Off","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"","name":"Nunda, Sajali","dept":"Contract Employee","subdept":"Manufacturing A shift","type":"Contract","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Scheduled Off","Wed":"Scheduled Off","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"","name":"Gaju, Michelle","dept":"Contract Employee","subdept":"Manufacturing A shift","type":"Contract","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Scheduled Off","Wed":"Scheduled Off","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"","name":"Nang, Men","dept":"Contract Employee","subdept":"Manufacturing A shift","type":"Contract","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Scheduled Off","Wed":"Scheduled Off","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"","name":"Mukuba, Emmanuel","dept":"Contract Employee","subdept":"Manufacturing A shift","type":"Contract","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Scheduled Off","Wed":"Scheduled Off","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"","name":"Figueroa, Alexis","dept":"Contract Employee","subdept":"Manufacturing B shift","type":"Contract","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Scheduled Off","Wed":"Scheduled Off","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"","name":"Kemba, Monica","dept":"Contract Employee","subdept":"Manufacturing B shift","type":"Contract","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Scheduled Off","Wed":"Scheduled Off","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"","name":"Seddiqi, Roostam","dept":"Contract Employee","subdept":"Manufacturing B shift","type":"Contract","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Scheduled Off","Wed":"Scheduled Off","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"","name":"Bouh, Saada","dept":"Contract Employee","subdept":"Manufacturing 2nd shift","type":"Contract","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Scheduled Off","Wed":"Scheduled Off","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"525","name":"Abebe Assefa","dept":"Quality","subdept":"Quality Assurance","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"389","name":"Alajaha Bennett","dept":"Quality","subdept":"Quality Assurance","type":"Regular","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Scheduled Off","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"622","name":"Michael Byrd","dept":"Quality","subdept":"Quality Assurance","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"PTO/Approved","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"approve to leave at 1pm with PTO approve  by QA asst manager QG","cumulative_pts":0},{"id":"218","name":"Quneshial Givens","dept":"Quality","subdept":"Quality Assurance","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"PTO/Approved","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"569","name":"Nia Harrell","dept":"Quality","subdept":"Quality Assurance","type":"Regular","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Scheduled Off","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"278","name":"Makia Lindsey","dept":"Quality","subdept":"Quality Assurance","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"PTO/Approved","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"PTO approve leave early / off tomorrow","cumulative_pts":0},{"id":"455","name":"Greg Martin","dept":"Quality","subdept":"Quality Assurance","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Scheduled Off","Fri":"PTO/Approved","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"653","name":"Asia Thomaston","dept":"Quality","subdept":"Quality Assurance","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Scheduled Off","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"576","name":"Makebbah etheridge","dept":"Quality","subdept":"Quality Assurance","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"Physical therapy @ 2:30 pm /FMLA per HR","cumulative_pts":0},{"id":"700","name":"Senaa Labennett","dept":"Quality","subdept":"Quality Assurance","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"694","name":"Zaynah Powell","dept":"Quality","subdept":"Quality 2nd shift","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"586","name":"Eli Coley","dept":"Compounding","subdept":"Compounding","type":"Regular","week_pts":1.0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Tardy","Thu":"Tardy","Fri":"Present","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":1.0},{"id":"703","name":"DEVIN DENNIS","dept":"Compounding","subdept":"Compounding","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Present","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"423","name":"J.vernon Gray","dept":"Compounding","subdept":"Compounding","type":"Regular","week_pts":0.5,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Tardy","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0.5},{"id":"25","name":"Paul Manuel","dept":"Compounding","subdept":"Compounding","type":"Regular","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Scheduled Off","Wed":"Scheduled Off","Thu":"Scheduled Off","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"553","name":"Rodregius Nowell","dept":"Compounding","subdept":"Compounding","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Present","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"554","name":"Robert Peoples","dept":"Compounding","subdept":"Compounding","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Present","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"363","name":"Omega Thompson","dept":"Compounding","subdept":"Compounding","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Present","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"420","name":"Leroy Fountain","dept":"Compounding","subdept":"Compounding 2nd shift","type":"Regular","week_pts":0.5,"daily":{"Mon":"Tardy","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0.5},{"id":"625","name":"Emmanuel Gayton","dept":"Compounding","subdept":"Compounding 2nd shift","type":"Regular","week_pts":1.0,"daily":{"Mon":"Present","Tue":"Tardy","Wed":"Present","Thu":"Tardy","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":1.0},{"id":"547","name":"Kashindi Kasa","dept":"Compounding","subdept":"Compounding 2nd shift","type":"Regular","week_pts":0,"daily":{"Mon":"Present","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"","cumulative_pts":0},{"id":"562","name":"Corey Mcburrow","dept":"Compounding","subdept":"Compounding 2nd shift","type":"Regular","week_pts":0,"daily":{"Mon":"Scheduled Off","Tue":"Present","Wed":"Present","Thu":"Present","Fri":"Scheduled Off","Sat":"Scheduled Off","Sun":"Scheduled Off"},"notes":"Notify he was going to be late.","cumulative_pts":0}];
+const LINES     = [{"line":1,"pattern":"Mon-Thu","avail_days":13.0,"avail_hrs":119.2,"avail_min":7150,"rem_batches":13,"running":1,"overdue":0,"rem_min":5138},{"line":2,"pattern":"Mon-Sat","avail_days":21.0,"avail_hrs":192.5,"avail_min":11550,"rem_batches":16,"running":1,"overdue":4,"rem_min":6722},{"line":3,"pattern":"Mon-Sat","avail_days":21.0,"avail_hrs":192.5,"avail_min":11550,"rem_batches":32,"running":1,"overdue":0,"rem_min":9872},{"line":4,"pattern":"Mon-Sat","avail_days":21.0,"avail_hrs":192.5,"avail_min":11550,"rem_batches":26,"running":1,"overdue":0,"rem_min":6925},{"line":5,"pattern":"Wed-Sat","avail_days":16.0,"avail_hrs":146.7,"avail_min":8800,"rem_batches":7,"running":1,"overdue":1,"rem_min":2966},{"line":6,"pattern":"Mon-Thu","avail_days":13.0,"avail_hrs":119.2,"avail_min":7150,"rem_batches":3,"running":1,"overdue":0,"rem_min":782},{"line":7,"pattern":"As Needed","avail_days":0.0,"avail_hrs":0.0,"avail_min":0,"rem_batches":0,"running":0,"overdue":0,"rem_min":0},{"line":8,"pattern":"Wed-Sat","avail_days":16.0,"avail_hrs":146.7,"avail_min":8800,"rem_batches":13,"running":1,"overdue":6,"rem_min":4761},{"line":10,"pattern":"Wed-Sat","avail_days":16.0,"avail_hrs":146.7,"avail_min":8800,"rem_batches":4,"running":1,"overdue":1,"rem_min":6577},{"line":11,"pattern":"Mon-Sat","avail_days":21.0,"avail_hrs":192.5,"avail_min":11550,"rem_batches":10,"running":1,"overdue":1,"rem_min":10286},{"line":14,"pattern":"Mon-Sat","avail_days":21.0,"avail_hrs":192.5,"avail_min":11550,"rem_batches":5,"running":1,"overdue":1,"rem_min":2353},{"line":15,"pattern":"Wed-Sat","avail_days":16.0,"avail_hrs":146.7,"avail_min":8800,"rem_batches":3,"running":1,"overdue":2,"rem_min":1845},{"line":16,"pattern":"As Needed","avail_days":0.0,"avail_hrs":0.0,"avail_min":0,"rem_batches":2,"running":0,"overdue":0,"rem_min":564}];
+const RUNNING   = [{"batch":"MAIN063357","date":"2026-05-07","line":1,"item":"1-698-12-0623","desc":"AJ Knot On My Watch Detangler, 12oz, 6ea (2x3) Bundle","origqty":3992,"actqty":0,"minutes":564,"casepk":6,"planea":23952,"actualea":0,"status":"RUNNING","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-03","shortage":-5201,"std_hc":6,"std_speed":50,"rem_min":282,"pct_comp":50.0,"plan_labor":28.2},{"batch":"MAIN063203","date":"2026-05-05","line":2,"item":"1-634-12-0623","desc":"AJ CLL Hold Plz! Styling Gel, 12oz, 6ea (2x3)","origqty":2289,"actqty":1620,"minutes":425,"casepk":6,"planea":13734,"actualea":9720,"status":"RUNNING","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-01","shortage":0,"std_hc":8,"std_speed":38,"rem_min":212,"pct_comp":50.0,"plan_labor":28.33},{"batch":"MAIN063277","date":"2026-05-07","line":3,"item":"1-696-15-1200","desc":"AJ Curl La La Custard, 15oz, 12ea","origqty":978,"actqty":924,"minutes":276,"casepk":12,"planea":11736,"actualea":11088,"status":"RUNNING","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-03","shortage":-27046,"std_hc":5,"std_speed":45,"rem_min":138,"pct_comp":50.0,"plan_labor":11.5},{"batch":"MAIN063489","date":"2026-05-08","line":4,"item":"1-2124-05-1243","desc":"ORI Aloe & Avocado Conditioning Hair Food, 5.25oz, 12ea (4x3","origqty":1349,"actqty":416,"minutes":443,"casepk":12,"planea":16188,"actualea":4992,"status":"RUNNING","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-04","shortage":0,"std_hc":6,"std_speed":45,"rem_min":221,"pct_comp":50.0,"plan_labor":22.15},{"batch":"MAIN063370","date":"2026-05-06","line":5,"item":"1-118-01-1243","desc":"AB No-Lye Relaxer Kit Super, 1, 12ea (4x3) Bundle","origqty":1800,"actqty":540,"minutes":438,"casepk":12,"planea":21600,"actualea":6480,"status":"RUNNING","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-02","shortage":-11577,"std_hc":10,"std_speed":62,"rem_min":219,"pct_comp":50.0,"plan_labor":36.5},{"batch":"MAIN063392","date":"2026-05-08","line":6,"item":"2-933-02-00","desc":"Adult Act Reg, 1.6oz, bulk","origqty":32640,"actqty":18800,"minutes":349,"casepk":1,"planea":32640,"actualea":18800,"status":"RUNNING","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-04","shortage":0,"std_hc":2,"std_speed":80,"rem_min":174,"pct_comp":50.0,"plan_labor":5.82},{"batch":"MAIN063406","date":"2026-04-24","line":8,"item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","origqty":17160,"actqty":3743,"minutes":367,"casepk":1,"planea":17160,"actualea":3743,"status":"RUNNING","cmpd":"","risk":"","cmpddue":"","shortage":0,"std_hc":3,"std_speed":55,"rem_min":183,"pct_comp":50.0,"plan_labor":9.17},{"batch":"MAIN063437","date":"2026-05-06","line":10,"item":"2-3191-01-402","desc":"dual packet, Hair Mayo1.5/Olive Oil Cream.5, bulk","origqty":150000,"actqty":20000,"minutes":3922,"casepk":1,"planea":150000,"actualea":20000,"status":"RUNNING","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-02","shortage":0,"std_hc":2,"std_speed":80,"rem_min":1961,"pct_comp":50.0,"plan_labor":65.37},{"batch":"MAIN063468","date":"2026-05-06","line":11,"item":"1-698-24-0600","desc":"AJ Knot On My Watch Detangler, 24oz, 6ea","origqty":1032,"actqty":588,"minutes":331,"casepk":6,"planea":6192,"actualea":3528,"status":"RUNNING","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-02","shortage":-5201,"std_hc":8,"std_speed":12,"rem_min":165,"pct_comp":50.0,"plan_labor":22.07},{"batch":"MAINS63383","date":"2026-05-06","line":14,"item":"2-243-06-77","desc":"TMW Mens Pre-Text Control, 0.6oz(packet), bulk","origqty":20000,"actqty":7000,"minutes":523,"casepk":1,"planea":20000,"actualea":7000,"status":"RUNNING","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-02","shortage":0,"std_hc":2,"std_speed":35,"rem_min":261,"pct_comp":50.0,"plan_labor":8.72},{"batch":"MAINR63175","date":"2026-04-01","line":15,"item":"2-290-15-77","desc":"Olive Oil Neut Shamp, 1.5oz(packet), bulk","origqty":105000,"actqty":70000,"minutes":802,"casepk":1,"planea":105000,"actualea":70000,"status":"RUNNING","cmpd":"","risk":"","cmpddue":"","shortage":0,"std_hc":2,"std_speed":100,"rem_min":401,"pct_comp":50.0,"plan_labor":13.37}];
+
+
+// ═══════════════════════════════════════════════════════════════════
+// HOC SHARED SYNC BUS  —  all 3 tools read + write hoc_sync_v1
+// Schema: { batchId: { prod:{status,actqty,dt,name,notes,ts},
+//                      cmpd:{status,actual,tank,lbs,notes,updater,ts},
+//                      qc:{status,ph,visc,dens,color,odor,appear,release,hrs,tech,notes,ts} } }
+// ═══════════════════════════════════════════════════════════════════
+const SYNC_KEY = 'hoc_sync_v1';
+
+function syncRead() {
+  try { return JSON.parse(localStorage.getItem(SYNC_KEY) || '{}'); } catch(e) { return {}; }
+}
+function syncWrite(data) {
+  try { localStorage.setItem(SYNC_KEY, JSON.stringify(data)); } catch(e) {}
+}
+function syncGet(batchId) {
+  return syncRead()[batchId] || { prod:{}, cmpd:{}, qc:{} };
+}
+function syncSet(batchId, section, fields) {
+  const all = syncRead();
+  if (!all[batchId]) all[batchId] = { prod:{}, cmpd:{}, qc:{} };
+  all[batchId][section] = { ...all[batchId][section], ...fields, ts: new Date().toISOString() };
+  syncWrite(all);
+  return all[batchId];
+}
+function syncClear() { localStorage.removeItem(SYNC_KEY); }
+function syncCount() { return Object.keys(syncRead()).length; }
+function syncCountSection(sec) { return Object.values(syncRead()).filter(v=>v[sec]&&Object.keys(v[sec]).length>1).length; }
+
+// Get effective production status (sync overrides Excel)
+function getStatus(b) {
+  const s = syncGet(b.batch);
+  return (s.prod && s.prod.status) ? s.prod.status : b.status;
+}
+// Get effective compound status
+function getCmpd(batchId, fallback) {
+  const s = syncGet(batchId);
+  return (s.cmpd && s.cmpd.cmpd_status) ? s.cmpd.cmpd_status : (fallback||'');
+}
+// Get effective QC status
+function getQC(batchId) {
+  const s = syncGet(batchId);
+  return (s.qc && s.qc.qc_status) ? s.qc.qc_status : '';
+}
+
+
+const N  = n => typeof n==='number' ? n.toLocaleString() : (n||'—');
+function _excelToDate(serial){var n=Number(serial);if(isNaN(n)||n<1||n>200000)return null;return new Date(Math.round((n-25569)*86400*1000));}
+const fD = s => {if(!s)return'—';try{if(typeof s==='number'||(typeof s==='string'&&/^\d{4,6}(\.\d+)?$/.test(s.trim()))){var ed=_excelToDate(s);if(ed&&!isNaN(ed.getTime()))return ed.toLocaleDateString('en-US',{month:'numeric',day:'numeric'});}return new Date(s+'T12:00:00').toLocaleDateString('en-US',{month:'numeric',day:'numeric'});}catch{return s;}};
+const fDL= s => {if(!s)return'—';try{if(typeof s==='number'||(typeof s==='string'&&/^\d{4,6}(\.\d+)?$/.test(s.trim()))){var ed=_excelToDate(s);if(ed&&!isNaN(ed.getTime()))return ed.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});}return new Date(s+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});}catch{return s;}};
+
+function stBadge(b) {
+  const st=getStatus(b);
+  if(st==='COMPLETED') return '<span class="pill p-done">COMPLETED</span>';
+  if(st==='RUNNING')   return '<span class="pill p-run">RUNNING</span>';
+  if(st==='ON HOLD'||st==='SHORT RUN') return '<span class="pill p-hold">'+st+'</span>';
+  return '<span class="pill p-ns">NOT STARTED</span>';
+}
+function cmpdBadge(c) {
+  if(!c) return '<span class="t3">—</span>';
+  const s=c.replace('COMPOUND ','');
+  if(c.includes('OVERDUE')||c.includes('CRITICAL')) return '<span class="pill p-od">'+s+'</span>';
+  if(c.includes('AT RISK'))  return '<span class="pill p-ar">'+s+'</span>';
+  if(c.includes('ON TRACK')) return '<span class="pill p-ot">'+s+'</span>';
+  if(c.includes('FILLING')||c.includes('COMPLETE')) return '<span class="pill p-run">'+s+'</span>';
+  return '<span class="pill p-ns">'+s+'</span>';
+}
+function sigBadge(s) {
+  if(s==='⚠ CRITICAL') return '<span class="pill p-od">⚠ CRITICAL</span>';
+  if(s==='! WATCH')    return '<span class="pill p-ar">! WATCH</span>';
+  if(s==='LINE OFF')   return '<span class="pill p-ns">LINE OFF</span>';
+  return '<span class="pill p-ot">✓ MONITOR</span>';
+}
+function qcBadge(st) {
+  if(!st) return '<span class="t3">—</span>';
+  if(st==='QC RELEASED') return '<span class="pill p-rel">QC RELEASED</span>';
+  if(st==='IN PROCESS')  return '<span class="pill p-qc">IN PROCESS</span>';
+  if(st==='QC HOLD')     return '<span class="pill p-ar">QC HOLD</span>';
+  if(st==='APPROVED')    return '<span class="pill p-ot">APPROVED</span>';
+  if(st==='REJECTED')    return '<span class="pill p-od">REJECTED</span>';
+  return '<span class="pill p-ns">'+st+'</span>';
+}
+function priBadge(p) {
+  if(p==='MUST RUN')   return '<span class="pill p-must">MUST</span>';
+  if(p==='SHOULD RUN') return '<span class="pill p-should">SHOULD</span>';
+  return '<span class="pill p-ns">NEXT WK</span>';
+}
+function syncBadge(batchId) {
+  const s=syncRead()[batchId];
+  if(!s) return '';
+  const parts=[];
+  if(s.prod&&s.prod.status) parts.push(s.prod.status);
+  if(s.cmpd&&s.cmpd.cmpd_status) parts.push(s.cmpd.cmpd_status);
+  if(s.qc&&s.qc.qc_status) parts.push(s.qc.qc_status);
+  return parts.length ? '<span class="pill p-sync" style="font-size:7px">⚡ '+parts.join(' · ')+'</span>' : '';
+}
+
+
+
+function exportAllCSV() {
+  const all=syncRead();
+  if(!Object.keys(all).length){alert('No floor updates to export.');return;}
+  const hdrs=['Batch','Section','Status','ActQty','CmpdStatus','QCStatus','pH','Viscosity','Density','Tech','Notes','Timestamp'];
+  const rows=[];
+  Object.entries(all).forEach(([id,s])=>{
+    if(s.prod&&s.prod.status) rows.push([id,'PRODUCTION',s.prod.status,s.prod.actqty||'','','','','','',s.prod.name||'',s.prod.notes||'',s.prod.ts||'']);
+    if(s.cmpd&&s.cmpd.cmpd_status) rows.push([id,'COMPOUND','','' ,s.cmpd.cmpd_status,'','','','',s.cmpd.updater||'',s.cmpd.notes||'',s.cmpd.ts||'']);
+    if(s.qc&&s.qc.qc_status) rows.push([id,'QC','','','',s.qc.qc_status,s.qc.ph||'',s.qc.visc||'',s.qc.dens||'',s.qc.tech||'',s.qc.notes||'',s.qc.ts||'']);
+  });
+  const csv=[hdrs,...rows].map(r=>r.map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='hoc_floor_updates_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+function showPage(id, map) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.nb')[map[id]].classList.add('active');
+}
+
+function pct(v){return typeof v==='number'?(Math.round(v*1000)/10)+'%':'—';}
+
+var PM={cmd:0,mfg:1,compound:2,quality:3,contract:4,hc:5,points:6};
+function P(id){
+  showPage(id,PM);
+  if(id==='hc')     renderHC();
+  if(id==='points') renderPoints();
+  if(id==='mfg')    renderDeptTable('mfg');
+  if(id==='compound')renderDeptTable('compound');
+  if(id==='quality') renderDeptTable('quality');
+  if(id==='contract')renderDeptTable('contract');
+}
+
+var POINT_VALUES = {
+  'Present':0,'PTO/Approved':0,'Scheduled Off':0,
+  'Tardy':0.5,'Early Departure':0.5,'Missed Punch':1,
+  'Early Arrival':2,'Unscheduled Abs':2,'No Call/No Show':5
+};
+var THRESHOLDS = [[5,'Verbal Warning','var(--amber)'],[10,'Written Warning','var(--red)'],[12,'Suspension','var(--red)'],[13,'Termination','var(--red)']];
+var STATUS_LIST = ['Present','PTO/Approved','Scheduled Off','Tardy','Early Departure','Missed Punch','Early Arrival','Unscheduled Abs','No Call/No Show'];
+
+var RC_KEY = 'hoc_rc_v1';
+var currentShift = 'Day';
+var mfgViewShift = 'A shift';
+
+function getRCData(){try{return JSON.parse(localStorage.getItem(RC_KEY)||'{}');}catch(e){return{};}}
+function saveRCData(d){try{localStorage.setItem(RC_KEY,JSON.stringify(d));}catch(e){}}
+
+// Get today's attendance for an employee (from local storage or initial Excel data)
+function getTodayStatus(emp){
+  var d=getRCData();
+  var uid=emp.id+'_'+emp.name;
+  if(d[uid]&&d[uid].today_status)return d[uid].today_status;
+  // Fall back to Mon from Excel as today's initial value
+  return emp.daily&&emp.daily.Mon?emp.daily.Mon:'Present';
+}
+function getTotalPts(emp){
+  var d=getRCData();
+  var uid=emp.id+'_'+emp.name;
+  if(d[uid]&&d[uid].total_pts!==undefined)return d[uid].total_pts;
+  return emp.cumulative_pts||0;
+}
+function getAssignment(emp){
+  var d=getRCData();
+  var uid=emp.id+'_'+emp.name;
+  if(d[uid]&&d[uid].line_assignment)return d[uid].line_assignment;
+  return '';
+}
+function getNote(emp){
+  var d=getRCData();
+  var uid=emp.id+'_'+emp.name;
+  if(d[uid]&&d[uid].today_note)return d[uid].today_note;
+  return emp.notes||'';
+}
+
+function getFlag(pts){
+  if(pts>=13)return['Termination','flag-term'];
+  if(pts>=12)return['Suspension','flag-suspend'];
+  if(pts>=10)return['Written Warning','flag-written'];
+  if(pts>=5) return['Verbal Warning','flag-verbal'];
+  return['',''];
+}
+function ptsBadgeClass(pts){
+  if(pts>=10)return'pts-term';
+  if(pts>=5) return'pts-high';
+  if(pts>=2) return'pts-low';
+  return'pts-0';
+}
+
+function statusOpts(current){
+  return STATUS_LIST.map(function(s){
+    return '<option value="'+s+'"'+(s===current?' selected':'')+'>'+s+'</option>';
+  }).join('');
+}
+function lineOpts(current){
+  var opts='<option value="">— assign line —</option>';
+  opts+='<option value="Pre-Weigh"'+(current==='Pre-Weigh'?' selected':'')+'>Pre-Weigh</option>';
+  opts+='<option value="Compounding"'+(current==='Compounding'?' selected':'')+'>Compounding</option>';
+  opts+='<option value="QC Lab"'+(current==='QC Lab'?' selected':'')+'>QC Lab</option>';
+  LINES.forEach(function(l){
+    var v='Line '+l.line;
+    opts+='<option value="'+v+'"'+(current===v?' selected':'')+'>'+v+'</option>';
+  });
+  opts+='<option value="Warehouse"'+(current==='Warehouse'?' selected':'')+'>Warehouse</option>';
+  opts+='<option value="Maintenance"'+(current==='Maintenance'?' selected':'')+'>Maintenance</option>';
+  return opts;
+}
+
+// ── Shift Summary ────────────────────────────────────────────────────
+function setShift(s){
+  currentShift=s;
+  ['Day','Afternoon','Night'].forEach(function(sh){
+    var map={'Day':'st-day','Afternoon':'st-aft','Night':'st-night'};
+    var el=document.getElementById(map[sh]);
+    if(el)el.classList.toggle('active',sh===s);
+  });
+  renderAll();
+}
+
+function renderAll(){
+  renderSyncBar(document.getElementById('sync-bar'));
+  renderBadges();
+  renderCmdKPIs();
+  renderDeptSummary();
+  renderFlagsSummary();
+  renderAbsentTable();
+  pushRosterToSync();
+}
+
+function renderBadges(){
+  var present=EMPLOYEES.filter(function(e){return getTodayStatus(e)==='Present';}).length;
+  var absent =EMPLOYEES.filter(function(e){var s=getTodayStatus(e);return s==='Unscheduled Abs'||s==='No Call/No Show';}).length;
+  var flagged=EMPLOYEES.filter(function(e){return getTotalPts(e)>=5;}).length;
+  document.getElementById('badges').innerHTML=
+    (absent?'<span class="badge b-red">'+absent+' ABSENT</span>':'')+
+    (flagged?'<span class="badge b-amb">'+flagged+' FLAGGED</span>':'')+
+    '<span class="badge b-grn">'+present+' PRESENT</span>';
+}
+
+function renderCmdKPIs(){
+  var total=EMPLOYEES.length;
+  var present=EMPLOYEES.filter(function(e){return getTodayStatus(e)==='Present';}).length;
+  var pto=EMPLOYEES.filter(function(e){return getTodayStatus(e)==='PTO/Approved';}).length;
+  var absent=EMPLOYEES.filter(function(e){var s=getTodayStatus(e);return s==='Unscheduled Abs'||s==='No Call/No Show';}).length;
+  var tardy=EMPLOYEES.filter(function(e){return getTodayStatus(e)==='Tardy';}).length;
+  var flagged=EMPLOYEES.filter(function(e){return getTotalPts(e)>=5;}).length;
+  var att_rate=total>0?Math.round((present+pto)/total*100):0;
+
+  document.getElementById('cmd-kpis').innerHTML=[
+    {l:'Total Employees',v:total,s:'All departments',c:'var(--text)'},
+    {l:'Present Today',v:present,s:'On floor',c:'var(--green)'},
+    {l:'PTO / Approved',v:pto,s:'Pre-approved',c:'var(--blue)'},
+    {l:'Unscheduled Absent',v:absent,s:'No prior approval',c:absent?'var(--red)':'var(--green)'},
+    {l:'Tardy Today',v:tardy,s:'Clocked in late',c:tardy?'var(--amber)':'var(--green)'},
+    {l:'Attendance Rate',v:att_rate+'%',s:'Present+PTO / total',c:att_rate>=95?'var(--green)':att_rate>=85?'var(--amber)':'var(--red)'},
+    {l:'Points Flagged',v:flagged,s:'At 5+ pts',c:flagged?'var(--red)':'var(--green)'},
+    {l:'Current Shift',v:currentShift,s:'Active filter',c:'var(--purple)'},
+  ].map(function(k){
+    return '<div class="kpi"><div class="kl">'+k.l+'</div><div class="kv" style="color:'+k.c+'">'+k.v+'</div><div class="ks">'+k.s+'</div></div>';
+  }).join('');
+
+  var dateStr=document.getElementById('shift-date-display');
+  if(dateStr)dateStr.textContent=currentShift+' Shift — '+new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+}
+
+function renderDeptSummary(){
+  var depts=['Manufacturing','Compounding','Quality','Contract Employee'];
+  var deptLabels={'Manufacturing':'Manufacturing','Compounding':'Compounding','Quality':'Quality','Contract Employee':'Contract'};
+  var rows=depts.map(function(dept){
+    var emps=EMPLOYEES.filter(function(e){return e.dept===dept;});
+    var present=emps.filter(function(e){return getTodayStatus(e)==='Present';}).length;
+    var absent=emps.filter(function(e){var s=getTodayStatus(e);return s==='Unscheduled Abs'||s==='No Call/No Show';}).length;
+    var pto=emps.filter(function(e){return getTodayStatus(e)==='PTO/Approved';}).length;
+    var total=emps.length;
+    var rate=total>0?Math.round(present/total*100):0;
+    var c=rate>=90?'var(--green)':rate>=75?'var(--amber)':'var(--red)';
+    return '<div class="quick-count" style="background:var(--bg2);border-radius:6px;margin-bottom:4px">'+
+      '<span style="font-weight:700;min-width:110px">'+deptLabels[dept]+'</span>'+
+      '<span style="color:var(--green)">'+present+' present</span>'+
+      '<span style="color:var(--red)">'+absent+' absent</span>'+
+      '<span style="color:var(--blue)">'+pto+' PTO</span>'+
+      '<span style="color:'+c+';font-weight:700">'+rate+'%</span>'+
+    '</div>';
+  }).join('');
+  document.getElementById('dept-summary').innerHTML=rows;
+}
+
+function renderFlagsSummary(){
+  var thresholds=[[5,'Verbal Warning','var(--amber)'],[10,'Written Warning','var(--red)'],[12,'Suspension','var(--red)'],[13,'Termination','var(--red)']];
+  var el=document.getElementById('flags-summary');
+  var rows=thresholds.map(function(t){
+    var count=EMPLOYEES.filter(function(e){return getTotalPts(e)>=t[0];}).length;
+    return '<div class="quick-count" style="background:var(--bg2);border-radius:6px;margin-bottom:4px">'+
+      '<span>'+t[1]+'</span>'+
+      '<span style="font-size:9px;color:var(--text3)">≥'+t[0]+' pts</span>'+
+      '<span style="font-weight:700;color:'+(count?t[2]:'var(--green)')+'">'+count+' employees</span>'+
+    '</div>';
+  }).join('');
+  el.innerHTML=rows;
+}
+
+function renderAbsentTable(){
+  var not_present=EMPLOYEES.filter(function(e){
+    var s=getTodayStatus(e);
+    return s!=='Present'&&s!=='Scheduled Off';
+  }).sort(function(a,b){return getTotalPts(b)-getTotalPts(a);});
+  var cnt=document.getElementById('absent-count');
+  if(cnt)cnt.textContent='  —  '+not_present.length+' employees';
+  document.getElementById('absent-tbody').innerHTML=not_present.length?not_present.map(function(e){
+    var pts=getTotalPts(e);
+    var flag=getFlag(pts);
+    var status=getTodayStatus(e);
+    var sc=status==='Unscheduled Abs'||status==='No Call/No Show'?'var(--red)':status==='Tardy'?'var(--amber)':'var(--text2)';
+    return '<tr>'+
+      '<td style="font-size:9px;color:var(--text3)">'+e.id+'</td>'+
+      '<td style="font-weight:600">'+e.name+'</td>'+
+      '<td class="t3">'+e.subdept+'</td>'+
+      '<td><span style="font-size:10px;font-weight:600;color:'+sc+'">'+status+'</span></td>'+
+      '<td style="text-align:center"><span class="pts-badge '+ptsBadgeClass(pts)+'">'+pts+'</span></td>'+
+      '<td>'+(flag[0]?'<span class="flag-badge '+flag[1]+'">'+flag[0]+'</span>':'<span class="t3">—</span>')+'</td>'+
+      '<td style="font-size:9px;color:var(--text3);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+getNote(e)+'</td>'+
+    '</tr>';
+  }).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:12px">All employees present or scheduled off ✓</td></tr>';
+}
+
+// ── Dept attendance tables ────────────────────────────────────────────
+function setMfgView(shift){
+  mfgViewShift=shift;
+  ['A shift','B shift','2nd shift'].forEach(function(s){
+    var map={'A shift':'mfg-a','B shift':'mfg-b','2nd shift':'mfg-2nd'};
+    var el=document.getElementById(map[s]);
+    if(el)el.classList.toggle('active',s===shift);
+  });
+  renderDeptTable('mfg');
+}
+
+function renderDeptTable(page){
+  var dept_map={
+    'mfg':'Manufacturing','compound':'Compounding',
+    'quality':'Quality','contract':'Contract Employee'
+  };
+  var dept=dept_map[page];
+  var emps=EMPLOYEES.filter(function(e){return e.dept===dept;});
+  if(page==='mfg'){
+    emps=emps.filter(function(e){return e.subdept.toLowerCase().includes(mfgViewShift.toLowerCase());});
+  }
+  var tbody_id=page+'-tbody';
+  var el=document.getElementById(tbody_id);
+  if(!el)return;
+  el.innerHTML=emps.map(function(e){
+    var status=getTodayStatus(e);
+    var pts=getTotalPts(e);
+    var flag=getFlag(pts);
+    var assignment=getAssignment(e);
+    var note=getNote(e);
+    var uid=e.id+'_'+encodeURIComponent(e.name);
+    return '<tr id="row-'+uid+'">'+
+      '<td style="font-size:9px;color:var(--text3)">'+e.id+'</td>'+
+      '<td style="font-weight:600;font-size:11px">'+e.name+'</td>'+
+      (page==='mfg'?'':('<td class="t3">'+e.subdept+'</td>'))+
+      '<td><select class="status-select" id="sel-'+uid+'" onchange="updateStatus(\''+uid+'\',this.value)">'+statusOpts(status)+'</select></td>'+
+      (page==='mfg'?('<td><select class="status-select" id="line-'+uid+'" style="width:120px" onchange="updateAssignment(\''+uid+'\',this.value)">'+lineOpts(assignment)+'</select></td>'):'<td class="t3">'+e.subdept+'</td>')+
+      '<td style="text-align:center"><span class="pts-badge '+ptsBadgeClass(pts)+'" id="pts-'+uid+'">'+pts+'</span></td>'+
+      '<td>'+(flag[0]?'<span class="flag-badge '+flag[1]+'">'+flag[0]+'</span>':'<span class="t3">—</span>')+'</td>'+
+      '<td><input type="text" style="width:160px;font:inherit;font-size:9px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:2px 5px" placeholder="Note..." value="'+note.replace(/"/g,'\"')+'" id="note-'+uid+'" onchange="updateNote(\''+uid+'\',this.value)"></td>'+
+    '</tr>';
+  }).join('');
+}
+
+function updateStatus(uid,status){
+  var d=getRCData();
+  if(!d[uid])d[uid]={};
+  d[uid].today_status=status;
+  // Add today's points to total
+  var pts_today=POINT_VALUES[status]||0;
+  if(d[uid].total_pts===undefined){
+    // Find emp base pts
+    var decoded=decodeURIComponent(uid.substring(uid.indexOf('_')+1));
+    var emp=EMPLOYEES.find(function(e){return e.name===decoded;});
+    d[uid].total_pts=(emp?emp.cumulative_pts:0)+pts_today;
+  } else {
+    d[uid].today_pts=pts_today;
+  }
+  saveRCData(d);
+  renderAll();
+  pushRosterToSync();
+}
+function updateAssignment(uid,line){
+  var d=getRCData();if(!d[uid])d[uid]={};
+  d[uid].line_assignment=line;saveRCData(d);
+  pushRosterToSync();
+}
+function updateNote(uid,note){
+  var d=getRCData();if(!d[uid])d[uid]={};
+  d[uid].today_note=note;saveRCData(d);
+}
+
+function saveAllMfg(){
+  renderAll();
+  var saved=document.createElement('div');
+  saved.textContent='✓ Saved';saved.style.cssText='position:fixed;bottom:20px;right:20px;background:var(--green);color:#fff;padding:8px 16px;border-radius:8px;font-size:11px;font-weight:700;z-index:999';
+  document.body.appendChild(saved);setTimeout(function(){document.body.removeChild(saved);},2500);
+}
+function saveDeptAttendance(dept){saveAllMfg();}
+
+// ── HC vs Standard ────────────────────────────────────────────────────
+function renderHC(){
+  var d=getRCData();
+  // Count present employees by line assignment
+  var lineCounts={};
+  EMPLOYEES.forEach(function(e){
+    var uid=e.id+'_'+e.name;
+    var status=getTodayStatus(e);
+    if(status!=='Present')return;
+    var line=getAssignment(e);
+    if(!line)return;
+    if(!lineCounts[line])lineCounts[line]=0;
+    lineCounts[line]++;
+  });
+
+  // Line areas with std_hc from running batches
+  var lineHC={};
+  RUNNING.forEach(function(b){
+    var key='Line '+b.line;
+    if(!lineHC[key])lineHC[key]={std:b.std_hc||6,actual:0,batch:b.batch,desc:b.desc};
+    lineHC[key].std=Math.max(lineHC[key].std,b.std_hc||6);
+  });
+  // Add other areas
+  ['Pre-Weigh','Compounding','QC Lab','Warehouse','Maintenance'].forEach(function(a){
+    if(!lineHC[a])lineHC[a]={std:2,actual:0,batch:'',desc:''};
+  });
+
+  // Apply actual counts
+  Object.keys(lineCounts).forEach(function(line){
+    if(lineHC[line])lineHC[line].actual=lineCounts[line];
+  });
+
+  // KPIs
+  var total_areas=Object.keys(lineHC).length;
+  var at_std=Object.values(lineHC).filter(function(l){return l.actual>=l.std;}).length;
+  var below=Object.values(lineHC).filter(function(l){return l.actual<l.std&&l.actual>0;}).length;
+  var unstaffed=Object.values(lineHC).filter(function(l){return l.actual===0;}).length;
+
+  document.getElementById('hc-kpis').innerHTML=[
+    {l:'Areas Tracked',v:total_areas,s:'Lines + departments',c:'var(--text)'},
+    {l:'At/Above Standard',v:at_std,s:'Staffed to run',c:'var(--green)'},
+    {l:'Below Standard',v:below,s:'Speed will be reduced',c:below?'var(--amber)':'var(--green)'},
+    {l:'Unstaffed',v:unstaffed,s:'No one assigned',c:unstaffed?'var(--red)':'var(--green)'},
+  ].map(function(k){return '<div class="kpi"><div class="kl">'+k.l+'</div><div class="kv" style="color:'+k.c+'">'+k.v+'</div><div class="ks">'+k.s+'</div></div>';}).join('');
+
+  document.getElementById('hc-line-grid').innerHTML=Object.entries(lineHC).sort(function(a,b){
+    var aNum=parseInt(a[0].replace('Line ',''))||0;
+    var bNum=parseInt(b[0].replace('Line ',''))||0;
+    return aNum-bNum||a[0].localeCompare(b[0]);
+  }).map(function(entry){
+    var area=entry[0],info=entry[1];
+    var actual=info.actual,std=info.std;
+    var diff=actual-std;
+    var pct_fill=std>0?Math.min(actual/std*100,130):0;
+    var c=diff>=0?'var(--green)':diff===-1?'var(--amber)':'var(--red)';
+    var signal=diff>=2?'OVER MAX':diff===1?'+1 ABOVE STD':diff===0?'AT STANDARD':diff===-1?'1 BELOW STD':(Math.abs(diff)+' BELOW STD');
+    var adj_speed_note=diff>0?'Speed +'+(Math.round(Math.min(diff,2)/std*100))+'%':diff<0?'Speed -'+(Math.round(Math.abs(diff)/std*100))+'%':'At standard speed';
+    return '<div class="line-card">'+
+      '<div class="lc-hdr">'+
+        '<div>'+
+          '<div class="lc-title">'+area+'</div>'+
+          (info.batch?'<div style="font-size:9px;color:var(--text3)">Running: '+info.batch.slice(-6)+' — '+info.desc.slice(0,35)+'</div>':'<div style="font-size:9px;color:var(--text3)">No batch running</div>')+
+        '</div>'+
+        '<div style="text-align:right">'+
+          '<div style="font-size:20px;font-weight:700;color:'+c+'">'+actual+'/'+std+'</div>'+
+          '<div style="font-size:9px;color:'+c+'">'+signal+'</div>'+
+        '</div>'+
+      '</div>'+
+      '<div class="hc-bar"><div class="hc-fill" style="width:'+Math.min(pct_fill,100)+'%;background:'+c+'"></div></div>'+
+      '<div style="font-size:9px;color:var(--text3);margin-top:4px">'+adj_speed_note+'</div>'+
+    '</div>';
+  }).join('');
+}
+
+// ── Points Register ───────────────────────────────────────────────────
+function renderPoints(){
+  var all=EMPLOYEES.slice().sort(function(a,b){return getTotalPts(b)-getTotalPts(a);});
+  var at5=all.filter(function(e){return getTotalPts(e)>=5;}).length;
+  var at10=all.filter(function(e){return getTotalPts(e)>=10;}).length;
+  var at12=all.filter(function(e){return getTotalPts(e)>=12;}).length;
+  var at13=all.filter(function(e){return getTotalPts(e)>=13;}).length;
+
+  document.getElementById('pts-kpis').innerHTML=[
+    {l:'Total Employees',v:EMPLOYEES.length,s:'All depts',c:'var(--text)'},
+    {l:'Clean Record',v:EMPLOYEES.filter(function(e){return getTotalPts(e)<5;}).length,s:'Below 5 pts',c:'var(--green)'},
+    {l:'Verbal Warning',v:at5-at10,s:'5-9 pts',c:'var(--amber)'},
+    {l:'Written Warning',v:at10-at12,s:'10-11 pts',c:'var(--red)'},
+    {l:'Suspension',v:at12-at13,s:'12 pts',c:'var(--red)'},
+    {l:'Termination',v:at13,s:'13+ pts',c:'var(--red)'},
+  ].map(function(k){return '<div class="kpi"><div class="kl">'+k.l+'</div><div class="kv" style="color:'+k.c+'">'+k.v+'</div><div class="ks">'+k.s+'</div></div>';}).join('');
+
+  document.getElementById('points-tbody').innerHTML=all.map(function(e){
+    var pts=getTotalPts(e);
+    var flag=getFlag(pts);
+    var action=flag[0]?'Issue disciplinary action in Paylocity':'No action required';
+    return '<tr>'+
+      '<td style="font-size:9px;color:var(--text3)">'+e.id+'</td>'+
+      '<td style="font-weight:600">'+e.name+'</td>'+
+      '<td class="t3">'+e.subdept+'</td>'+
+      '<td style="text-align:center"><span class="pts-badge '+ptsBadgeClass(e.week_pts||0)+'">'+( e.week_pts||0)+'</span></td>'+
+      '<td style="text-align:center"><span class="pts-badge '+ptsBadgeClass(pts)+'">'+pts+'</span></td>'+
+      '<td>'+(flag[0]?'<span class="flag-badge '+flag[1]+'">'+flag[0]+'</span>':'<span class="t3">Clean</span>')+'</td>'+
+      '<td style="font-size:9px;color:'+(flag[0]?'var(--red)':'var(--text3)')+'">'+action+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+// ── Push roster to sync bus ───────────────────────────────────────────
+function pushRosterToSync(){
+  var all=syncRead();
+  // Build roster: {area: {std, actual, employees: [names]}}
+  var roster={};
+  var present_emps=[];
+  EMPLOYEES.forEach(function(e){
+    var status=getTodayStatus(e);
+    var line=getAssignment(e);
+    if(status==='Present'){
+      present_emps.push({name:e.name,id:e.id,dept:e.dept,subdept:e.subdept,line:line});
+      if(line){
+        if(!roster[line])roster[line]={std:0,actual:0,employees:[]};
+        roster[line].actual++;
+        roster[line].employees.push(e.name);
+      }
+    }
+  });
+  // Add std_hc from running batches
+  RUNNING.forEach(function(b){
+    var key='Line '+b.line;
+    if(roster[key])roster[key].std=b.std_hc||6;
+  });
+  // Write to hoc_sync_v1 under 'roster' key
+  try{
+    var d=JSON.parse(localStorage.getItem('hoc_sync_v1')||'{}');
+    d.__roster={
+      shift:currentShift,
+      ts:new Date().toISOString(),
+      present_count:present_emps.length,
+      total_count:EMPLOYEES.length,
+      by_area:roster,
+      present_employees:present_emps
+    };
+    localStorage.setItem('hoc_sync_v1',JSON.stringify(d));
+  }catch(e){}
+}
+
+function exportPoints(){
+  var hdrs=['ID','Name','Dept','Sub-Dept','Type','Week_Pts','Total_Pts','Flag','Today_Status','Assignment'];
+  var rows=EMPLOYEES.map(function(e){
+    var pts=getTotalPts(e);
+    var flag=getFlag(pts);
+    return[e.id,e.name,e.dept,e.subdept,e.type,e.week_pts||0,pts,flag[0],getTodayStatus(e),getAssignment(e)];
+  });
+  var csv=[hdrs,...rows].map(function(r){return r.map(function(v){return'"'+String(v||'').replace(/"/g,'""')+'"';}).join(',');}).join(String.fromCharCode(10));
+  var a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='roll_call_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+}
+
+// ── Auto-refresh ──────────────────────────────────────────────────────
+window.addEventListener('storage',function(e){if(e.key==='hoc_sync_v1'){try{renderAll();}catch(err){}}});
+setInterval(function(){try{renderAll();}catch(err){}},30000);
+
+// ── Init ──────────────────────────────────────────────────────────────
+renderAll();
+
+
+// ── Password Protection ──────────────────────────────────────────────
+var __AUTH_PIN    = '1956';
+var __AUTH_ROLE   = 'Supervisor';
+var __AUTH_KEY    = 'hoc_auth_rc';
+var __AUTH_LOG    = 'hoc_audit_log';
+var __attempts    = 0;
+var __lockUntil   = 0;
+
+function __writeAuditLog(event, detail) {
+  try {
+    var log = JSON.parse(localStorage.getItem(__AUTH_LOG) || '[]');
+    log.unshift({ts:new Date().toISOString(),tool:'RC',event:event,detail:detail,role:__AUTH_ROLE});
+    if(log.length > 500) log = log.slice(0,500);
+    localStorage.setItem(__AUTH_LOG, JSON.stringify(log));
+  } catch(e) {}
+}
+
+function __checkAuth() {
+  try {
+    if(sessionStorage.getItem(__AUTH_KEY) === 'granted') {
+      var ov = document.getElementById('auth-overlay');
+      if(ov) ov.style.display = 'none';
+      return;
+    }
+  } catch(e) {}
+  var ov = document.getElementById('auth-overlay');
+  if(ov) { ov.style.display = 'flex'; }
+  setTimeout(function() {
+    var inp = document.getElementById('auth-pin-input');
+    if(inp) inp.focus();
+  }, 50);
+}
+
+function __submitPIN() {
+  var now = Date.now();
+  if(now < __lockUntil) {
+    var secs = Math.ceil((__lockUntil - now) / 1000);
+    var err = document.getElementById('auth-err');
+    if(err) err.textContent = 'Locked. Wait ' + secs + 's.';
+    return;
+  }
+  var inp = document.getElementById('auth-pin-input');
+  var entered = inp ? inp.value.trim() : '';
+  if(!entered) return;
+  if(entered === __AUTH_PIN) {
+    __attempts = 0;
+    try { sessionStorage.setItem(__AUTH_KEY, 'granted'); } catch(e) {}
+    __writeAuditLog('ACCESS_GRANTED', 'PIN accepted');
+    var ov = document.getElementById('auth-overlay');
+    if(ov) ov.style.display = 'none';
+    if(inp) inp.value = '';
+  } else {
+    __attempts++;
+    __writeAuditLog('ACCESS_DENIED', 'Wrong PIN #' + __attempts);
+    if(__attempts >= 3) {
+      __lockUntil = Date.now() + 30000;
+      __attempts = 0;
+      var err = document.getElementById('auth-err');
+      if(err) err.textContent = 'Locked for 30 seconds.';
+      var btn = document.getElementById('auth-btn');
+      if(btn) btn.disabled = true;
+      setTimeout(function() {
+        var btn2 = document.getElementById('auth-btn');
+        if(btn2) btn2.disabled = false;
+        var err2 = document.getElementById('auth-err');
+        if(err2) err2.textContent = '';
+      }, 30000);
+    } else {
+      var rem = 3 - __attempts;
+      var err = document.getElementById('auth-err');
+      if(err) err.textContent = 'Incorrect PIN. ' + rem + ' attempt' + (rem===1?'':'s') + ' left.';
+    }
+    if(inp) { inp.value = ''; inp.focus(); }
+  }
+}
+
+// Keydown listener
+(function() {
+  var inp = document.getElementById('auth-pin-input');
+  if(inp) {
+    inp.addEventListener('keydown', function(e) {
+      if(e.key === 'Enter') __submitPIN();
+    });
+  }
+})();
+
+// Run auth check immediately — DOM is ready since script is at end of body
+__checkAuth();
+
+// Publish employee roster to localStorage so other dashboards (Production Supervisor) can pull names
+try {
+  var roster = EMPLOYEES.map(function(e){ return {name: e.name, dept: e.dept, subdept: e.subdept, type: e.type, today: (e.daily||{})[(new Date()).toLocaleDateString('en-US',{weekday:'short'}).slice(0,3)] || ''}; });
+  localStorage.setItem('hoc_roll_call_roster', JSON.stringify({ ts: Date.now(), employees: roster }));
+} catch(e){}
+
+</script>
+
+<script>
+// Auto-update date displays
+(function(){
+  var today = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  var shortDate = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  document.querySelectorAll('.brand-sub,.brand-sub *,[class*="brand-sub"]').forEach(function(el){
+    if(el.children.length === 0){
+      el.textContent = el.textContent.replace(/(?:January|February|March|April|May|June|July|August|September|October|November|December) \d{1,2},? \d{4}/g, today);
+      el.textContent = el.textContent.replace(/(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2},? \d{4}/g, shortDate);
+    }
+  });
+  // Also fix any standalone date text nodes
+  var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  var node;
+  var dateRe = /(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2},? \d{4}/g;
+  while(node = walker.nextNode()){
+    if(dateRe.test(node.textContent)){
+      node.textContent = node.textContent.replace(dateRe, shortDate);
+    }
+  }
+})();
+</script>
+
+<script src="hoc_events.js"></script>
+<script>
+// Auto-update header date placeholder
+(function(){
+  var today = new Date().toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'});
+  document.querySelectorAll('.js-today-date').forEach(function(el){ el.textContent = today; });
+})();
+</script>
+</body></html>

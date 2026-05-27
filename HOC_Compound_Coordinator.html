@@ -1,0 +1,1127 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HOC Compound Coordinator</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0B0E17;--bg2:#111520;--bg3:#161C28;--border:#1E293B;
+  --text:#DDE4F0;--text2:#8A97B4;--text3:#4A5570;
+  --green:#22C55E;--green-l:rgba(34,197,94,.09);
+  --blue:#3B82F6;--blue-l:rgba(59,130,246,.12);
+  --amber:#F59E0B;--amber-l:rgba(245,158,11,.12);
+  --red:#EF4444;--red-l:rgba(239,68,68,.12);
+  --teal:#10B981;--teal-l:rgba(16,185,129,.1);
+  --purple:#8B5CF6;--purple-l:rgba(139,92,246,.1);
+  --gray-l:#1E2535;
+  font-family:ui-monospace,"Cascadia Code","Fira Code",monospace;
+}
+body{background:var(--bg);color:var(--text);min-height:100vh;font-size:12px}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 14px;display:flex;align-items:stretch;position:sticky;top:0;z-index:100}
+.brand{display:flex;align-items:center;gap:8px;padding:9px 13px 9px 0;border-right:1px solid var(--border);margin-right:11px;flex-shrink:0}
+.logo{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.brand-name{font-weight:700;font-size:12px}.brand-sub{font-size:9px;color:var(--text3)}
+.nav{display:flex;flex:1;overflow-x:auto}
+.nb{padding:0 11px;background:none;border:none;border-bottom:2px solid transparent;color:var(--text2);cursor:pointer;font:inherit;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;transition:all .15s;white-space:nowrap}
+.nb:hover{color:var(--text)}
+.badges{display:flex;gap:5px;align-items:center;padding:7px 0;margin-left:auto;flex-shrink:0}
+.badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:.04em}
+.b-red{background:var(--red-l);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.b-amb{background:var(--amber-l);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.b-grn{background:var(--green-l);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.b-blu{background:var(--blue-l);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.b-teal{background:var(--teal-l);color:var(--teal);border:1px solid rgba(16,185,129,.3)}
+.b-gry{background:var(--gray-l);color:var(--text2);border:1px solid var(--border)}
+.b-pur{background:var(--purple-l);color:var(--purple);border:1px solid rgba(139,92,246,.3)}
+.content{padding:13px;max-width:1600px;margin:0 auto}
+.page{display:none}.page.active{display:block}
+.card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px}
+.card-title{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:6px;margin-bottom:10px}
+.kpi{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 11px}
+.kl{font-size:8px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.kv{font-size:22px;font-weight:700;line-height:1}.ks{font-size:9px;color:var(--text3);margin-top:3px}
+.tbl-wrap{border-radius:8px;border:1px solid var(--border);overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{padding:5px 8px;font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);text-align:left;border-bottom:1px solid var(--border);background:var(--bg2);white-space:nowrap}
+td{padding:5px 8px;border-bottom:1px solid rgba(30,41,59,.5);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.015)}
+.pill{display:inline-flex;font-size:8px;font-weight:700;padding:2px 6px;border-radius:3px;letter-spacing:.05em;white-space:nowrap}
+.p-done{background:rgba(148,163,184,.08);color:#475569;border:1px solid #334155}
+.p-run{background:var(--blue-l);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.p-ns{background:var(--gray-l);color:var(--text3);border:1px solid var(--border)}
+.p-od{background:var(--red-l);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.p-ar{background:var(--amber-l);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.p-ot{background:var(--green-l);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.p-qc{background:var(--teal-l);color:var(--teal);border:1px solid rgba(16,185,129,.3)}
+.p-rel{background:var(--purple-l);color:var(--purple);border:1px solid rgba(139,92,246,.3)}
+.p-hold{background:var(--amber-l);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.p-must{background:var(--red-l);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.p-should{background:var(--amber-l);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.p-sync{background:rgba(139,92,246,.12);color:var(--purple);border:1px solid rgba(139,92,246,.3)}
+.filter-row{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
+.fb{padding:4px 9px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font:inherit;font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;transition:all .15s}
+.fb:hover{color:var(--text)}
+.detail{border-radius:10px;padding:12px;margin:8px 0 10px;display:none}
+.detail.open{display:block}
+.dg{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:8px 0;font-size:11px}
+.df label{font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);display:block;margin-bottom:2px}
+.df span{color:var(--text);font-weight:600}
+.close-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:17px;line-height:1}
+.upd-panel{margin-top:10px;padding:10px 12px;border-radius:7px}
+.upd-section{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.upd-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:7px}
+.upd-label{font-size:10px;color:var(--text2);white-space:nowrap;min-width:130px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px}
+.fld{display:flex;flex-direction:column;gap:3px}
+.fld label{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3)}
+select,input[type=text],input[type=date],input[type=number],textarea{background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:5px;padding:4px 8px;font:inherit;font-size:10px}
+textarea{width:100%;resize:vertical;min-height:46px;margin-top:4px}
+.btn{padding:5px 14px;border-radius:5px;font:inherit;font-size:10px;font-weight:700;cursor:pointer;border:1px solid}
+.saved-msg{font-size:10px;display:none}.saved-msg.show{display:inline}
+.line-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(248px,1fr));gap:8px;margin-bottom:10px}
+.lc{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 13px;cursor:pointer;transition:border-color .15s}
+.lc:hover{border-color:#253047}
+.lc-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.lc-row{display:flex;justify-content:space-between;font-size:10px;color:var(--text2);padding:2px 0}
+.lc-row span{color:var(--text);font-weight:600}
+.pb{height:5px;background:var(--gray-l);border-radius:3px;margin:5px 0 3px;overflow:hidden}
+.pb-fill{height:100%;border-radius:3px}
+.alert-s{border-radius:10px;padding:10px 12px;margin-bottom:10px}
+.at{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
+.ag{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:6px}
+.ai{border-radius:6px;padding:7px 9px}
+.t3{color:var(--text3)}.done-row td{opacity:.4}.run-row td{background:rgba(59,130,246,.04)}
+.must-row td{background:rgba(239,68,68,.04)}.should-row td{background:rgba(245,158,11,.03)}
+.no-fit td{border-left:3px solid var(--red)!important}
+.num-red{color:var(--red);font-weight:700}.num-grn{color:var(--green);font-weight:700}
+.sync-bar{background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:8px;padding:7px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;font-size:10px;flex-wrap:wrap}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--purple);display:inline-block;margin-right:4px}
+.fc-lhdr{background:#16213a;padding:7px 12px;border-radius:6px;margin:10px 0 2px;display:flex;justify-content:space-between;align-items:center}
+.fc-lhdr-l{font-size:11px;font-weight:700;color:var(--text)}
+.fc-lhdr-r{font-size:9px;color:var(--text3);display:flex;gap:10px}
+.fc-bar{height:4px;border-radius:2px;margin:2px 0;overflow:hidden;background:rgba(255,255,255,.08)}
+.fc-bar-fill{height:100%;border-radius:2px}
+.exp-step{font-size:10px;color:var(--text2);margin-bottom:6px;padding:7px 10px;background:var(--bg2);border-radius:6px;border-left:3px solid}
+.nb.active{color:var(--blue);border-bottom-color:var(--blue)}
+.logo{background:var(--blue);color:#0a1929}
+.fb.active{background:var(--blue);border-color:var(--blue);color:#0a1929}
+.detail{background:var(--bg3);border:1px solid var(--blue)}
+.upd-panel{background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.2)}
+.upd-section{color:var(--blue)}
+select:focus,input:focus,textarea:focus{border-color:var(--blue)}
+.btn-b{background:var(--blue-l);border-color:rgba(59,130,246,.4);color:var(--blue);padding:5px 14px;border-radius:5px;font:inherit;font-size:10px;font-weight:700;cursor:pointer;border:1px solid}
+.btn-b:hover{background:rgba(59,130,246,.2)}
+.btn-r{background:var(--red-l);border-color:rgba(239,68,68,.4);color:var(--red);padding:5px 14px;border-radius:5px;font:inherit;font-size:10px;font-weight:700;cursor:pointer;border:1px solid}
+.btn-r:hover{background:rgba(239,68,68,.2)}
+.btn-g{background:var(--green-l);border-color:rgba(34,197,94,.4);color:var(--green);padding:5px 14px;border-radius:5px;font:inherit;font-size:10px;font-weight:700;cursor:pointer;border:1px solid}
+.btn-g:hover{background:rgba(34,197,94,.18)}
+.check-row{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;background:var(--bg2);margin-bottom:4px;border:1px solid var(--border)}
+.check-row.verified{border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.04)}
+.check-row.short{border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.04)}
+.check-label{font-size:10px;flex:1;color:var(--text)}
+.check-val{font-size:10px;font-weight:700;min-width:80px;text-align:right}
+</style></head><body>
+
+<div class="topbar">
+  <div class="brand"><div class="logo">CC</div>
+    <div><div class="brand-name">Compound Coordinator</div>
+    <div class="brand-sub">Raw material verification · <span class="js-today-date">May 17, 2026</span></div></div>
+  </div>
+  <nav class="nav">
+    <button class="nb active" onclick="P('cmd')">Command Center</button>
+    <button class="nb" onclick="P('verify')">Batch Verification</button>
+    <button class="nb" onclick="P('inventory')">Raw Inventory</button>
+    <button class="nb" onclick="P('alerts')">Alerts &amp; Escalations</button>
+    <button class="nb" onclick="P('sync')">Sync</button>
+  </nav>
+  <a href="index.html" style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text2);text-decoration:none;font-size:9px;font-weight:700;flex-shrink:0;white-space:nowrap" title="Back to HOC-OES Menu">← HOC-OES</a><a href="HOC_Inventory.html" style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;background:rgba(34,211,238,.12);border:1px solid rgba(34,211,238,.3);color:#22D3EE;text-decoration:none;font-size:9px;font-weight:700;flex-shrink:0;white-space:nowrap" title="Back to HOC-OES Menu">📦 Inventory</a>
+  <div class="badges" id="badges"></div>
+</div>
+
+<!-- CMD -->
+<div class="page active" id="page-cmd"><div class="content">
+  <div class="sync-bar" id="sync-bar"></div>
+  <div id="alert-area"></div>
+  <div class="kpi-grid" id="cmd-kpis"></div>
+  <div class="card">
+    <div class="card-title">Schedule Readiness — Can We Make These Batches?
+      <span class="t3" style="font-size:9px;font-weight:400;letter-spacing:0">Click any row to verify raw materials</span>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr>
+        <th>Batch</th><th>Ln</th><th>Date</th><th>Description</th><th>Formula</th>
+        <th>Lbs Needed</th><th>Labor Hrs</th><th>Cmpd Status</th><th>Raw Status</th><th>Shortage</th>
+        <th>Correction Flag</th><th>CC Verified</th><th>Proceed?</th>
+      </tr></thead>
+      <tbody id="cmd-tbody"></tbody>
+    </table></div>
+  </div>
+</div></div>
+
+<!-- BATCH VERIFICATION -->
+<div class="page" id="page-verify"><div class="content">
+  <p style="font-size:10px;color:var(--text2);margin-bottom:10px">
+    For each batch: verify raw materials are physically available → mark Verified to proceed, or raise a shortage alert to stop pre-weigh and compound.
+  </p>
+  <div class="filter-row" id="vf"></div>
+  <div class="tbl-wrap"><table>
+    <thead><tr>
+      <th>Batch</th><th>Ln</th><th>Date</th><th>Description</th><th>Formula</th>
+      <th>Lbs</th><th>Due By</th><th>Cmpd Status</th><th>Raw Status</th><th>CC Verified</th><th>Proceed</th>
+    </tr></thead>
+    <tbody id="ver-tbody"></tbody>
+  </table></div>
+  <div class="detail" id="ver-detail">
+    <div class="card-title"><span id="vd-title">Batch Verification</span>
+      <button class="close-btn" onclick="closeVD()">×</button></div>
+    <div class="dg" id="vd-info"></div>
+    <div class="upd-panel">
+      <div class="upd-section">Raw Material Verification Checklist</div>
+      <div id="vd-checks" style="margin-bottom:10px"></div>
+      <div class="upd-row"><span class="upd-label">Physical Verification</span>
+        <select id="v-status">
+          <option value="">— select decision —</option>
+          <option value="VERIFIED — PROCEED">✅ VERIFIED — All materials confirmed, proceed</option>
+          <option value="SHORT — PARTIAL BATCH">⚠️ SHORT — Partial batch possible</option>
+          <option value="SHORT — HOLD">🚫 SHORT — Cannot run, alerting team</option>
+          <option value="SHORT — EMERGENCY ORDER">🚨 SHORTAGE — Emergency procurement needed</option>
+        </select>
+      </div>
+
+      <!-- BATCH-SPECIFIC RAW MATERIALS (BOM verification) -->
+      <div style="background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.25);border-radius:8px;padding:10px;margin-bottom:8px">
+        <div style="font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#60A5FA;margin-bottom:8px">
+          Required Raw Materials for This Batch
+          <span id="bom-source" style="color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0;margin-left:6px"></span>
+        </div>
+        <div id="bom-list" style="font-size:11px;color:var(--text2);line-height:1.6">
+          <div style="font-style:italic;color:var(--text3)">Loading batch-specific raw materials…</div>
+        </div>
+      </div>
+      
+      <!-- Multi-shortage entry -->
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px">
+        <div style="font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:8px">
+          Raw Material Shortages
+          <span id="shortage-count" style="color:var(--red);margin-left:6px"></span>
+        </div>
+        <div id="shortage-list" style="margin-bottom:8px;min-height:20px"></div>
+        <div style="display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:end">
+          <div>
+            <div style="font-size:9px;color:var(--text3);margin-bottom:3px">Add Short Item</div>
+            <select id="short-sku-select" style="width:100%">
+              <option value="">— select from low inventory —</option>
+<option value="8-24000" data-desc="Water" data-qoh="0.0">8-24000 — Water (QOH: 0)</option><option value="8-19009" data-desc="Soybean Oil" data-qoh="45114.91">8-19009 — Soybean Oil (QOH: 45,115)</option><option value="8-18030" data-desc="Snow White Petrolatum" data-qoh="19267.0">8-18030 — Snow White Petrolatum (QOH: 19,267)</option><option value="8-18009" data-desc="Petrolatum" data-qoh="60496.54">8-18009 — Petrolatum (QOH: 60,497)</option><option value="8-18031" data-desc="Paraffin Wax - SP170" data-qoh="1095.8">8-18031 — Paraffin Wax - SP170 (QOH: 1,096)</option><option value="8-18020" data-desc="Hydrogenated Vegetable Oil" data-qoh="6189.0">8-18020 — Hydrogenated Vegetable Oil (QOH: 6,189)</option><option value="8-15024" data-desc="Techmine 350" data-qoh="774.0">8-15024 — Techmine 350 (QOH: 774)</option><option value="8-17035" data-desc="Custoguar 112" data-qoh="529.02">8-17035 — Custoguar 112 (QOH: 529)</option><option value="8-19034" data-desc="Campo SP True Monoi Oil" data-qoh="154.61">8-19034 — Campo SP True Monoi Oil (QOH: 155)</option>
+              <option value="__MANUAL__">+ Enter manually...</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:9px;color:var(--text3);margin-bottom:3px">Qty Needed</div>
+            <input type="number" id="short-qty-need" placeholder="Qty" style="width:90px">
+          </div>
+          <div>
+            <button onclick="addShortageItem()" style="padding:5px 10px;border-radius:5px;font:inherit;font-size:9px;font-weight:700;cursor:pointer;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:var(--red);white-space:nowrap">+ Add</button>
+          </div>
+        </div>
+        <div id="manual-sku-row" style="display:none;margin-top:6px;display:none">
+          <input type="text" id="short-sku-manual" placeholder="Manual SKU" style="width:48%;margin-right:2%">
+          <input type="text" id="short-desc-manual" placeholder="Description" style="width:48%">
+        </div>
+      </div>
+      <div class="upd-row" style="display:none"><span class="upd-label">Short Item</span>
+        <input type="hidden" id="v-short-item" placeholder="SKU or description of short material" style="width:220px">
+      </div>
+      <div class="upd-row"><span class="upd-label">Short Quantity</span>
+        <input type="hidden" id="v-short-qty" placeholder="Lbs short" style="width:120px">
+      </div>
+      <div class="upd-row"><span class="upd-label">Verified By</span>
+        <input type="text" id="v-by" placeholder="Your name" style="width:150px">
+      </div>
+      <div class="upd-row" style="flex-direction:column;align-items:flex-start">
+        <span class="upd-label" style="margin-bottom:3px">Notes / Action Taken</span>
+        <textarea id="v-notes" placeholder="What was found, what action is being taken, who was notified..."></textarea>
+      </div>
+      <!-- ALERT BUTTONS -->
+      <div style="margin-top:10px;padding:8px 10px;background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.15);border-radius:6px">
+        <div style="font-size:9px;font-weight:700;color:var(--red);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">If Short — Alert These Teams</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn-r" onclick="alertTeam('PRE-WEIGH')">🚫 Stop Pre-Weigh</button>
+          <button class="btn-r" onclick="alertTeam('COMPOUND')">🚫 Stop Compound</button>
+          <button class="btn-r" onclick="alertTeam('PROCUREMENT')">📧 Alert Procurement</button>
+          <button class="btn-r" onclick="alertTeam('PLANNING')">📧 Alert Planning</button>
+          <button class="btn-r" onclick="alertTeam('PRODUCTION')">📧 Alert Production</button>
+        </div>
+        <div id="alert-log" style="margin-top:6px;font-size:9px;color:var(--text3)"></div>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+        <button class="btn-g" onclick="saveVerification()">Save Verification</button>
+        <button class="btn-b" onclick="markProceed()">✅ Mark Verified — Proceed</button>
+        <span class="saved-msg" id="vd-saved" style="color:var(--blue)">✓ Saved &amp; synced to all tools</span>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- RAW INVENTORY -->
+<div class="page" id="page-inventory"><div class="content">
+  <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+    <span style="font-size:10px;color:var(--text2);align-self:center">Filter:</span>
+    <button class="fb active" id="inv-ALL" onclick="setInv('ALL')">All</button>
+    <button class="fb" id="inv-SHORT" onclick="setInv('SHORT')">Short</button>
+    <button class="fb" id="inv-LOW" onclick="setInv('LOW')">Low</button>
+    <button class="fb" id="inv-OK" onclick="setInv('OK')">OK</button>
+  </div>
+  <div class="tbl-wrap"><table>
+    <thead><tr>
+      <th>SKU</th><th>Description</th><th>QOH</th><th>Required</th><th>PO Qty</th><th>Net Avail</th><th>Status</th>
+    </tr></thead>
+    <tbody id="inv-tbody"></tbody>
+  </table></div>
+</div></div>
+
+<!-- ALERTS -->
+<div class="page" id="page-alerts"><div class="content">
+  <div class="card">
+    <div class="card-title">Active Shortage Alerts — Teams Notified</div>
+    <div id="alert-list" style="font-size:10px;color:var(--text2)">No alerts raised yet.</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Alert Protocol — When Raw Materials Are Short</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="padding:10px;background:var(--bg2);border-radius:8px;border-left:3px solid var(--red)">
+        <div style="font-size:10px;font-weight:700;color:var(--red);margin-bottom:5px">STOP — Block Upstream Work</div>
+        <div style="font-size:9px;color:var(--text2);line-height:1.6">
+          ① Raise shortage alert in this tool<br>
+          ② Alert Pre-Weigh: do not pull materials for this batch<br>
+          ③ Alert Compound: do not start mixing<br>
+          ④ Mark batch as BLOCKED in the sync bus
+        </div>
+      </div>
+      <div style="padding:10px;background:var(--bg2);border-radius:8px;border-left:3px solid var(--amber)">
+        <div style="font-size:10px;font-weight:700;color:var(--amber);margin-bottom:5px">ESCALATE — Get Materials Moving</div>
+        <div style="font-size:9px;color:var(--text2);line-height:1.6">
+          ① Alert Procurement with SKU, qty short, batch impacted<br>
+          ② Alert Planning: schedule may need adjustment<br>
+          ③ Check if partial batch threshold is possible<br>
+          ④ Update sync bus with ETA from procurement
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Batches Currently Blocked</div>
+    <div id="blocked-list" style="font-size:10px;color:var(--text2)">Loading...</div>
+  </div>
+</div></div>
+
+<!-- SYNC -->
+<div class="page" id="page-sync"><div class="content">
+  <div class="card">
+    <div class="card-title">Sync Status</div>
+    <div id="sync-list" style="font-size:10px;color:var(--text2)">No updates yet.</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Export</div>
+    <div class="exp-step" style="border-color:var(--blue)">1 — Verify batches in Batch Verification tab</div>
+    <div class="exp-step" style="border-color:var(--blue)">2 — Export CSV below</div>
+    <div class="exp-step" style="border-color:var(--blue)">3 — Open HOC_Compound_Tracker.xlsx → COMPOUND_STATUS_FEED → update verification status</div>
+    <div style="margin-top:10px"><button class="btn-b" onclick="exportAllCSV()">⬇ Export CSV</button></div>
+  </div>
+</div></div>
+
+<script>
+// ── Multi-shortage management ───────────────────────────────────────
+var currentShortages = [];  // {sku, desc, qty_need, qty_have, qty_short, type}
+
+function addShortageItem() {
+  var selectEl = document.getElementById('short-sku-select');
+  var skuVal = selectEl ? selectEl.value : '';
+  if (!skuVal) { alert('Select an item first.'); return; }
+  
+  var desc = '', qoh = 0, sku = skuVal;
+  if (skuVal === '__MANUAL__') {
+    sku  = (document.getElementById('short-sku-manual') || {value:''}).value.trim();
+    desc = (document.getElementById('short-desc-manual') || {value:''}).value.trim();
+    if (!sku) { alert('Enter a SKU.'); return; }
+  } else {
+    var opt = selectEl.options[selectEl.selectedIndex];
+    desc = opt ? (opt.getAttribute('data-desc') || '') : '';
+    qoh  = opt ? parseFloat(opt.getAttribute('data-qoh') || 0) : 0;
+    // Match from LOW_CHEM
+    var chem = LOW_CHEM.find(function(c){return c.sku===skuVal;});
+    if (chem) { qoh = chem.qoh || 0; desc = chem.desc || desc; }
+  }
+  
+  var qtyNeed = parseFloat((document.getElementById('short-qty-need') || {value:0}).value) || 0;
+  var qtyShort = qoh - qtyNeed;
+  
+  // Check if already in list
+  if (currentShortages.find(function(s){return s.sku===sku;})) {
+    alert(sku + ' is already in the shortage list.');
+    return;
+  }
+  
+  currentShortages.push({
+    sku: sku, desc: desc,
+    qty_have: Math.round(qoh), qty_need: Math.round(qtyNeed),
+    qty_short: Math.round(qtyShort), type: 'Raw Material'
+  });
+  
+  // Reset inputs
+  if (selectEl) selectEl.value = '';
+  var qn = document.getElementById('short-qty-need'); if(qn) qn.value = '';
+  
+  renderShortageList();
+}
+
+function removeShortageItem(idx) {
+  currentShortages.splice(idx, 1);
+  renderShortageList();
+}
+
+function renderShortageList() {
+  var el = document.getElementById('shortage-list');
+  var countEl = document.getElementById('shortage-count');
+  if (!el) return;
+  
+  if (!currentShortages.length) {
+    el.innerHTML = '<div style="font-size:9px;color:var(--text3);padding:4px 0">No shortages logged yet</div>';
+    if (countEl) countEl.textContent = '';
+    return;
+  }
+  
+  if (countEl) countEl.textContent = '(' + currentShortages.length + ' item' + (currentShortages.length>1?'s':'') + ' short)';
+  
+  el.innerHTML = currentShortages.map(function(s, i) {
+    var c = s.qty_short < 0 ? 'var(--red)' : 'var(--amber)';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;margin-bottom:3px;background:rgba(239,68,68,.06);border-radius:6px;border-left:3px solid var(--red);font-size:10px">' +
+      '<div style="flex:1">' +
+        '<b style="color:var(--red)">' + s.sku + '</b> — ' + s.desc.slice(0,40) + '<br>' +
+        '<span style="font-size:9px;color:var(--text3)">Have: ' + (s.qty_have||0).toLocaleString() + 
+        '  Need: ' + (s.qty_need||0).toLocaleString() + 
+        '  <b style="color:' + c + '">Short: ' + (s.qty_short||0).toLocaleString() + '</b></span>' +
+      '</div>' +
+      '<button onclick="removeShortageItem(' + i + ')" style="padding:1px 6px;border-radius:3px;font:inherit;font-size:9px;cursor:pointer;background:transparent;border:1px solid rgba(239,68,68,.3);color:var(--red)">✕</button>' +
+    '</div>';
+  }).join('');
+}
+
+function loadExistingShortages(batch) {
+  var s = syncGet(batch);
+  if (s.cc && s.cc.shortages && s.cc.shortages.length) {
+    currentShortages = s.cc.shortages;
+  } else if (s.cc && s.cc.short_item) {
+    // Migrate old single-item format
+    currentShortages = [{sku: s.cc.short_item, desc: s.cc.short_item, 
+      qty_have: 0, qty_need: 0, qty_short: parseFloat(s.cc.short_qty)||0, type:'Raw Material'}];
+  } else {
+    currentShortages = [];
+  }
+  renderShortageList();
+}
+
+// Handle manual entry toggle
+document.addEventListener && document.addEventListener('change', function(e) {
+  if (e.target && e.target.id === 'short-sku-select') {
+    var row = document.getElementById('manual-sku-row');
+    if (row) row.style.display = e.target.value === '__MANUAL__' ? 'grid' : 'none';
+  }
+});
+
+
+const LOW_CHEM = [{"sku":"8-24000","desc":"Water","qoh":0.0,"production_req":-2100284.206599999,"po_qty":2500000.0,"safety":0.0,"pos":[{"po":"00000000000027453262","qty":500000,"weeks_out":-48,"type":"Unfirmed PO"},{"po":"00000000000027453263","qty":500000,"weeks_out":2,"type":"Unfirmed PO"},{"po":"00000000000027453264","qty":500000,"weeks_out":5,"type":"Unfirmed PO"},{"po":"00000000000027453265","qty":500000,"weeks_out":7,"type":"Unfirmed PO"},{"po":"00000000000027453266","qty":500000,"weeks_out":10,"type":"Unfirmed PO"}],"net":399715.79,"req":2100284.21,"status":"LOW"},{"sku":"8-19009","desc":"Soybean Oil","qoh":45114.91,"production_req":-279973.07762000023,"po_qty":255000.0,"safety":0.0,"pos":[{"po":"PO058517","qty":45000,"weeks_out":1,"type":"Purchase Order"},{"po":"PO058518","qty":42000,"weeks_out":2,"type":"Purchase Order"},{"po":"PO058519","qty":42000,"weeks_out":3,"type":"Purchase Order"},{"po":"00000000000027453249","qty":42000,"weeks_out":5,"type":"Unfirmed PO"},{"po":"00000000000027453250","qty":42000,"weeks_out":7,"type":"Unfirmed PO"},{"po":"00000000000027453251","qty":42000,"weeks_out":10,"type":"Unfirmed PO"}],"net":20141.83,"req":279973.08,"status":"LOW"},{"sku":"8-18030","desc":"Snow White Petrolatum","qoh":19267.0,"production_req":-150504.95234000005,"po_qty":160000.0,"safety":0.0,"pos":[{"po":"00000000000027453099","qty":40000,"weeks_out":4,"type":"Unfirmed PO"},{"po":"00000000000027453100","qty":40000,"weeks_out":6,"type":"Unfirmed PO"},{"po":"00000000000027453101","qty":40000,"weeks_out":11,"type":"Unfirmed PO"},{"po":"00000000000027453102","qty":40000,"weeks_out":12,"type":"Unfirmed PO"}],"net":28762.05,"req":150504.95,"status":"LOW"},{"sku":"8-18009","desc":"Petrolatum","qoh":60496.54,"production_req":-142154.19361000005,"po_qty":90000.0,"safety":0.0,"pos":[{"po":"00000000000027453231","qty":45000,"weeks_out":4,"type":"Unfirmed PO"},{"po":"00000000000027453232","qty":45000,"weeks_out":6,"type":"Unfirmed PO"}],"net":8342.35,"req":142154.19,"status":"LOW"},{"sku":"8-18031","desc":"Paraffin Wax - SP170","qoh":1095.8,"production_req":-5137.30406,"po_qty":5065.85,"safety":-1000.0,"pos":[{"po":"PO058468","qty":331,"weeks_out":1,"type":"Purchase Order"},{"po":"PO058603","qty":330,"weeks_out":1,"type":"Purchase Order"},{"po":"PO058713","qty":1264,"weeks_out":2,"type":"Purchase Order"},{"po":"PO058802","qty":1212,"weeks_out":4,"type":"Purchase Order"},{"po":"00000000000027453103","qty":165,"weeks_out":11,"type":"Unfirmed PO"},{"po":"00000000000027453104","qty":165,"weeks_out":11,"type":"Unfirmed PO"},{"po":"00000000000027453105","qty":165,"weeks_out":11,"type":"Unfirmed PO"},{"po":"00000000000027453106","qty":165,"weeks_out":11,"type":"Unfirmed PO"},{"po":"00000000000027453107","qty":165,"weeks_out":12,"type":"Unfirmed PO"},{"po":"00000000000027453108","qty":165,"weeks_out":12,"type":"Unfirmed PO"},{"po":"00000000000027453110","qty":110,"weeks_out":12,"type":"Unfirmed PO"},{"po":"00000000000027453109","qty":165,"weeks_out":12,"type":"Unfirmed PO"},{"po":"00000000000027453111","qty":165,"weeks_out":12,"type":"Unfirmed PO"},{"po":"00000000000027453112","qty":165,"weeks_out":12,"type":"Unfirmed PO"},{"po":"00000000000027453113","qty":165,"weeks_out":12,"type":"Unfirmed PO"},{"po":"00000000000027453114","qty":165,"weeks_out":13,"type":"Unfirmed PO"}],"net":1024.34,"req":5137.3,"status":"LOW"},{"sku":"8-18020","desc":"Hydrogenated Vegetable Oil","qoh":6189.0,"production_req":-8020.436,"po_qty":3344.0,"safety":-1500.0,"pos":[{"po":"PO058487","qty":1496,"weeks_out":1,"type":"Purchase Order"},{"po":"PO058746","qty":880,"weeks_out":2,"type":"Purchase Order"},{"po":"PO058842","qty":924,"weeks_out":5,"type":"Purchase Order"},{"po":"00000000000027453247","qty":44,"weeks_out":10,"type":"Unfirmed PO"}],"net":1512.56,"req":8020.44,"status":"LOW"},{"sku":"8-15024","desc":"Techmine 350","qoh":774.0,"production_req":-1193.10688,"po_qty":450.0,"safety":0.0,"pos":[{"po":"PO058545","qty":450,"weeks_out":0,"type":"Purchase Order"}],"net":30.89,"req":1193.11,"status":"LOW"},{"sku":"8-17035","desc":"Custoguar 112","qoh":529.02,"production_req":-739.7122999999999,"po_qty":330.69,"safety":-120.0,"pos":[{"po":"00000000000027453091","qty":48,"weeks_out":9,"type":"Unfirmed PO"},{"po":"00000000000027453092","qty":96,"weeks_out":9,"type":"Unfirmed PO"},{"po":"00000000000027453093","qty":18,"weeks_out":9,"type":"Unfirmed PO"},{"po":"00000000000027453094","qty":18,"weeks_out":9,"type":"Unfirmed PO"},{"po":"00000000000027453095","qty":18,"weeks_out":9,"type":"Unfirmed PO"},{"po":"00000000000027453096","qty":17,"weeks_out":11,"type":"Unfirmed PO"},{"po":"00000000000027453097","qty":96,"weeks_out":12,"type":"Unfirmed PO"},{"po":"00000000000027453098","qty":18,"weeks_out":12,"type":"Unfirmed PO"}],"net":120.0,"req":739.71,"status":"LOW"},{"sku":"8-19034","desc":"Campo SP True Monoi Oil","qoh":154.61,"production_req":-150.66602,"po_qty":11.02,"safety":-12.0,"pos":[{"po":"00000000000027453208","qty":11,"weeks_out":12,"type":"Unfirmed PO"}],"net":14.96,"req":150.67,"status":"LOW"}];
+function _loadBatches(){
+  // Live loader: reads from Data Upload Hub (localStorage.hoc_oes_upload_v1)
+  // Falls back to empty array if no upload yet — dashboards will show "no data"
+  try {
+    var raw = localStorage.getItem('hoc_upload_v1');
+    if(!raw) return [];
+    var up = JSON.parse(raw);
+    var src = (up && up.batches) ? up.batches : [];
+    var todayStr = new Date().toISOString().slice(0,10);
+
+    return src.map(function(b){
+      // Compute urgency from cmpddue vs today
+      var urgency = 'PLANNED';
+      var cmpd = String(b.cmpd || b.cmpd_status || '').toUpperCase();
+      var status = String(b.status || '').toUpperCase();
+      if(status === 'COMPLETED') urgency = 'DONE';
+      else if(status === 'RUNNING' || cmpd.indexOf('FILLING') >= 0) urgency = 'FILLING';
+      else if(cmpd.indexOf('OVERDUE') >= 0) urgency = 'CRITICAL';
+      else if(cmpd.indexOf('CRITICAL') >= 0) urgency = 'CRITICAL';
+      else if(cmpd.indexOf('AT RISK') >= 0) urgency = 'AT RISK';
+      else if(cmpd.indexOf('ON TRACK') >= 0) urgency = 'ON TRACK';
+      else if(cmpd.indexOf('NO COMPOUND') >= 0) urgency = 'NO STD';
+
+      // raw_status from shortage
+      var raw_status = 'VERIFIED';
+      var sh = parseFloat(b.shortage) || 0;
+      if(sh < -3000) raw_status = 'CRITICALLY SHORT';
+      else if(sh < 0) raw_status = 'SHORT';
+
+      // fill_status (legacy field name)
+      var fill_status = status === 'COMPLETED' ? 'COMPLETED' :
+                       status === 'RUNNING' ? 'RUNNING' : 'NOT STARTED';
+
+      // correction flag (mirrors original heuristic)
+      var correction = '✓ IN SYNC';
+      if(status === 'RUNNING') correction = '⚠ FILLING NOW — COMPOUND MUST BE READY';
+      else if(status !== 'COMPLETED' && (b.actqty||0) === 0 && (b.origqty||0) > 0) {
+        correction = '⚠ QTY VARIANCE -100%';
+      }
+
+      return {
+        batch: b.batch,
+        date: b.date,
+        line: parseInt(b.line) || 0,
+        desc: b.desc || '',
+        formula: parseInt(String(b.formula||b.item||'').replace(/[^0-9]/g,'').slice(0,4)) || 0,
+        fill_status: fill_status,
+        cmpd_status: b.cmpd || b.cmpd_status || '',
+        lbs: parseFloat(b.lbs) || parseFloat(b.origqty) || 0,
+        shortage: sh,
+        rem_lbs: status==='COMPLETED' ? 0 : (parseFloat(b.lbs) || parseFloat(b.origqty) || 0),
+        correction: correction,
+        cmpd_due: b.cmpddue || '',
+        urgency: urgency,
+        raw_status: raw_status,
+        verified: false,
+        // Pass through useful extras
+        status: b.status,
+        item: b.item || '',
+        origqty: b.origqty || 0,
+        actqty: b.actqty || 0
+      };
+    });
+  } catch(e) {
+    console.warn('BATCHES live load failed:', e);
+    return [];
+  }
+}
+let BATCHES = _loadBatches();
+function reloadBatches(){ BATCHES = _loadBatches(); }
+const CHEMICALS= [{"sku":"8-24000","desc":"Water","qoh":0.0,"production_req":-2100284.206599999,"po_qty":2500000.0,"safety":0.0,"pos":[{"po":"00000000000027453262","qty":500000,"weeks_out":-48,"type":"Unfirmed PO"},{"po":"00000000000027453263","qty":500000,"weeks_out":2,"type":"Unfirmed PO"},{"po":"00000000000027453264","qty":500000,"weeks_out":5,"type":"Unfirmed PO"},{"po":"00000000000027453265","qty":500000,"weeks_out":7,"type":"Unfirmed PO"},{"po":"00000000000027453266","qty":500000,"weeks_out":10,"type":"Unfirmed PO"}],"net":399715.79,"req":2100284.21,"status":"LOW"},{"sku":"8-19009","desc":"Soybean Oil","qoh":45114.91,"production_req":-279973.07762000023,"po_qty":255000.0,"safety":0.0,"pos":[{"po":"PO058517","qty":45000,"weeks_out":1,"type":"Purchase Order"},{"po":"PO058518","qty":42000,"weeks_out":2,"type":"Purchase Order"},{"po":"PO058519","qty":42000,"weeks_out":3,"type":"Purchase Order"},{"po":"00000000000027453249","qty":42000,"weeks_out":5,"type":"Unfirmed PO"},{"po":"00000000000027453250","qty":42000,"weeks_out":7,"type":"Unfirmed PO"},{"po":"00000000000027453251","qty":42000,"weeks_out":10,"type":"Unfirmed PO"}],"net":20141.83,"req":279973.08,"status":"LOW"},{"sku":"8-18030","desc":"Snow White Petrolatum","qoh":19267.0,"production_req":-150504.95234000005,"po_qty":160000.0,"safety":0.0,"pos":[{"po":"00000000000027453099","qty":40000,"weeks_out":4,"type":"Unfirmed PO"},{"po":"00000000000027453100","qty":40000,"weeks_out":6,"type":"Unfirmed PO"},{"po":"00000000000027453101","qty":40000,"weeks_out":11,"type":"Unfirmed PO"},{"po":"00000000000027453102","qty":40000,"weeks_out":12,"type":"Unfirmed PO"}],"net":28762.05,"req":150504.95,"status":"LOW"},{"sku":"8-18009","desc":"Petrolatum","qoh":60496.54,"production_req":-142154.19361000005,"po_qty":90000.0,"safety":0.0,"pos":[{"po":"00000000000027453231","qty":45000,"weeks_out":4,"type":"Unfirmed PO"},{"po":"00000000000027453232","qty":45000,"weeks_out":6,"type":"Unfirmed PO"}],"net":8342.35,"req":142154.19,"status":"LOW"},{"sku":"8-18011","desc":"Propylene Glycol","qoh":20763.12,"production_req":-40648.78582,"po_qty":42000.0,"safety":0.0,"pos":[{"po":"PO058874","qty":42000,"weeks_out":2,"type":"Purchase Order"}],"net":22114.34,"req":40648.79,"status":"OK"},{"sku":"8-17017","desc":"Luviskol K90 AT1 Lsg. 20%","qoh":6774.29,"production_req":-19297.502190000003,"po_qty":22930.62,"safety":-10000.0,"pos":[{"po":"PO058689","qty":2205,"weeks_out":-1,"type":"Purchase Order"},{"po":"PO058532","qty":2646,"weeks_out":2,"type":"Purchase Order"},{"po":"PO058263","qty":3969,"weeks_out":2,"type":"Purchase Order"},{"po":"PO058342","qty":4410,"weeks_out":2,"type":"Purchase Order"},{"po":"PO058744","qty":1323,"weeks_out":4,"type":"Purchase Order"},{"po":"PO058430","qty":5291,"weeks_out":5,"type":"Purchase Order"},{"po":"00000000000027453202","qty":441,"weeks_out":7,"type":"Unfirmed PO"},{"po":"PO058865","qty":1323,"weeks_out":9,"type":"Purchase Order"},{"po":"00000000000027453203","qty":441,"weeks_out":9,"type":"Unfirmed PO"},{"po":"00000000000027453204","qty":441,"weeks_out":10,"type":"Unfirmed PO"},{"po":"00000000000027453205","qty":441,"weeks_out":12,"type":"Unfirmed PO"}],"net":10407.41,"req":19297.5,"status":"OK"},{"sku":"8-14001","desc":"Cetyl Alcohol","qoh":7594.11,"production_req":-14146.568070000003,"po_qty":11020.8,"safety":-4000.0,"pos":[{"po":"PO058628","qty":4408,"weeks_out":1,"type":"Purchase Order"},{"po":"PO058726","qty":2204,"weeks_out":4,"type":"Purchase Order"},{"po":"00000000000027453237","qty":2204,"weeks_out":8,"type":"Unfirmed PO"},{"po":"00000000000027453238","qty":2204,"weeks_out":9,"type":"Unfirmed PO"}],"net":4468.35,"req":14146.57,"status":"OK"},{"sku":"8-18004","desc":"Glycerin","qoh":41862.38,"production_req":-48088.12298000001,"po_qty":45260.0,"safety":0.0,"pos":[{"po":"PO058504","qty":260,"weeks_out":-2,"type":"Purchase Order"},{"po":"00000000000027453243","qty":45000,"weeks_out":8,"type":"Unfirmed PO"}],"net":39034.25,"req":48088.12,"status":"OK"},{"sku":"8-14008","desc":"Incroquat Behenyl TMS","qoh":5336.61,"production_req":-11498.114150000001,"po_qty":10583.1,"safety":-4000.0,"pos":[{"po":"PO058462","qty":1764,"weeks_out":1,"type":"Purchase Order"},{"po":"PO058602","qty":3527,"weeks_out":1,"type":"Purchase Order"},{"po":"PO058741","qty":1764,"weeks_out":4,"type":"Purchase Order"},{"po":"PO058881","qty":1764,"weeks_out":4,"type":"Purchase Order"},{"po":"00000000000027453239","qty":1764,"weeks_out":9,"type":"Unfirmed PO"}],"net":4421.59,"req":11498.11,"status":"OK"},{"sku":"8-14009","desc":"Isopropyl Myristate","qoh":3305.33,"production_req":-7754.598160000007,"po_qty":6560.85,"safety":-2000.0,"pos":[{"po":"PO058338","qty":386,"weeks_out":-3,"type":"Purchase Order"},{"po":"PO058419","qty":1,"weeks_out":0,"type":"Purchase Order"},{"po":"PO058597","qty":386,"weeks_out":0,"type":"Purchase Order"},{"po":"PO058463","qty":386,"weeks_out":1,"type":"Purchase Order"},{"po":"PO058541","qty":1158,"weeks_out":1,"type":"Purchase Order"},{"po":"PO058793","qty":1929,"weeks_out":3,"type":"Purchase Order"},{"po":"00000000000027453174","qty":386,"weeks_out":11,"type":"Unfirmed PO"},{"po":"00000000000027453175","qty":386,"weeks_out":11,"type":"Unfirmed PO"},{"po":"00000000000027453176","qty":386,"weeks_out":11,"type":"Unfirmed PO"},{"po":"00000000000027453177","qty":386,"weeks_out":12,"type":"Unfirmed PO"},{"po":"00000000000027453178","qty":386,"weeks_out":12,"type":"Unfirmed PO"},{"po":"00000000000027453179","qty":386,"weeks_out":12,"type":"Unfirmed PO"}],"net":2111.59,"req":7754.6,"status":"OK"},{"sku":"8-18031","desc":"Paraffin Wax - SP170","qoh":1095.8,"production_req":-5137.30406,"po_qty":5065.85,"safety":-1000.0,"pos":[{"po":"PO058468","qty":331,"weeks_out":1,"type":"Purchase Order"},{"po":"PO058603","qty":330,"weeks_out":1,"type":"Purchase Order"},{"po":"PO058713","qty":1264,"weeks_out":2,"type":"Purchase Order"},{"po":"PO058802","qty":1212,"weeks_out":4,"type":"Purchase Order"},{"po":"00000000000027453103","qty":165,"weeks_out":11,"type":"Unfirmed PO"},{"po":"00000000000027453104","qty":165,"weeks_out":11,"type":"Unfirmed PO"},{"po":"00000000000027453105","qty":165,"weeks_out":11,"type":"Unfirmed PO"},{"po":"00000000000027453106","qty":165,"weeks_out":11,"type":"Unfirmed PO"},{"po":"00000000000027453107","qty":165,"weeks_out":12,"type":"Unfirmed PO"},{"po":"00000000000027453108","qty":165,"weeks_out":12,"type":"Unfirmed PO"},{"po":"00000000000027453110","qty":110,"weeks_out":12,"type":"Unfirmed PO"},{"po":"00000000000027453109","qty":165,"weeks_out":12,"type":"Unfirmed PO"},{"po":"00000000000027453111","qty":165,"weeks_out":12,"type":"Unfirmed PO"},{"po":"00000000000027453112","qty":165,"weeks_out":12,"type":"Unfirmed PO"},{"po":"00000000000027453113","qty":165,"weeks_out":12,"type":"Unfirmed PO"},{"po":"00000000000027453114","qty":165,"weeks_out":13,"type":"Unfirmed PO"}],"net":1024.34,"req":5137.3,"status":"LOW"},{"sku":"8-10058","desc":"Marsh Mallow Extract","qoh":4367.87,"production_req":-8407.29483,"po_qty":7200.0,"safety":-3000.0,"pos":[{"po":"PO058457","qty":450,"weeks_out":0,"type":"Purchase Order"},{"po":"PO058534","qty":450,"weeks_out":0,"type":"Purchase Order"},{"po":"PO058597","qty":1800,"weeks_out":0,"type":"Purchase Order"},{"po":"PO058700","qty":3150,"weeks_out":1,"type":"Purchase Order"},{"po":"PO058775","qty":450,"weeks_out":4,"type":"Purchase Order"},{"po":"00000000000027453170","qty":450,"weeks_out":10,"type":"Unfirmed PO"},{"po":"00000000000027453171","qty":450,"weeks_out":11,"type":"Unfirmed PO"}],"net":3160.58,"req":8407.29,"status":"OK"},{"sku":"8-19045","desc":"Jeechem CTG","qoh":1437.4,"production_req":-5251.348190000001,"po_qty":5027.09,"safety":-1000.0,"pos":[{"po":"PO058469","qty":419,"weeks_out":1,"type":"Purchase Order"},{"po":"PO058752","qty":1257,"weeks_out":2,"type":"Purchase Order"},{"po":"PO058804","qty":838,"weeks_out":5,"type":"Purchase Order"},{"po":"PO058863","qty":419,"weeks_out":5,"type":"Purchase Order"},{"po":"00000000000027453182","qty":419,"weeks_out":11,"type":"Unfirmed PO"},{"po":"00000000000027453183","qty":419,"weeks_out":11,"type":"Unfirmed PO"},{"po":"00000000000027453184","qty":419,"weeks_out":12,"type":"Unfirmed PO"},{"po":"00000000000027453185","qty":419,"weeks_out":12,"type":"Unfirmed PO"},{"po":"00000000000027453186","qty":419,"weeks_out":12,"type":"Unfirmed PO"}],"net":1213.14,"req":5251.35,"status":"OK"},{"sku":"8-14002","desc":"Cosmowax P","qoh":21162.65,"production_req":-24935.085309999995,"po_qty":14549.8,"safety":-10000.0,"pos":[{"po":"PO058718","qty":7495,"weeks_out":4,"type":"Purchase Order"},{"po":"00000000000027453226","qty":1764,"weeks_out":8,"type":"Unfirmed PO"},{"po":"00000000000027453227","qty":1764,"weeks_out":9,"type":"Unfirmed PO"},{"po":"00000000000027453228","qty":1764,"weeks_out":9,"type":"Unfirmed PO"},{"po":"00000000000027453229","qty":1764,"weeks_out":10,"type":"Unfirmed PO"}],"net":10777.36,"req":24935.09,"status":"OK"},{"sku":"8-19006","desc":"Olive Oil","qoh":7539.24,"production_req":-10545.208899999989,"po_qty":6700.2,"safety":-3000.0,"pos":[{"po":"PO058343","qty":2,"weeks_out":-2,"type":"Purchase Order"},{"po":"PO058433","qty":2,"weeks_out":-1,"type":"Purchase Order"},{"po":"PO058550","qty":1674,"weeks_out":1,"type":"Purchase Order"},{"po":"PO058748","qty":1674,"weeks_out":1,"type":"Purchase Order"},{"po":"PO058843","qty":1674,"weeks_out":5,"type":"Purchase Order"},{"po":"00000000000027453248","qty":1674,"weeks_out":9,"type":"Unfirmed PO"}],"net":3694.24,"req":10545.21,"status":"OK"},{"sku":"8-10006","desc":"Aloe Vera Gel","qoh":3884.66,"production_req":-6873.067829999999,"po_qty":4591.0,"safety":-1500.0,"pos":[{"po":"PO058086","qty":460,"weeks_out":-7,"type":"Purchase Order"},{"po":"PO058457","qty":918,"weeks_out":0,"type":"Purchase Order"},{"po":"PO058826","qty":918,"weeks_out":4,"type":"Purchase Order"},{"po":"PO058859","qty":459,"weeks_out":4,"type":"Purchase Order"},{"po":"PO058775","qty":1377,"weeks_out":4,"type":"Purchase Order"},{"po":"00000000000027453188","qty":459,"weeks_out":11,"type":"Unfirmed PO"}],"net":1602.59,"req":6873.07,"status":"OK"},{"sku":"8-18018","desc":"Varisoft 432 PPG","qoh":3610.28,"production_req":-6195.499099999999,"po_qty":4297.63,"safety":-1500.0,"pos":[{"po":"PO058346","qty":2,"weeks_out":-2,"type":"Purchase Order"},{"po":"PO058385","qty":4,"weeks_out":-1,"type":"Purchase Order"},{"po":"PO058597","qty":390,"weeks_out":0,"type":"Purchase Order"},{"po":"PO058703","qty":2341,"weeks_out":0,"type":"Purchase Order"},{"po":"PO058775","qty":390,"weeks_out":4,"type":"Purchase Order"},{"po":"00000000000027453244","qty":390,"weeks_out":9,"type":"Unfirmed PO"},{"po":"00000000000027453245","qty":390,"weeks_out":9,"type":"Unfirmed PO"},{"po":"00000000000027453246","qty":390,"weeks_out":10,"type":"Unfirmed PO"}],"net":1712.41,"req":6195.5,"status":"OK"},{"sku":"8-14013","desc":"Polysorbate 20","qoh":4543.2,"production_req":-6974.914600000001,"po_qty":3944.08,"safety":-900.0,"pos":[{"po":"PO058449","qty":20,"weeks_out":-1,"type":"Purchase Order"},{"po":"PO058421","qty":992,"weeks_out":1,"type":"Purchase Order"},{"po":"PO058833","qty":1940,"weeks_out":4,"type":"Purchase Order"},{"po":"00000000000027453200","qty":992,"weeks_out":11,"type":"Unfirmed PO"}],"net":1512.36,"req":6974.91,"status":"OK"},{"sku":"8-13060","desc":"Tropical Whisper Lilial Mod CE-220142","qoh":5190.0,"production_req":-7579.815749999996,"po_qty":5200.0,"safety":-2500.0,"pos":[{"po":"PO058539","qty":400,"weeks_out":2,"type":"Purchase Order"},{"po":"PO058722","qty":1200,"weeks_out":2,"type":"Purchase Order"},{"po":"PO058789","qty":800,"weeks_out":4,"type":"Purchase Order"},{"po":"PO058830","qty":400,"weeks_out":5,"type":"Purchase Order"},{"po":"00000000000027453193","qty":400,"weeks_out":8,"type":"Unfirmed PO"},{"po":"00000000000027453194","qty":400,"weeks_out":8,"type":"Unfirmed PO"},{"po":"00000000000027453195","qty":400,"weeks_out":9,"type":"Unfirmed PO"},{"po":"00000000000027453196","qty":400,"weeks_out":9,"type":"Unfirmed PO"},{"po":"00000000000027453197","qty":400,"weeks_out":9,"type":"Unfirmed PO"},{"po":"00000000000027453198","qty":400,"weeks_out":12,"type":"Unfirmed PO"}],"net":2810.18,"req":7579.82,"status":"OK"},{"sku":"8-16003","desc":"Silicone SWS 101-1000","qoh":3600.38,"production_req":-5584.054749999999,"po_qty":4850.0,"safety":-2500.0,"pos":[{"po":"PO058466","qty":2645,"weeks_out":1,"type":"Purchase Order"},{"po":"00000000000027453240","qty":2205,"weeks_out":9,"type":"Unfirmed PO"}],"net":2866.33,"req":5584.05,"status":"OK"},{"sku":"8-10022","desc":"PEG-75 Lanolin","qoh":704.0,"production_req":-2636.070419999999,"po_qty":3087.0,"safety":-1000.0,"pos":[{"po":"PO058532","qty":441,"weeks_out":0,"type":"Purchase Order"},{"po":"PO058596","qty":882,"weeks_out":0,"type":"Purchase Order"},{"po":"PO058646","qty":441,"weeks_out":1,"type":"Purchase Order"},{"po":"PO058783","qty":441,"weeks_out":2,"type":"Purchase Order"},{"po":"PO058879","qty":441,"weeks_out":5,"type":"Purchase Order"},{"po":"00000000000027453225","qty":441,"weeks_out":8,"type":"Unfirmed PO"}],"net":1154.93,"req":2636.07,"status":"OK"},{"sku":"8-18020","desc":"Hydrogenated Vegetable Oil","qoh":6189.0,"production_req":-8020.436,"po_qty":3344.0,"safety":-1500.0,"pos":[{"po":"PO058487","qty":1496,"weeks_out":1,"type":"Purchase Order"},{"po":"PO058746","qty":880,"weeks_out":2,"type":"Purchase Order"},{"po":"PO058842","qty":924,"weeks_out":5,"type":"Purchase Order"},{"po":"00000000000027453247","qty":44,"weeks_out":10,"type":"Unfirmed PO"}],"net":1512.56,"req":8020.44,"status":"LOW"},{"sku":"8-10019","desc":"Lanolin","qoh":2096.92,"production_req":-3885.909900000002,"po_qty":3350.62,"safety":-1500.0,"pos":[{"po":"PO058715","qty":419,"weeks_out":3,"type":"Purchase Order"},{"po":"PO058784","qty":419,"weeks_out":4,"type":"Purchase Order"},{"po":"PO058828","qty":1256,"weeks_out":4,"type":"Purchase Order"},{"po":"00000000000027453163","qty":419,"weeks_out":10,"type":"Unfirmed PO"},{"po":"00000000000027453164","qty":419,"weeks_out":10,"type":"Unfirmed PO"},{"po":"00000000000027453165","qty":419,"weeks_out":12,"type":"Unfirmed PO"}],"net":1561.63,"req":3885.91,"status":"OK"},{"sku":"8-13099","desc":"Indian M (Hemp Oil)  KJ-1048","qoh":1846.0,"production_req":-3400.6015000000025,"po_qty":3200.0,"safety":-1500.0,"pos":[{"po":"PO058461","qty":400,"weeks_out":1,"type":"Purchase Order"},{"po":"PO058725","qty":800,"weeks_out":2,"type":"Purchase Order"},{"po":"PO058792","qty":800,"weeks_out":4,"type":"Purchase Order"},{"po":"00000000000027452865","qty":400,"weeks_out":11,"type":"Unfirmed PO"},{"po":"00000000000027452866","qty":400,"weeks_out":12,"type":"Unfirmed PO"},{"po":"00000000000027452867","qty":400,"weeks_out":12,"type":"Unfirmed PO"}],"net":1645.4,"req":3400.6,"status":"OK"},{"sku":"8-10023","desc":"Shea But","qoh":9783.96,"production_req":-11305.328939999992,"po_qty":6615.0,"safety":-3000.0,"pos":[{"po":"PO058718","qty":2205,"weeks_out":4,"type":"Purchase Order"},{"po":"00000000000027453189","qty":2205,"weeks_out":8,"type":"Unfirmed PO"},{"po":"00000000000027453190","qty":2205,"weeks_out":11,"type":"Unfirmed PO"}],"net":5093.63,"req":11305.33,"status":"OK"},{"sku":"8-14035","desc":"Cremophor RH 40","qoh":345.47,"production_req":-1814.5116799999996,"po_qty":2248.28,"safety":-705.0,"pos":[{"po":"PO058836","qty":1587,"weeks_out":1,"type":"Purchase Order"},{"po":"PO058882","qty":529,"weeks_out":2,"type":"Purchase Order"},{"po":"00000000000027453087","qty":132,"weeks_out":9,"type":"Unfirmed PO"}],"net":779.24,"req":1814.51,"status":"OK"},{"sku":"8-15023","desc":"SugaNate160 NC","qoh":3491.0,"production_req":-4772.4275,"po_qty":2300.0,"safety":0.0,"pos":[{"po":"PO058545","qty":2300,"weeks_out":0,"type":"Purchase Order"}],"net":1018.57,"req":4772.43,"status":"OK"},{"sku":"8-18021","desc":"Hydrogenated Coconut Oil","qoh":2842.0,"production_req":-4097.263409999999,"po_qty":2420.0,"safety":-1000.0,"pos":[{"po":"PO058685","qty":968,"weeks_out":-1,"type":"Purchase Order"},{"po":"PO058746","qty":484,"weeks_out":2,"type":"Purchase Order"},{"po":"PO058801","qty":484,"weeks_out":4,"type":"Purchase Order"},{"po":"PO058842","qty":484,"weeks_out":5,"type":"Purchase Order"}],"net":1164.74,"req":4097.26,"status":"OK"},{"sku":"8-14021","desc":"Lipomulse-165","qoh":1973.08,"production_req":-3191.30518,"po_qty":2640.0,"safety":-750.0,"pos":[{"po":"PO058835","qty":1320,"weeks_out":4,"type":"Purchase Order"},{"po":"00000000000027453201","qty":1320,"weeks_out":10,"type":"Unfirmed PO"}],"net":1421.77,"req":3191.31,"status":"OK"},{"sku":"8-10067","desc":"NaturePep Amaranth","qoh":0.68,"production_req":-1158.3317900000002,"po_qty":1763.92,"safety":-200.0,"pos":[{"po":"PO058570","qty":441,"weeks_out":9,"type":"Purchase Order"},{"po":"PO058535","qty":441,"weeks_out":9,"type":"Purchase Order"},{"po":"PO058297","qty":882,"weeks_out":9,"type":"Purchase Order"}],"net":606.27,"req":1158.33,"status":"OK"},{"sku":"8-18024","desc":"AMP Ultra PC 3000","qoh":2562.38,"production_req":-3494.1389300000014,"po_qty":2520.0,"safety":-1500.0,"pos":[{"po":"PO058463","qty":1260,"weeks_out":1,"type":"Purchase Order"},{"po":"PO058541","qty":420,"weeks_out":1,"type":"Purchase Order"},{"po":"PO058720","qty":840,"weeks_out":5,"type":"Purchase Order"}],"net":1588.24,"req":3494.14,"status":"OK"},{"sku":"8-16006","desc":"Silicone Fluid KF-56A","qoh":1009.56,"production_req":-1883.6088800000005,"po_qty":1763.92,"safety":-600.0,"pos":[{"po":"PO058684","qty":441,"weeks_out":1,"type":"Purchase Order"},{"po":"PO058742","qty":441,"weeks_out":2,"type":"Purchase Order"},{"po":"PO058838","qty":441,"weeks_out":4,"type":"Purchase Order"},{"po":"00000000000027453241","qty":441,"weeks_out":10,"type":"Unfirmed PO"}],"net":889.87,"req":1883.61,"status":"OK"},{"sku":"8-10093","desc":"Green Tea Fanning's","qoh":15.0,"production_req":-850.0203900000006,"po_qty":1200.0,"safety":-175.0,"pos":[{"po":"PO058092","qty":200,"weeks_out":0,"type":"Purchase Order"},{"po":"PO058719","qty":200,"weeks_out":2,"type":"Purchase Order"},{"po":"PO058278","qty":400,"weeks_out":2,"type":"Purchase Order"},{"po":"00000000000027453081","qty":200,"weeks_out":12,"type":"Unfirmed PO"},{"po":"00000000000027453082","qty":200,"weeks_out":13,"type":"Unfirmed PO"}],"net":364.98,"req":850.02,"status":"OK"},{"sku":"8-19030","desc":"Flaxseed Oil","qoh":797.32,"production_req":-1595.6467600000003,"po_qty":1257.0,"safety":-400.0,"pos":[{"po":"PO058607","qty":419,"weeks_out":0,"type":"Purchase Order"},{"po":"PO058439","qty":419,"weeks_out":1,"type":"Purchase Order"},{"po":"PO058751","qty":419,"weeks_out":4,"type":"Purchase Order"}],"net":458.67,"req":1595.65,"status":"OK"},{"sku":"8-20015","desc":"Euxyl PE 9010","qoh":11248.0,"production_req":-11943.075429999986,"po_qty":8360.0,"safety":-7500.0,"pos":[{"po":"PO058371","qty":440,"weeks_out":-1,"type":"Purchase Order"},{"po":"PO058388","qty":440,"weeks_out":-1,"type":"Purchase Order"},{"po":"PO058441","qty":1320,"weeks_out":-1,"type":"Purchase Order"},{"po":"PO058784","qty":1320,"weeks_out":4,"type":"Purchase Order"},{"po":"PO058745","qty":880,"weeks_out":4,"type":"Purchase Order"},{"po":"PO058828","qty":880,"weeks_out":4,"type":"Purchase Order"},{"po":"PO058864","qty":440,"weeks_out":5,"type":"Purchase Order"},{"po":"00000000000027453253","qty":440,"weeks_out":8,"type":"Unfirmed PO"},{"po":"00000000000027453254","qty":440,"weeks_out":8,"type":"Unfirmed PO"},{"po":"00000000000027453255","qty":440,"weeks_out":9,"type":"Unfirmed PO"},{"po":"00000000000027453256","qty":440,"weeks_out":9,"type":"Unfirmed PO"},{"po":"00000000000027453257","qty":440,"weeks_out":11,"type":"Unfirmed PO"},{"po":"00000000000027453258","qty":440,"weeks_out":12,"type":"Unfirmed PO"}],"net":7664.92,"req":11943.08,"status":"OK"},{"sku":"8-16011","desc":"Dow Corning 193C","qoh":1514.09,"production_req":-2137.6440900000002,"po_qty":1682.0,"safety":-800.0,"pos":[{"po":"PO058883","qty":800,"weeks_out":4,"type":"Purchase Order"},{"po":"PO058862","qty":441,"weeks_out":5,"type":"Purchase Order"},{"po":"00000000000027453230","qty":441,"weeks_out":13,"type":"Unfirmed PO"}],"net":1058.44,"req":2137.64,"status":"OK"},{"sku":"8-10079","desc":"CustoNatural HMP OF","qoh":567.84,"production_req":-1179.6564,"po_qty":1323.0,"safety":-500.0,"pos":[{"po":"PO058597","qty":882,"weeks_out":0,"type":"Purchase Order"},{"po":"PO058826","qty":441,"weeks_out":4,"type":"Purchase Order"}],"net":711.18,"req":1179.66,"status":"OK"},{"sku":"8-20016","desc":"CustoCide BDHA","qoh":4923.0,"production_req":-5469.248609999993,"po_qty":1761.0,"safety":-800.0,"pos":[{"po":"PO058168","qty":441,"weeks_out":-6,"type":"Purchase Order"},{"po":"00000000000027453259","qty":440,"weeks_out":8,"type":"Unfirmed PO"},{"po":"00000000000027453260","qty":440,"weeks_out":9,"type":"Unfirmed PO"},{"po":"00000000000027453261","qty":440,"weeks_out":11,"type":"Unfirmed PO"}],"net":1214.75,"req":5469.25,"status":"OK"},{"sku":"8-22014","desc":"Genapol G 260","qoh":484.0,"production_req":-921.04278,"po_qty":900.0,"safety":-400.0,"pos":[{"po":"PO058703","qty":450,"weeks_out":0,"type":"Purchase Order"},{"po":"PO058837","qty":450,"weeks_out":4,"type":"Purchase Order"}],"net":462.96,"req":921.04,"status":"OK"},{"sku":"8-15024","desc":"Techmine 350","qoh":774.0,"production_req":-1193.10688,"po_qty":450.0,"safety":0.0,"pos":[{"po":"PO058545","qty":450,"weeks_out":0,"type":"Purchase Order"}],"net":30.89,"req":1193.11,"status":"LOW"},{"sku":"8-10041","desc":"Avocado Oil","qoh":313.79,"production_req":-720.3092499999996,"po_qty":840.0,"safety":-250.0,"pos":[{"po":"PO058186","qty":840,"weeks_out":1,"type":"Purchase Order"}],"net":433.48,"req":720.31,"status":"OK"},{"sku":"8-22005","desc":"Mackernium SDC 85","qoh":813.0,"production_req":-1212.5895800000005,"po_qty":1200.0,"safety":-750.0,"pos":[{"po":"PO058255","qty":200,"weeks_out":-1,"type":"Purchase Order"},{"po":"PO058385","qty":200,"weeks_out":-1,"type":"Purchase Order"},{"po":"PO058419","qty":400,"weeks_out":0,"type":"Purchase Order"},{"po":"00000000000027453209","qty":200,"weeks_out":8,"type":"Unfirmed PO"},{"po":"00000000000027453210","qty":200,"weeks_out":9,"type":"Unfirmed PO"}],"net":800.41,"req":1212.59,"status":"OK"},{"sku":"8-10056","desc":"Mango Butter","qoh":435.0,"production_req":-834.2208299999999,"po_qty":880.0,"safety":-180.0,"pos":[{"po":"PO058411","qty":440,"weeks_out":1,"type":"Purchase Order"},{"po":"00000000000027453166","qty":440,"weeks_out":9,"type":"Unfirmed PO"}],"net":480.78,"req":834.22,"status":"OK"},{"sku":"8-14012","desc":"PEG-150 Distearate","qoh":954.0,"production_req":-1348.37215,"po_qty":1100.0,"safety":-500.0,"pos":[{"po":"PO058703","qty":500,"weeks_out":0,"type":"Purchase Order"},{"po":"PO058826","qty":600,"weeks_out":4,"type":"Purchase Order"}],"net":705.63,"req":1348.37,"status":"OK"},{"sku":"8-13078","desc":"Honey Blossoms Rev. 3  2020120946","qoh":510.0,"production_req":-808.0259299999999,"po_qty":800.0,"safety":-250.0,"pos":[{"po":"PO058540","qty":400,"weeks_out":0,"type":"Purchase Order"},{"po":"00000000000027453172","qty":400,"weeks_out":9,"type":"Unfirmed PO"}],"net":501.97,"req":808.03,"status":"OK"},{"sku":"8-10057","desc":"Slippery Elm Bark Extract","qoh":3035.52,"production_req":-3327.200170000002,"po_qty":2700.0,"safety":-2000.0,"pos":[{"po":"PO058626","qty":450,"weeks_out":0,"type":"Purchase Order"},{"po":"PO058775","qty":450,"weeks_out":2,"type":"Purchase Order"},{"po":"PO058720","qty":450,"weeks_out":3,"type":"Purchase Order"},{"po":"00000000000027453167","qty":450,"weeks_out":8,"type":"Unfirmed PO"},{"po":"00000000000027453168","qty":450,"weeks_out":9,"type":"Unfirmed PO"},{"po":"00000000000027453169","qty":450,"weeks_out":12,"type":"Unfirmed PO"}],"net":2408.32,"req":3327.2,"status":"OK"},{"sku":"8-19028","desc":"Argan Oil","qoh":698.7,"production_req":-957.1475600000002,"po_qty":880.0,"safety":-200.0,"pos":[{"po":"PO058551","qty":440,"weeks_out":-1,"type":"Purchase Order"},{"po":"00000000000027453207","qty":440,"weeks_out":12,"type":"Unfirmed PO"}],"net":621.55,"req":957.15,"status":"OK"},{"sku":"8-13077","desc":"Exotic Coconut Rev.3 2016050457","qoh":281.0,"production_req":-532.54261,"po_qty":800.0,"safety":-200.0,"pos":[{"po":"PO058460","qty":400,"weeks_out":0,"type":"Purchase Order"},{"po":"00000000000027453199","qty":400,"weeks_out":9,"type":"Unfirmed PO"}],"net":548.46,"req":532.54,"status":"OK"},{"sku":"8-22012","desc":"Merquat 100","qoh":1232.92,"production_req":-1483.9965000000004,"po_qty":900.0,"safety":-600.0,"pos":[{"po":"PO058597","qty":450,"weeks_out":0,"type":"Purchase Order"},{"po":"PO058884","qty":450,"weeks_out":4,"type":"Purchase Order"}],"net":648.92,"req":1484.0,"status":"OK"},{"sku":"8-14049","desc":"Endicare CT-100","qoh":1708.0,"production_req":-1958.65314,"po_qty":1200.0,"safety":-775.0,"pos":[{"po":"PO058797","qty":400,"weeks_out":3,"type":"Purchase Order"},{"po":"00000000000027453088","qty":400,"weeks_out":6,"type":"Unfirmed PO"},{"po":"00000000000027453089","qty":400,"weeks_out":6,"type":"Unfirmed PO"}],"net":949.35,"req":1958.65,"status":"OK"},{"sku":"8-14028","desc":"Cetearyl Alcohol","qoh":2590.64,"production_req":-2835.18972,"po_qty":1500.0,"safety":-75.0,"pos":[{"po":"PO058704","qty":1500,"weeks_out":3,"type":"Purchase Order"}],"net":1255.45,"req":2835.19,"status":"OK"},{"sku":"8-13064","desc":"Papaya & Green Mango 5319813","qoh":1003.0,"production_req":-1240.54231,"po_qty":800.0,"safety":-200.0,"pos":[{"po":"PO058791","qty":400,"weeks_out":1,"type":"Purchase Order"},{"po":"PO058831","qty":400,"weeks_out":5,"type":"Purchase Order"}],"net":562.46,"req":1240.54,"status":"OK"},{"sku":"8-18025","desc":"Castorwax MP-70","qoh":561.32,"production_req":-793.63319,"po_qty":912.0,"safety":-350.0,"pos":[{"po":"PO058370","qty":456,"weeks_out":1,"type":"Purchase Order"},{"po":"PO058747","qty":456,"weeks_out":4,"type":"Purchase Order"}],"net":679.69,"req":793.63,"status":"OK"},{"sku":"8-22015","desc":"CustoPoly  122","qoh":682.0,"production_req":-900.33384,"po_qty":926.0,"safety":-260.0,"pos":[{"po":"PO058454","qty":926,"weeks_out":5,"type":"Purchase Order"}],"net":707.67,"req":900.33,"status":"OK"},{"sku":"8-17035","desc":"Custoguar 112","qoh":529.02,"production_req":-739.7122999999999,"po_qty":330.69,"safety":-120.0,"pos":[{"po":"00000000000027453091","qty":48,"weeks_out":9,"type":"Unfirmed PO"},{"po":"00000000000027453092","qty":96,"weeks_out":9,"type":"Unfirmed PO"},{"po":"00000000000027453093","qty":18,"weeks_out":9,"type":"Unfirmed PO"},{"po":"00000000000027453094","qty":18,"weeks_out":9,"type":"Unfirmed PO"},{"po":"00000000000027453095","qty":18,"weeks_out":9,"type":"Unfirmed PO"},{"po":"00000000000027453096","qty":17,"weeks_out":11,"type":"Unfirmed PO"},{"po":"00000000000027453097","qty":96,"weeks_out":12,"type":"Unfirmed PO"},{"po":"00000000000027453098","qty":18,"weeks_out":12,"type":"Unfirmed PO"}],"net":120.0,"req":739.71,"status":"LOW"},{"sku":"8-10018","desc":"Hydrogenated Palm Kernel Oil","qoh":250.0,"production_req":-435.69474,"po_qty":450.0,"safety":-225.0,"pos":[{"po":"PO058679","qty":200,"weeks_out":1,"type":"Purchase Order"},{"po":"PO058859","qty":250,"weeks_out":4,"type":"Purchase Order"}],"net":264.31,"req":435.69,"status":"OK"},{"sku":"8-14017","desc":"Brij S2-SO","qoh":3658.98,"production_req":-3812.293460000001,"po_qty":1161.0,"safety":-750.0,"pos":[{"po":"PO058602","qty":3,"weeks_out":-1,"type":"Purchase Order"},{"po":"PO058741","qty":386,"weeks_out":4,"type":"Purchase Order"},{"po":"PO058834","qty":772,"weeks_out":5,"type":"Purchase Order"}],"net":1007.68,"req":3812.29,"status":"OK"},{"sku":"8-13054","desc":"Frag. Z99-458","qoh":122.0,"production_req":-259.94595,"po_qty":400.0,"safety":-150.0,"pos":[{"po":"PO058820","qty":400,"weeks_out":1,"type":"Purchase Order"}],"net":262.05,"req":259.95,"status":"OK"},{"sku":"8-17018","desc":"IntegriGEL P37-PG","qoh":1256.2,"production_req":-1388.85803,"po_qty":795.0,"safety":-600.0,"pos":[{"po":"PO058369","qty":1,"weeks_out":-1,"type":"Purchase Order"},{"po":"PO058745","qty":794,"weeks_out":4,"type":"Purchase Order"}],"net":662.34,"req":1388.86,"status":"OK"},{"sku":"8-22020","desc":"Hydrotriticum 2000 PE","qoh":1191.4,"production_req":-1316.4401799999994,"po_qty":2000.0,"safety":-1500.0,"pos":[{"po":"PO058419","qty":1000,"weeks_out":0,"type":"Purchase Order"},{"po":"PO058754","qty":1000,"weeks_out":3,"type":"Purchase Order"}],"net":1874.96,"req":1316.44,"status":"OK"},{"sku":"8-15022","desc":"Colateric CBS","qoh":3938.0,"production_req":-4055.5812099999994,"po_qty":4500.0,"safety":-2000.0,"pos":[{"po":"PO058544","qty":2250,"weeks_out":0,"type":"Purchase Order"},{"po":"PO058826","qty":2250,"weeks_out":4,"type":"Purchase Order"}],"net":4382.42,"req":4055.58,"status":"OK"},{"sku":"8-16005","desc":"Silicone TE-350 FG","qoh":598.0,"production_req":-705.66944,"po_qty":900.0,"safety":-350.0,"pos":[{"po":"PO058597","qty":450,"weeks_out":0,"type":"Purchase Order"},{"po":"PO058826","qty":450,"weeks_out":4,"type":"Purchase Order"}],"net":792.33,"req":705.67,"status":"OK"},{"sku":"8-22036","desc":"Cola Moist 200","qoh":319.0,"production_req":-424.45142000000004,"po_qty":450.0,"safety":0.0,"pos":[{"po":"00000000000027453116","qty":450,"weeks_out":11,"type":"Unfirmed PO"}],"net":344.55,"req":424.45,"status":"OK"},{"sku":"8-19051","desc":"Batana Oil N75007","qoh":122.0,"production_req":-213.62761,"po_qty":200.0,"safety":-100.0,"pos":[{"po":"PO058604","qty":100,"weeks_out":0,"type":"Purchase Order"},{"po":"PO058631","qty":100,"weeks_out":0,"type":"Purchase Order"}],"net":108.37,"req":213.63,"status":"OK"},{"sku":"8-13046","desc":"Wacky Melon 2002BA02162","qoh":638.0,"production_req":-703.54097,"po_qty":400.0,"safety":-225.0,"pos":[{"po":"PO058605","qty":400,"weeks_out":1,"type":"Purchase Order"}],"net":334.46,"req":703.54,"status":"OK"},{"sku":"8-15015","desc":"BioiTerge AS-40","qoh":13756.67,"production_req":-13810.960849999998,"po_qty":8818.0,"safety":-7500.0,"pos":[{"po":"PO058775","qty":4409,"weeks_out":4,"type":"Purchase Order"},{"po":"PO058837","qty":4409,"weeks_out":4,"type":"Purchase Order"}],"net":8763.7,"req":13810.96,"status":"OK"},{"sku":"8-19031","desc":"Canola Oil","qoh":1545.0,"production_req":-1587.26638,"po_qty":1700.0,"safety":-685.0,"pos":[{"po":"PO058718","qty":1700,"weeks_out":4,"type":"Purchase Order"}],"net":1657.73,"req":1587.27,"status":"OK"},{"sku":"8-17021","desc":"Styleze W-17","qoh":1620.0,"production_req":-1658.81636,"po_qty":4000.0,"safety":-725.0,"pos":[{"po":"PO058773","qty":3200,"weeks_out":0,"type":"Purchase Order"},{"po":"PO058693","qty":800,"weeks_out":5,"type":"Purchase Order"}],"net":3961.18,"req":1658.82,"status":"OK"},{"sku":"8-16007","desc":"Fibrosil SC-C8L","qoh":1309.0,"production_req":-1347.6859300000008,"po_qty":1940.0,"safety":-350.0,"pos":[{"po":"PO058839","qty":1940,"weeks_out":4,"type":"Purchase Order"}],"net":1901.31,"req":1347.69,"status":"OK"},{"sku":"8-10028","desc":"Silk Amino Acids","qoh":219.91,"production_req":-258.5372,"po_qty":440.0,"safety":-10.0,"pos":[{"po":"PO058625","qty":440,"weeks_out":1,"type":"Purchase Order"}],"net":401.37,"req":258.54,"status":"OK"},{"sku":"8-19047","desc":"Safflower Seed Oil","qoh":4.96,"production_req":-38.36980000000002,"po_qty":70.0,"safety":-15.0,"pos":[{"po":"PO058752","qty":35,"weeks_out":2,"type":"Purchase Order"},{"po":"00000000000027453115","qty":35,"weeks_out":10,"type":"Unfirmed PO"}],"net":36.59,"req":38.37,"status":"OK"},{"sku":"8-19011","desc":"Vitamin E Oil","qoh":196.58,"production_req":-223.3428100000001,"po_qty":419.0,"safety":-125.0,"pos":[{"po":"PO058534","qty":419,"weeks_out":0,"type":"Purchase Order"}],"net":392.24,"req":223.34,"status":"OK"},{"sku":"8-10087","desc":"Horsetail Extract In Safflower Oil","qoh":0.0,"production_req":-0.31061,"po_qty":40.0,"safety":-1.0,"pos":[{"po":"PO058771","qty":40,"weeks_out":2,"type":"Purchase Order"}],"net":39.69,"req":0.31,"status":"OK"},{"sku":"8-12008","desc":"D&C Yellow #11","qoh":6.09,"production_req":-4.924459999999997,"po_qty":11.0,"safety":-2.0,"pos":[{"po":"00000000000027453191","qty":11,"weeks_out":12,"type":"Unfirmed PO"}],"net":12.17,"req":4.92,"status":"OK"},{"sku":"8-19034","desc":"Campo SP True Monoi Oil","qoh":154.61,"production_req":-150.66602,"po_qty":11.02,"safety":-12.0,"pos":[{"po":"00000000000027453208","qty":11,"weeks_out":12,"type":"Unfirmed PO"}],"net":14.96,"req":150.67,"status":"LOW"},{"sku":"8-12029","desc":"Pyla-Cert DP Green B 328245","qoh":4.81,"production_req":-0.02344,"po_qty":0,"safety":-1.0,"pos":[],"net":4.78,"req":0.02,"status":"OK"},{"sku":"8-10105","desc":"Turmeric EO","qoh":5.0,"production_req":0,"po_qty":0,"safety":0.0,"pos":[],"net":5.0,"req":0,"status":"OK"},{"sku":"8-19053","desc":"Kalahari Oil","qoh":50.96,"production_req":-45.80563,"po_qty":31.0,"safety":-15.0,"pos":[{"po":"PO058844","qty":31,"weeks_out":2,"type":"Purchase Order"}],"net":36.16,"req":45.81,"status":"OK"},{"sku":"8-10083","desc":"Lavender Extract in Safflower Oil","qoh":5.94,"production_req":-0.30501,"po_qty":0,"safety":-1.0,"pos":[],"net":5.63,"req":0.31,"status":"OK"},{"sku":"8-10092","desc":"Indian Hemp Extract in Sunflower Seed Oil","qoh":23.0,"production_req":-17.000400000000003,"po_qty":40.0,"safety":-20.0,"pos":[{"po":"PO058598","qty":40,"weeks_out":1,"type":"Purchase Order"}],"net":46.0,"req":17.0,"status":"OK"},{"sku":"8-13055","desc":"Green Marine # 223707","qoh":39.0,"production_req":-31.89472,"po_qty":25.0,"safety":-15.0,"pos":[{"po":"00000000000027453192","qty":25,"weeks_out":8,"type":"Unfirmed PO"}],"net":32.11,"req":31.89,"status":"OK"},{"sku":"8-12021","desc":"External D&C Violet #2","qoh":7.32,"production_req":-0.07488,"po_qty":0,"safety":-1.0,"pos":[],"net":7.25,"req":0.07,"status":"OK"},{"sku":"8-12002","desc":"D&C Green #6","qoh":8.18,"production_req":-0.8933700000000007,"po_qty":0,"safety":-1.0,"pos":[],"net":7.29,"req":0.89,"status":"OK"},{"sku":"8-12013","desc":"FD&C Yellow #6","qoh":8.74,"production_req":-0.43682,"po_qty":0,"safety":-1.0,"pos":[],"net":8.3,"req":0.44,"status":"OK"},{"sku":"8-12011","desc":"FD&C Red #40","qoh":8.86,"production_req":-0.47322,"po_qty":0,"safety":-1.0,"pos":[],"net":8.39,"req":0.47,"status":"OK"},{"sku":"8-10013","desc":"Ginseng Powder","qoh":12.86,"production_req":-3.99432,"po_qty":0,"safety":-5.0,"pos":[],"net":8.87,"req":3.99,"status":"OK"},{"sku":"8-12024","desc":"D&C Green #5","qoh":9.93,"production_req":-0.02859,"po_qty":0,"safety":-1.0,"pos":[],"net":9.9,"req":0.03,"status":"OK"},{"sku":"8-10059","desc":"ESP Ginseng,Rosemqary, Horsetail Extract Blend WS","qoh":21.81,"production_req":-11.549059999999999,"po_qty":0,"safety":-3.0,"pos":[],"net":10.26,"req":11.55,"status":"OK"},{"sku":"8-12017","desc":"Phenol Red WS","qoh":14.24,"production_req":-3.8371500000000003,"po_qty":0,"safety":-2.0,"pos":[],"net":10.4,"req":3.84,"status":"OK"},{"sku":"8-10060","desc":"Apple Cider Vinegar","qoh":11.22,"production_req":-0.65914,"po_qty":0,"safety":-1.0,"pos":[],"net":10.56,"req":0.66,"status":"OK"},{"sku":"8-10009","desc":"Chickory Root Powder","qoh":15.0,"production_req":-4.30166,"po_qty":0,"safety":-10.0,"pos":[],"net":10.7,"req":4.3,"status":"OK"},{"sku":"8-10084","desc":"Rose Extract in Safflower Oil","qoh":16.53,"production_req":-5.6462,"po_qty":0,"safety":-1.0,"pos":[],"net":10.89,"req":5.65,"status":"OK"},{"sku":"8-12028","desc":"FD&C Red #4","qoh":11.0,"production_req":0,"po_qty":0,"safety":0.0,"pos":[],"net":11.0,"req":0,"status":"OK"},{"sku":"8-12007","desc":"D&C Yellow #10","qoh":11.48,"production_req":-0.17307,"po_qty":0,"safety":-1.0,"pos":[],"net":11.3,"req":0.17,"status":"OK"},{"sku":"8-12009","desc":"FD&C Blue #1","qoh":15.41,"production_req":-0.8442600000000009,"po_qty":0,"safety":-1.0,"pos":[],"net":14.57,"req":0.84,"status":"OK"},{"sku":"8-10081","desc":"Ginger Extract In Safflower Oil","qoh":17.0,"production_req":-1.6027,"po_qty":0,"safety":-3.0,"pos":[],"net":15.4,"req":1.6,"status":"OK"},{"sku":"8-10104","desc":"Sea Moss in Olive Oil Extract","qoh":16.0,"production_req":0,"po_qty":0,"safety":-4.0,"pos":[],"net":16.0,"req":0,"status":"OK"},{"sku":"8-10085","desc":"Rosemary leaf Extract in Safflower Oil","qoh":38.28,"production_req":-22.189470000000018,"po_qty":0,"safety":-10.0,"pos":[],"net":16.09,"req":22.19,"status":"OK"},{"sku":"8-19046","desc":"Wheat  Germ Oil","qoh":33.48,"production_req":-17.000400000000003,"po_qty":0,"safety":-10.0,"pos":[],"net":16.48,"req":17.0,"status":"OK"},{"sku":"8-12012","desc":"FD&C Yellow #5","qoh":19.65,"production_req":-2.8156300000000005,"po_qty":0,"safety":-1.0,"pos":[],"net":16.83,"req":2.82,"status":"OK"},{"sku":"8-10116","desc":"Okra Extract 79N79140-WS","qoh":396.51,"production_req":-378.9193,"po_qty":400.0,"safety":-200.0,"pos":[{"po":"00000000000027453086","qty":400,"weeks_out":9,"type":"Unfirmed PO"}],"net":417.6,"req":378.92,"status":"OK"},{"sku":"8-12006","desc":"D&C Red #33","qoh":21.12,"production_req":-2.687439999999998,"po_qty":0,"safety":-2.0,"pos":[],"net":18.43,"req":2.69,"status":"OK"},{"sku":"8-18032","desc":"ARJUN Paraffin Wax","qoh":19.11,"production_req":0,"po_qty":0,"safety":0.0,"pos":[],"net":19.11,"req":0,"status":"OK"},{"sku":"8-18015","desc":"Uvinul MS-40","qoh":25.31,"production_req":-5.6792300000000004,"po_qty":0,"safety":-2.0,"pos":[],"net":19.63,"req":5.68,"status":"OK"},{"sku":"8-10106","desc":"N72088 - OS Botanical Extract","qoh":26.0,"production_req":-5.7246,"po_qty":0,"safety":-5.0,"pos":[],"net":20.28,"req":5.72,"status":"OK"},{"sku":"8-10112","desc":"N72368-OS Botanical Extract","qoh":26.0,"production_req":-5.7246,"po_qty":0,"safety":-6.0,"pos":[],"net":20.28,"req":5.72,"status":"OK"},{"sku":"8-10036","desc":"Actiplex 3323 LipoSoy","qoh":20.97,"production_req":-0.00532,"po_qty":0,"safety":-1.0,"pos":[],"net":20.97,"req":0.01,"status":"OK"},{"sku":"8-10004","desc":"CustoBlend ACTI 1008","qoh":28.72,"production_req":-6.56205,"po_qty":0,"safety":-7.0,"pos":[],"net":22.16,"req":6.56,"status":"OK"},{"sku":"8-10030","desc":"Oregano Flakes","qoh":81.72,"production_req":-58.908580000000015,"po_qty":60.0,"safety":-25.0,"pos":[{"po":"00000000000027453234","qty":60,"weeks_out":8,"type":"Unfirmed PO"}],"net":82.82,"req":58.91,"status":"OK"},{"sku":"8-10029","desc":"SoluColl","qoh":22.98,"production_req":-0.00238,"po_qty":0,"safety":-1.0,"pos":[],"net":22.98,"req":0.0,"status":"OK"},{"sku":"8-10032","desc":"CustoBlend ACTI 2812","qoh":48.17,"production_req":-24.7629,"po_qty":140.0,"safety":-25.0,"pos":[{"po":"00000000000027453235","qty":140,"weeks_out":8,"type":"Unfirmed PO"}],"net":163.41,"req":24.76,"status":"OK"},{"sku":"8-10080","desc":"Aloe Vera Extract in Safflower Oil","qoh":33.88,"production_req":-9.22746,"po_qty":0,"safety":-10.0,"pos":[],"net":24.65,"req":9.23,"status":"OK"},{"sku":"8-22010","desc":"Dehyquart Guar N","qoh":25.0,"production_req":0,"po_qty":0,"safety":-10.0,"pos":[],"net":25.0,"req":0,"status":"OK"},{"sku":"8-14006","desc":"Glyceryl Monostearate","qoh":367.0,"production_req":-341.85399,"po_qty":440.0,"safety":-115.0,"pos":[{"po":"00000000000027453173","qty":440,"weeks_out":9,"type":"Unfirmed PO"}],"net":465.15,"req":341.85,"status":"OK"},{"sku":"8-10111","desc":"PremHair Omega-3","qoh":26.0,"production_req":0,"po_qty":0,"safety":-5.0,"pos":[],"net":26.0,"req":0,"status":"OK"},{"sku":"8-10096","desc":"BV-OSC - Tetrahexyldecyl Ascorbate","qoh":26.52,"production_req":-0.308,"po_qty":0,"safety":-1.0,"pos":[],"net":26.21,"req":0.31,"status":"OK"},{"sku":"8-19049","desc":"Rosemary Oil","qoh":29.9,"production_req":-3.66953,"po_qty":0,"safety":-20.0,"pos":[],"net":26.23,"req":3.67,"status":"OK"},{"sku":"8-14038","desc":"Jeecol CS-20","qoh":197.84,"production_req":-170.92701,"po_qty":385.84,"safety":-60.0,"pos":[{"po":"00000000000027453180","qty":386,"weeks_out":9,"type":"Unfirmed PO"}],"net":412.75,"req":170.93,"status":"OK"},{"sku":"8-22002","desc":"Hydrotriticum QM","qoh":27.52,"production_req":-0.43244000000000005,"po_qty":0,"safety":-1.0,"pos":[],"net":27.09,"req":0.43,"status":"OK"},{"sku":"8-12004","desc":"D&C Red #17","qoh":28.38,"production_req":-0.5002699999999998,"po_qty":0,"safety":-1.0,"pos":[],"net":27.88,"req":0.5,"status":"OK"},{"sku":"8-10038","desc":"Hydrosoy 2000 PE","qoh":29.02,"production_req":-0.32749000000000006,"po_qty":0,"safety":-1.0,"pos":[],"net":28.69,"req":0.33,"status":"OK"},{"sku":"8-10044","desc":"Hydrolyzed Oat Protein","qoh":29.82,"production_req":-0.23945000000000005,"po_qty":0,"safety":-1.0,"pos":[],"net":29.58,"req":0.24,"status":"OK"},{"sku":"8-10090","desc":"White Nettle Extract In Saffower Oil","qoh":36.53,"production_req":-5.6462,"po_qty":0,"safety":-5.0,"pos":[],"net":30.88,"req":5.65,"status":"OK"},{"sku":"8-19038","desc":"Tamanu Oil","qoh":44.23,"production_req":-11.44508,"po_qty":0,"safety":-12.0,"pos":[],"net":32.78,"req":11.45,"status":"OK"},{"sku":"8-13102","desc":"Coconut Oil Fragrance  PA 100337","qoh":47.0,"production_req":-13.72542,"po_qty":0,"safety":-20.0,"pos":[],"net":33.27,"req":13.73,"status":"OK"},{"sku":"8-10109","desc":"Vitamin AEF ws PF","qoh":34.0,"production_req":0,"po_qty":0,"safety":-10.0,"pos":[],"net":34.0,"req":0,"status":"OK"},{"sku":"8-19041","desc":"ClariSilk","qoh":36.0,"production_req":0,"po_qty":0,"safety":0.0,"pos":[],"net":36.0,"req":0,"status":"OK"},{"sku":"8-13110","desc":"Lavender Sprig & Sandalwood A 2023050255","qoh":46.0,"production_req":-9.15028,"po_qty":0,"safety":-12.0,"pos":[],"net":36.85,"req":9.15,"status":"OK"},{"sku":"8-10052","desc":"Quat-Keratin WKP","qoh":37.68,"production_req":0,"po_qty":0,"safety":0.0,"pos":[],"net":37.68,"req":0,"status":"OK"},{"sku":"8-10088","desc":"Passion Fruit Extract In Safflower Oil","qoh":41.0,"production_req":-1.6027,"po_qty":0,"safety":-3.0,"pos":[],"net":39.4,"req":1.6,"status":"OK"},{"sku":"8-12018","desc":"Butterscotch Shade R-SD","qoh":50.11,"production_req":-10.361220000000001,"po_qty":0.09,"safety":-4.0,"pos":[{"po":"PO058563","qty":0,"weeks_out":-1,"type":"Purchase Order"}],"net":39.84,"req":10.36,"status":"OK"},{"sku":"8-10086","desc":"Sage Extract  In Safflower Oil","qoh":42.93,"production_req":-3.05009,"po_qty":0,"safety":-5.0,"pos":[],"net":39.88,"req":3.05,"status":"OK"},{"sku":"8-19027","desc":"Grapeseed Oil","qoh":355.6,"production_req":-315.64254000000005,"po_qty":441.0,"safety":-100.0,"pos":[{"po":"PO058438","qty":441,"weeks_out":1,"type":"Purchase Order"}],"net":480.96,"req":315.64,"status":"OK"},{"sku":"8-10005","desc":"HOC Blend 2 - 15189","qoh":44.04,"production_req":-3.992,"po_qty":0,"safety":-10.0,"pos":[],"net":40.05,"req":3.99,"status":"OK"},{"sku":"8-19015","desc":"Kiwi Oil","qoh":47.19,"production_req":-7.14015,"po_qty":0,"safety":-5.0,"pos":[],"net":40.05,"req":7.14,"status":"OK"},{"sku":"8-10034","desc":"Cropeptide WPF","qoh":41.79,"production_req":-0.03765,"po_qty":0,"safety":-1.0,"pos":[],"net":41.75,"req":0.04,"status":"OK"},{"sku":"8-18006","desc":"Benzophenone-3","qoh":46.97,"production_req":-4.870400000000001,"po_qty":0,"safety":-5.0,"pos":[],"net":42.1,"req":4.87,"status":"OK"},{"sku":"8-10011","desc":"Coltsfoot Powder","qoh":43.12,"production_req":0,"po_qty":0,"safety":-5.0,"pos":[],"net":43.12,"req":0,"status":"OK"},{"sku":"8-10097","desc":"Chebe Powder","qoh":45.0,"production_req":0,"po_qty":0,"safety":-1.0,"pos":[],"net":45.0,"req":0,"status":"OK"},{"sku":"8-14044","desc":"Tego Pearl N 300","qoh":117.0,"production_req":-71.58642,"po_qty":0,"safety":0.0,"pos":[],"net":45.41,"req":71.59,"status":"OK"},{"sku":"8-10108","desc":"ESP Extract Blend 792-210","qoh":47.0,"production_req":0,"po_qty":0,"safety":0.0,"pos":[],"net":47.0,"req":0,"status":"OK"},{"sku":"8-18008","desc":"Ritalac LA","qoh":67.0,"production_req":-18.81786,"po_qty":0,"safety":-10.0,"pos":[],"net":48.18,"req":18.82,"status":"OK"},{"sku":"8-19020","desc":"TTOil","qoh":67.91,"production_req":-19.11469,"po_qty":0,"safety":-15.0,"pos":[],"net":48.8,"req":19.11,"status":"OK"},{"sku":"8-10073","desc":"Mari Coll NPNF","qoh":49.0,"production_req":0,"po_qty":0,"safety":0.0,"pos":[],"net":49.0,"req":0,"status":"OK"},{"sku":"8-10115","desc":"OryzaShine","qoh":49.28,"production_req":0,"po_qty":0,"safety":-25.0,"pos":[],"net":49.28,"req":0,"status":"OK"},{"sku":"8-19022","desc":"Clove Oil","qoh":74.97,"production_req":-23.481469999999998,"po_qty":0,"safety":-10.0,"pos":[],"net":51.49,"req":23.48,"status":"OK"},{"sku":"8-19018","desc":"Mink Oil","qoh":52.91,"production_req":-0.01061,"po_qty":0,"safety":-1.0,"pos":[],"net":52.9,"req":0.01,"status":"OK"},{"sku":"8-19012","desc":"Walnut Oil","qoh":119.0,"production_req":-65.61998,"po_qty":0,"safety":-50.0,"pos":[],"net":53.38,"req":65.62,"status":"OK"},{"sku":"8-10074","desc":"BP-Triluronic Acid","qoh":54.0,"production_req":0,"po_qty":0,"safety":-1.0,"pos":[],"net":54.0,"req":0,"status":"OK"},{"sku":"8-20011","desc":"Tinoguard TT","qoh":55.56,"production_req":-1.21771,"po_qty":0,"safety":-1.0,"pos":[],"net":54.35,"req":1.22,"status":"OK"},{"sku":"8-13035","desc":"Hair Mayo MOD-2047134","qoh":489.74,"production_req":-434.74960000000004,"po_qty":400.0,"safety":-200.0,"pos":[{"po":"00000000000027453236","qty":400,"weeks_out":8,"type":"Unfirmed PO"}],"net":454.99,"req":434.75,"status":"OK"},{"sku":"8-17031","desc":"Sepimax Zen","qoh":78.45,"production_req":-21.68031,"po_qty":1.0,"safety":-25.0,"pos":[{"po":"PO057909","qty":1,"weeks_out":-7,"type":"Purchase Order"}],"net":57.77,"req":21.68,"status":"OK"},{"sku":"8-10053","desc":"Quinoa Pro EX","qoh":66.93,"production_req":-9.046420000000001,"po_qty":0,"safety":-5.0,"pos":[],"net":57.88,"req":9.05,"status":"OK"},{"sku":"8-10016","desc":"Honey","qoh":132.52,"production_req":-74.59744,"po_qty":0,"safety":-25.0,"pos":[],"net":57.92,"req":74.6,"status":"OK"},{"sku":"8-17010","desc":"Salcare SC-96","qoh":285.76,"production_req":-227.61261000000002,"po_qty":0,"safety":0.0,"pos":[],"net":58.15,"req":227.61,"status":"OK"},{"sku":"8-19039","desc":"Macadamia Nut Oil","qoh":60.0,"production_req":0,"po_qty":0,"safety":0.0,"pos":[],"net":60.0,"req":0,"status":"OK"},{"sku":"8-10007","desc":"Black Pepper","qoh":132.0,"production_req":-70.676,"po_qty":0,"safety":-50.0,"pos":[],"net":61.32,"req":70.68,"status":"OK"},{"sku":"8-20017","desc":"Sensiva PA30","qoh":162.92,"production_req":-98.25553,"po_qty":441.19,"safety":-200.0,"pos":[{"po":"PO057989","qty":132,"weeks_out":2,"type":"Purchase Order"},{"po":"PO057989","qty":309,"weeks_out":2,"type":"Purchase Order"}],"net":505.85,"req":98.26,"status":"OK"},{"sku":"8-17034","desc":"Hairfix STF","qoh":308.06,"production_req":-240.99817000000004,"po_qty":88.0,"safety":-125.0,"pos":[{"po":"PO058800","qty":88,"weeks_out":1,"type":"Purchase Order"}],"net":155.06,"req":241.0,"status":"OK"},{"sku":"8-20012","desc":"TBHQ","qoh":361.0,"production_req":-293.65168,"po_qty":440.0,"safety":-100.0,"pos":[{"po":"PO058837","qty":440,"weeks_out":4,"type":"Purchase Order"}],"net":507.35,"req":293.65,"status":"OK"},{"sku":"8-10037","desc":"Ginseng Extract","qoh":67.68,"production_req":-0.058,"po_qty":0,"safety":-1.0,"pos":[],"net":67.62,"req":0.06,"status":"OK"},{"sku":"8-10003","desc":"CustoBlend ACTI 1101","qoh":68.1,"production_req":0,"po_qty":0,"safety":-10.0,"pos":[],"net":68.1,"req":0,"status":"OK"},{"sku":"8-12025","desc":"Pylacert Dark Green Olive MX-702","qoh":69.71,"production_req":-1.3176299999999999,"po_qty":0,"safety":-1.0,"pos":[],"net":68.39,"req":1.32,"status":"OK"},{"sku":"8-19029","desc":"Shea Butter Oil","qoh":78.95,"production_req":-8.48404,"po_qty":0,"safety":-11.0,"pos":[],"net":70.47,"req":8.48,"status":"OK"},{"sku":"8-22019","desc":"Crodasone W-PF","qoh":72.74,"production_req":0,"po_qty":0,"safety":-1.0,"pos":[],"net":72.74,"req":0,"status":"OK"},{"sku":"8-12023","desc":"D&C Violet #2","qoh":72.93,"production_req":-0.01687,"po_qty":0,"safety":-1.0,"pos":[],"net":72.91,"req":0.02,"status":"OK"},{"sku":"8-10113","desc":"Cactus Extract N76213-WS","qoh":248.91,"production_req":-174.70404000000002,"po_qty":25.79,"safety":-100.0,"pos":[{"po":"00000000000027453083","qty":3,"weeks_out":7,"type":"Unfirmed PO"},{"po":"00000000000027453084","qty":11,"weeks_out":7,"type":"Unfirmed PO"},{"po":"00000000000027453085","qty":11,"weeks_out":7,"type":"Unfirmed PO"}],"net":100.0,"req":174.7,"status":"OK"},{"sku":"8-17030","desc":"Sepinov EMT 10","qoh":93.34,"production_req":-19.06993,"po_qty":0,"safety":-25.0,"pos":[],"net":74.28,"req":19.07,"status":"OK"},{"sku":"8-13086","desc":"Wacky Watermelon SANS DEP Fragrance  AL222115","qoh":186.0,"production_req":-109.06727000000001,"po_qty":0,"safety":-75.0,"pos":[],"net":76.93,"req":109.07,"status":"OK"},{"sku":"8-17037","desc":"Custopoly PQ-37 LV","qoh":272.0,"production_req":-192.36544,"po_qty":276.0,"safety":-100.0,"pos":[{"po":"PO058397","qty":276,"weeks_out":7,"type":"Purchase Order"}],"net":355.63,"req":192.37,"status":"OK"},{"sku":"8-10061","desc":"Coconut Milk Powder","qoh":84.93,"production_req":-2.39257,"po_qty":0,"safety":-1.0,"pos":[],"net":82.54,"req":2.39,"status":"OK"},{"sku":"8-10002","desc":"CustoBlend ACTI 245","qoh":156.62,"production_req":-73.28855999999999,"po_qty":0,"safety":-75.0,"pos":[],"net":83.33,"req":73.29,"status":"OK"},{"sku":"8-13123","desc":"Rice & Coconut Fragrance 2025080461","qoh":85.0,"production_req":0,"po_qty":0,"safety":-75.0,"pos":[],"net":85.0,"req":0,"status":"OK"},{"sku":"8-10068","desc":"H-Vit Plus","qoh":89.0,"production_req":0,"po_qty":0,"safety":-12.0,"pos":[],"net":89.0,"req":0,"status":"OK"},{"sku":"8-19007","desc":"Peppermint Oil","qoh":130.0,"production_req":-40.491910000000004,"po_qty":0,"safety":-25.0,"pos":[],"net":89.51,"req":40.49,"status":"OK"},{"sku":"8-10024","desc":"Shebu WS","qoh":495.09,"production_req":-404.8432699999999,"po_qty":0,"safety":-50.0,"pos":[],"net":90.25,"req":404.84,"status":"OK"},{"sku":"8-10078","desc":"FiberHance BM Solution","qoh":92.0,"production_req":0,"po_qty":0,"safety":0.0,"pos":[],"net":92.0,"req":0,"status":"OK"},{"sku":"8-22018","desc":"Keravis PE","qoh":132.84,"production_req":-39.821110000000004,"po_qty":0,"safety":-25.0,"pos":[],"net":93.02,"req":39.82,"status":"OK"},{"sku":"8-18019","desc":"Polyquaternium 7","qoh":2427.36,"production_req":-2333.5869700000003,"po_qty":1350.0,"safety":-1000.0,"pos":[{"po":"PO058706","qty":450,"weeks_out":-1,"type":"Purchase Order"},{"po":"PO058784","qty":900,"weeks_out":4,"type":"Purchase Order"}],"net":1443.77,"req":2333.59,"status":"OK"},{"sku":"8-17036","desc":"SolaGum AX","qoh":94.28,"production_req":-0.4868,"po_qty":0,"safety":0.0,"pos":[],"net":93.79,"req":0.49,"status":"OK"},{"sku":"8-19002","desc":"Aloe Vera Oil","qoh":94.73,"production_req":-0.043930000000000004,"po_qty":0,"safety":-60.0,"pos":[],"net":94.69,"req":0.04,"status":"OK"},{"sku":"8-10012","desc":"Egg Powder","qoh":121.13,"production_req":-21.741159999999997,"po_qty":0,"safety":-20.0,"pos":[],"net":99.39,"req":21.74,"status":"OK"},{"sku":"8-10031","desc":"Cholesterol","qoh":123.93,"production_req":-22.369149999999998,"po_qty":0.23,"safety":-10.0,"pos":[{"po":"PO058562","qty":0,"weeks_out":0,"type":"Purchase Order"}],"net":101.79,"req":22.37,"status":"OK"},{"sku":"8-10095","desc":"Biotin","qoh":113.43,"production_req":-2.3301600000000002,"po_qty":0,"safety":-3.0,"pos":[],"net":111.1,"req":2.33,"status":"OK"},{"sku":"8-13100","desc":"Peppermint (PA32950)","qoh":273.0,"production_req":-160.37372,"po_qty":0,"safety":-35.0,"pos":[],"net":112.63,"req":160.37,"status":"OK"},{"sku":"8-10017","desc":"Hydrolyzed Collagen","qoh":140.76,"production_req":-26.926510000000004,"po_qty":0,"safety":-100.0,"pos":[],"net":113.84,"req":26.93,"status":"OK"},{"sku":"8-13117","desc":"Spicy Turmeric Fragrance - 2023120819","qoh":114.0,"production_req":0,"po_qty":0,"safety":-21.0,"pos":[],"net":114.0,"req":0,"status":"OK"},{"sku":"8-19023","desc":"Eucalyptus Oil","qoh":142.94,"production_req":-22.90901,"po_qty":0,"safety":-25.0,"pos":[],"net":120.03,"req":22.91,"status":"OK"},{"sku":"8-19044","desc":"Hempseed Oil","qoh":120.96,"production_req":0,"po_qty":0,"safety":-30.0,"pos":[],"net":120.96,"req":0,"status":"OK"},{"sku":"8-10077","desc":"KeraPlant Z NPNF","qoh":121.0,"production_req":0,"po_qty":0,"safety":0.0,"pos":[],"net":121.0,"req":0,"status":"OK"},{"sku":"8-10076","desc":"CollaPlant Z NPNF","qoh":130.0,"production_req":0,"po_qty":0,"safety":0.0,"pos":[],"net":130.0,"req":0,"status":"OK"},{"sku":"8-13103","desc":"Hollywood Beauty Cocoa Butter Type -  CE-250443","qoh":130.0,"production_req":0,"po_qty":0,"safety":0.0,"pos":[],"net":130.0,"req":0,"status":"OK"},{"sku":"8-10069","desc":"ESP Black Tea, Henna, Sage Extract in Glycerin","qoh":131.0,"production_req":0,"po_qty":0,"safety":0.0,"pos":[],"net":131.0,"req":0,"status":"OK"},{"sku":"8-10066","desc":"ESP Bamboo Fiber Extract WS","qoh":135.0,"production_req":0,"po_qty":0,"safety":0.0,"pos":[],"net":135.0,"req":0,"status":"OK"},{"sku":"8-10051","desc":"CustoBlend 6V","qoh":141.0,"production_req":-5.2386800000000004,"po_qty":0,"safety":-5.0,"pos":[],"net":135.76,"req":5.24,"status":"OK"},{"sku":"8-10107","desc":"N72089 - WS Botanical Extract","qoh":196.0,"production_req":-59.6071,"po_qty":0,"safety":-70.0,"pos":[],"net":136.39,"req":59.61,"status":"OK"},{"sku":"8-13122","desc":"Batana A  1024497","qoh":302.01,"production_req":-160.22071,"po_qty":0,"safety":-125.0,"pos":[],"net":141.79,"req":160.22,"status":"OK"},{"sku":"8-13091","desc":"Moringa & Aloe AP260716","qoh":201.0,"production_req":-57.18416,"po_qty":0,"safety":-60.0,"pos":[],"net":143.82,"req":57.18,"status":"OK"},{"sku":"8-10072","desc":"Frescolat X-Cool","qoh":165.75,"production_req":-18.58313,"po_qty":0,"safety":-40.0,"pos":[],"net":147.17,"req":18.58,"status":"OK"},{"sku":"8-10033","desc":"Hydrolyzed Milk Protein","qoh":149.0,"production_req":0,"po_qty":0,"safety":-2.0,"pos":[],"net":149.0,"req":0,"status":"OK"}];
+const ALL_PROD = [{"batch":"MAIN063264","date":"2026-04-22","line":1,"item":"1-552-12-1200","desc":"ORI Cocoa Butter Body Lotion, 12oz, 12ea","origqty":755,"actqty":704,"minutes":313,"casepk":12,"planea":9060,"actualea":8448,"status":"COMPLETED","cmpd":"","risk":"","cmpddue":"","shortage":0},{"batch":"MAIN063460","date":"2026-05-04","line":1,"item":"1-108-12-1200","desc":"AB Moisturizing Shampoo W/Conditioner, 12oz, 12ea","origqty":1193,"actqty":1207,"minutes":337,"casepk":12,"planea":14316,"actualea":14484,"status":"COMPLETED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-04-30","shortage":0},{"batch":"MAIN063487","date":"2026-05-05","line":1,"item":"1-698-12-1200","desc":"AJ Knot On My Watch Detangler, 12oz, 12ea","origqty":1996,"actqty":2072,"minutes":564,"casepk":12,"planea":23952,"actualea":24864,"status":"COMPLETED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-01","shortage":-5201},{"batch":"MAIN063515","date":"2026-05-06","line":1,"item":"1-698-12-1200","desc":"AJ Knot On My Watch Detangler, 12oz, 12ea","origqty":1996,"actqty":2100,"minutes":564,"casepk":12,"planea":23952,"actualea":25200,"status":"COMPLETED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-02","shortage":-5201},{"batch":"MAIN063357","date":"2026-05-07","line":1,"item":"1-698-12-0623","desc":"AJ Knot On My Watch Detangler, 12oz, 6ea (2x3) Bundle","origqty":3992,"actqty":0,"minutes":564,"casepk":6,"planea":23952,"actualea":0,"status":"RUNNING","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-03","shortage":-5201},{"batch":"MAIN063366","date":"2026-05-11","line":1,"item":"1-693-12-1243","desc":"AJ Quench Leave-In Conditioner, 12oz, 12ea (4x3) Bundle","origqty":1148,"actqty":0,"minutes":324,"casepk":12,"planea":13776,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-07","shortage":-3883},{"batch":"MAIN063516","date":"2026-05-11","line":1,"item":"1-693-12-1243","desc":"AJ Quench Leave-In Conditioner, 12oz, 12ea (4x3) Bundle","origqty":1148,"actqty":0,"minutes":324,"casepk":12,"planea":13776,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-07","shortage":-3883},{"batch":"MAIN063462","date":"2026-05-12","line":1,"item":"1-693-12-1200","desc":"AJ Quench Leave-In Conditioner, 12oz, 12ea","origqty":1148,"actqty":0,"minutes":324,"casepk":12,"planea":13776,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-08","shortage":-3883},{"batch":"MAIN063463","date":"2026-05-13","line":1,"item":"1-693-12-1200","desc":"AJ Quench Leave-In Conditioner, 12oz, 12ea","origqty":1148,"actqty":0,"minutes":324,"casepk":12,"planea":13776,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-09","shortage":-3883},{"batch":"MAIN063464","date":"2026-05-14","line":1,"item":"1-693-12-1200","desc":"AJ Quench Leave-In Conditioner, 12oz, 12ea","origqty":1148,"actqty":0,"minutes":324,"casepk":12,"planea":13776,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-10","shortage":-3883},{"batch":"MAIN063488","date":"2026-05-14","line":1,"item":"1-693-12-1200","desc":"AJ Quench Leave-In Conditioner, 12oz, 12ea","origqty":1148,"actqty":0,"minutes":324,"casepk":12,"planea":13776,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-10","shortage":-3883},{"batch":"MAIN063364","date":"2026-05-18","line":1,"item":"1-693-16-1200","desc":"AJ Quench Leave-In Conditioner, 16oz, 12ea","origqty":870,"actqty":0,"minutes":307,"casepk":12,"planea":10440,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-14","shortage":-3883},{"batch":"MAIN063458","date":"2026-05-18","line":1,"item":"1-693-16-1200","desc":"AJ Quench Leave-In Conditioner, 16oz, 12ea","origqty":870,"actqty":0,"minutes":307,"casepk":12,"planea":10440,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-14","shortage":-3883},{"batch":"MAIN063358","date":"2026-05-19","line":1,"item":"1-115-12-1243","desc":"AB Ultimate Herbal Oil, 12oz, 12ea (4x3) Bundle","origqty":3979,"actqty":0,"minutes":1123,"casepk":12,"planea":47748,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-15","shortage":-5881},{"batch":"MAIN063416","date":"2026-05-21","line":1,"item":"1-115-12-1243","desc":"AB Ultimate Herbal Oil, 12oz, 12ea (4x3) Bundle","origqty":1989,"actqty":0,"minutes":562,"casepk":12,"planea":23868,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-17","shortage":-5881},{"batch":"MAIN063448","date":"2026-05-26","line":1,"item":"1-554-12-1200","desc":"ORI Olive Oil Body Lotion, 12oz, 12ea","origqty":1126,"actqty":0,"minutes":300,"casepk":12,"planea":13512,"actualea":0,"status":"NOT STARTED","cmpd":"","risk":"","cmpddue":"","shortage":0},{"batch":"MAIN063536","date":"2026-05-27","line":1,"item":"1-552-12-1200","desc":"ORI Cocoa Butter Body Lotion, 12oz, 12ea","origqty":1182,"actqty":0,"minutes":313,"casepk":12,"planea":14184,"actualea":0,"status":"NOT STARTED","cmpd":"","risk":"","cmpddue":"","shortage":0},{"batch":"MAIN063398","date":"2026-04-28","line":2,"item":"1-635-12-0623","desc":"AJ Curl LaLa Thirst Trap! Curl Milk, 12oz, 6ea (2x3)","origqty":2292,"actqty":2138,"minutes":324,"casepk":6,"planea":13752,"actualea":12828,"status":"COMPLETED","cmpd":"","risk":"","cmpddue":"","shortage":0},{"batch":"MAIN063420","date":"2026-05-01","line":2,"item":"1-670-08-1200","desc":"AJ Soft All Over, 8oz, 12ea","origqty":1318,"actqty":1314,"minutes":372,"casepk":12,"planea":15816,"actualea":15768,"status":"COMPLETED","cmpd":"","risk":"","cmpddue":"","shortage":0},{"batch":"MAIN063444","date":"2026-05-02","line":2,"item":"1-102-12-1243-01","desc":"AB Braid Sheen, 12oz, 12ea (4x3) Bundle FD","origqty":1143,"actqty":1121,"minutes":489,"casepk":12,"planea":13716,"actualea":13452,"status":"COMPLETED","cmpd":"","risk":"","cmpddue":"","shortage":0},{"batch":"MAIN063202","date":"2026-05-04","line":2,"item":"1-634-12-0623","desc":"AJ CLL Hold Plz! Styling Gel, 12oz, 6ea (2x3)","origqty":2289,"actqty":2354,"minutes":425,"casepk":6,"planea":13734,"actualea":14124,"status":"COMPLETED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-04-30","shortage":0},{"batch":"MAIN063203","date":"2026-05-05","line":2,"item":"1-634-12-0623","desc":"AJ CLL Hold Plz! Styling Gel, 12oz, 6ea (2x3)","origqty":2289,"actqty":1620,"minutes":425,"casepk":6,"planea":13734,"actualea":9720,"status":"RUNNING","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-01","shortage":0},{"batch":"MAIN063269","date":"2026-05-04","line":2,"item":"1-647-04-1243","desc":"AJ B&H scratch free zone Itch Serum, 4oz, 12ea (4x3)","origqty":1989,"actqty":0,"minutes":530,"casepk":12,"planea":23868,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-04-30","shortage":-214},{"batch":"MAIN063337","date":"2026-05-05","line":2,"item":"1-646-04-1243","desc":"AJ B&H Scent-sational! Hair Perfume, 4oz, 12ea (4x3)","origqty":1319,"actqty":0,"minutes":351,"casepk":12,"planea":15828,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-01","shortage":0},{"batch":"MAIN063475","date":"2026-05-06","line":2,"item":"1-690-04-2446","desc":"AJ Frizz Rebel Coconut & Sweet Almond, 4oz, 24ea (4x6) Displ","origqty":461,"actqty":0,"minutes":260,"casepk":24,"planea":11064,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-02","shortage":0},{"batch":"MAIN063270","date":"2026-05-07","line":2,"item":"1-560-04-2446","desc":"ORI Jamaican Black Castor Oil, 4oz, 24ea (4x6) Display","origqty":1639,"actqty":0,"minutes":926,"casepk":24,"planea":39336,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-03","shortage":0},{"batch":"MAIN063084","date":"2026-05-11","line":2,"item":"1-HB564-04-1226","desc":"HB GRO UP! Rosemary Mint & Biotin Oil, 4oz, 12ea (2X6) 8-10087, 5/8","origqty":1066,"actqty":0,"minutes":284,"casepk":12,"planea":12792,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-07","shortage":0},{"batch":"MAIN063532","date":"2026-05-12","line":2,"item":"1-642-12-1243","desc":"AJ Oh So Strong Braid Refresh Spray, 12oz, 12ea (4x3) Bundle","origqty":653,"actqty":0,"minutes":205,"casepk":12,"planea":7836,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-08","shortage":0},{"batch":"MAIN063641","date":"2026-05-12","line":2,"item":"1-698-08-1243-4700","desc":"AJ Knot On My Watch Detangler, 8oz, 12ea (4x3) Bundle Bonus","origqty":905,"actqty":0,"minutes":256,"casepk":12,"planea":10860,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-08","shortage":-5201},{"batch":"MAIN063505","date":"2026-05-13","line":2,"item":"1-635-08-1243","desc":"AJ CLL Thirst Trap! Curl Milk, 8oz, 12ea (4x3)","origqty":921,"actqty":0,"minutes":260,"casepk":12,"planea":11052,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-09","shortage":0},{"batch":"MAIN063554","date":"2026-05-14","line":2,"item":"1-637-08-1243","desc":"AJ Curl LaLa Foam-a-licious Styling Mousse, 8.5oz, 12ea (4x3 9-637-08,5/5","origqty":1502,"actqty":0,"minutes":663,"casepk":12,"planea":18024,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-10","shortage":0},{"batch":"MAIN063555","date":"2026-05-15","line":2,"item":"1-637-08-1243","desc":"AJ Curl LaLa Foam-a-licious Styling Mousse, 8.5oz, 12ea (4x3 9-637-08,5/5","origqty":1502,"actqty":0,"minutes":663,"casepk":12,"planea":18024,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-11","shortage":0},{"batch":"MAIN063603","date":"2026-05-19","line":2,"item":"1-648-06-1243","desc":"AJ Biotin & Honey dry clean!, 6oz, 12ea (4x3)","origqty":1166,"actqty":0,"minutes":412,"casepk":12,"planea":13992,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-15","shortage":0},{"batch":"MAIN063204","date":"2026-05-20","line":2,"item":"1-634-12-0623","desc":"AJ CLL Hold Plz! Styling Gel, 12oz, 6ea (2x3)","origqty":2289,"actqty":0,"minutes":425,"casepk":6,"planea":13734,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-16","shortage":0},{"batch":"MAIN063205","date":"2026-05-21","line":2,"item":"1-634-12-0623","desc":"AJ CLL Hold Plz! Styling Gel, 12oz, 6ea (2x3)","origqty":2289,"actqty":0,"minutes":425,"casepk":6,"planea":13734,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-17","shortage":0},{"batch":"MAIN063206","date":"2026-05-22","line":2,"item":"1-634-12-0623","desc":"AJ CLL Hold Plz! Styling Gel, 12oz, 6ea (2x3)","origqty":2289,"actqty":0,"minutes":425,"casepk":6,"planea":13734,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-18","shortage":0},{"batch":"MAIN063395","date":"2026-05-23","line":2,"item":"1-634-12-0623","desc":"AJ CLL Hold Plz! Styling Gel, 12oz, 6ea (2x3)","origqty":2289,"actqty":0,"minutes":425,"casepk":6,"planea":13734,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-19","shortage":0},{"batch":"MAIN063469","date":"2026-04-28","line":3,"item":"1-688-15-0600","desc":"AJ Coco Repair, 15oz, 6ea","origqty":1698,"actqty":1625,"minutes":250,"casepk":6,"planea":10188,"actualea":9750,"status":"COMPLETED","cmpd":"","risk":"","cmpddue":"","shortage":0},{"batch":"MAIN062987","date":"2026-05-01","line":3,"item":"1-504-15-1200","desc":"ORI Kids Hair Nutrition, 15oz, 12ea","origqty":994,"actqty":924,"minutes":292,"casepk":12,"planea":11928,"actualea":11088,"status":"COMPLETED","cmpd":"","risk":"","cmpddue":"","shortage":0},{"batch":"MAIN063288","date":"2026-05-02","line":3,"item":"1-675-15-1200","desc":"AJ Fix My Hair, 15oz, 12ea","origqty":891,"actqty":939,"minutes":257,"casepk":12,"planea":10692,"actualea":11268,"status":"COMPLETED","cmpd":"","risk":"","cmpddue":"","shortage":0},{"batch":"MAIN063425","date":"2026-05-02","line":3,"item":"1-675-15-1200","desc":"AJ Fix My Hair, 15oz, 12ea","origqty":891,"actqty":936,"minutes":257,"casepk":12,"planea":10692,"actualea":11232,"status":"COMPLETED","cmpd":"","risk":"","cmpddue":"","shortage":0},{"batch":"MAIN063498","date":"2026-05-04","line":3,"item":"1-553-15-1200","desc":"ORI Olive Oil Body Whip, 15oz, 12ea","origqty":976,"actqty":900,"minutes":287,"casepk":12,"planea":11712,"actualea":10800,"status":"COMPLETED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-04-30","shortage":-4300},{"batch":"MAIN063499","date":"2026-05-04","line":3,"item":"1-553-15-1200","desc":"ORI Olive Oil Body Whip, 15oz, 12ea","origqty":976,"actqty":982,"minutes":287,"casepk":12,"planea":11712,"actualea":11784,"status":"COMPLETED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-04-30","shortage":-4300},{"batch":"MAIN063273","date":"2026-05-05","line":3,"item":"1-696-15-1200","desc":"AJ Curl La La Custard, 15oz, 12ea","origqty":978,"actqty":881,"minutes":276,"casepk":12,"planea":11736,"actualea":10572,"status":"COMPLETED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-01","shortage":-27046},{"batch":"MAIN063274","date":"2026-05-05","line":3,"item":"1-696-15-1200","desc":"AJ Curl La La Custard, 15oz, 12ea","origqty":978,"actqty":966,"minutes":276,"casepk":12,"planea":11736,"actualea":11592,"status":"COMPLETED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-01","shortage":-27046},{"batch":"MAIN063275","date":"2026-05-06","line":3,"item":"1-696-15-1200","desc":"AJ Curl La La Custard, 15oz, 12ea","origqty":978,"actqty":954,"minutes":276,"casepk":12,"planea":11736,"actualea":11448,"status":"COMPLETED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-02","shortage":-27046},{"batch":"MAIN063276","date":"2026-05-06","line":3,"item":"1-696-15-1200","desc":"AJ Curl La La Custard, 15oz, 12ea","origqty":978,"actqty":963,"minutes":276,"casepk":12,"planea":11736,"actualea":11556,"status":"COMPLETED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-02","shortage":-27046},{"batch":"MAIN063277","date":"2026-05-07","line":3,"item":"1-696-15-1200","desc":"AJ Curl La La Custard, 15oz, 12ea","origqty":978,"actqty":924,"minutes":276,"casepk":12,"planea":11736,"actualea":11088,"status":"RUNNING","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-03","shortage":-27046},{"batch":"MAIN063278","date":"2026-05-07","line":3,"item":"1-696-15-1200","desc":"AJ Curl La La Custard, 15oz, 12ea","origqty":978,"actqty":0,"minutes":276,"casepk":12,"planea":11736,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-03","shortage":-27046},{"batch":"MAIN063279","date":"2026-05-08","line":3,"item":"1-696-15-1200","desc":"AJ Curl La La Custard, 15oz, 12ea","origqty":978,"actqty":0,"minutes":276,"casepk":12,"planea":11736,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND CRITICAL","risk":"WILL MISS","cmpddue":"2026-05-04","shortage":-27046},{"batch":"MAIN063280","date":"2026-05-08","line":3,"item":"1-696-15-1200","desc":"AJ Curl La La Custard, 15oz, 12ea","origqty":978,"actqty":0,"minutes":276,"casepk":12,"planea":11736,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND CRITICAL","risk":"WILL MISS","cmpddue":"2026-05-04","shortage":-27046},{"batch":"MAIN063281","date":"2026-05-09","line":3,"item":"1-696-15-1200","desc":"AJ Curl La La Custard, 15oz, 12ea","origqty":978,"actqty":0,"minutes":276,"casepk":12,"planea":11736,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND CRITICAL","risk":"WILL MISS","cmpddue":"2026-05-05","shortage":-27046},{"batch":"MAIN063282","date":"2026-05-09","line":3,"item":"1-696-15-1200","desc":"AJ Curl La La Custard, 15oz, 12ea","origqty":978,"actqty":0,"minutes":276,"casepk":12,"planea":11736,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND CRITICAL","risk":"WILL MISS","cmpddue":"2026-05-05","shortage":-27046},{"batch":"MAIN063500","date":"2026-05-11","line":3,"item":"1-553-15-1200","desc":"ORI Olive Oil Body Whip, 15oz, 12ea","origqty":976,"actqty":0,"minutes":287,"casepk":12,"planea":11712,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-07","shortage":-4300},{"batch":"MAIN063501","date":"2026-05-11","line":3,"item":"1-553-15-1200","desc":"ORI Olive Oil Body Whip, 15oz, 12ea","origqty":976,"actqty":0,"minutes":287,"casepk":12,"planea":11712,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-07","shortage":-4300},{"batch":"MAIN063283","date":"2026-05-12","line":3,"item":"1-696-15-0623","desc":"AJ Curl La La Custard, 15oz, 6ea (2x3) Bundle","origqty":1956,"actqty":0,"minutes":307,"casepk":6,"planea":11736,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-08","shortage":-27046},{"batch":"MAIN063284","date":"2026-05-12","line":3,"item":"1-696-15-0623","desc":"AJ Curl La La Custard, 15oz, 6ea (2x3) Bundle","origqty":1956,"actqty":0,"minutes":307,"casepk":6,"planea":11736,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-08","shortage":-27046},{"batch":"MAIN063285","date":"2026-05-13","line":3,"item":"1-696-15-0623","desc":"AJ Curl La La Custard, 15oz, 6ea (2x3) Bundle","origqty":1956,"actqty":0,"minutes":307,"casepk":6,"planea":11736,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-09","shortage":-27046},{"batch":"MAIN063304","date":"2026-05-14","line":3,"item":"1-696-09-1243","desc":"AJ Curl La La Custard, 9oz, 12ea (4x3) Bundle","origqty":1649,"actqty":0,"minutes":466,"casepk":12,"planea":19788,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-10","shortage":-27046},{"batch":"MAIN063305","date":"2026-05-15","line":3,"item":"1-696-09-1243","desc":"AJ Curl La La Custard, 9oz, 12ea (4x3) Bundle","origqty":1649,"actqty":0,"minutes":466,"casepk":12,"planea":19788,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-11","shortage":-27046},{"batch":"MAIN063317","date":"2026-05-16","line":3,"item":"1-696-09-1243","desc":"AJ Curl La La Custard, 9oz, 12ea (4x3) Bundle","origqty":1649,"actqty":0,"minutes":466,"casepk":12,"planea":19788,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-12","shortage":-27046},{"batch":"MAIN063341","date":"2026-05-16","line":3,"item":"1-696-18-1200","desc":"AJ Curl La La Custard, 18oz, 12ea","origqty":818,"actqty":0,"minutes":289,"casepk":12,"planea":9816,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-12","shortage":-27046},{"batch":"MAIN063342","date":"2026-05-18","line":3,"item":"1-696-18-1200","desc":"AJ Curl La La Custard, 18oz, 12ea","origqty":818,"actqty":0,"minutes":289,"casepk":12,"planea":9816,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-14","shortage":-27046},{"batch":"MAIN063427","date":"2026-05-18","line":3,"item":"1-696-18-1200","desc":"AJ Curl La La Custard, 18oz, 12ea","origqty":818,"actqty":0,"minutes":289,"casepk":12,"planea":9816,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-14","shortage":-27046},{"batch":"MAIN063335","date":"2026-05-20","line":3,"item":"1-692-09-1243","desc":"AJ Don't Shrink Curling Gel, 9oz, 12ea (4x3) Bundle","origqty":1621,"actqty":0,"minutes":458,"casepk":12,"planea":19452,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-16","shortage":-10061},{"batch":"MAIN063518","date":"2026-05-20","line":3,"item":"1-692-09-1243","desc":"AJ Don't Shrink Curling Gel, 9oz, 12ea (4x3) Bundle","origqty":1621,"actqty":0,"minutes":458,"casepk":12,"planea":19452,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-16","shortage":-10061},{"batch":"MAIN063289","date":"2026-05-21","line":3,"item":"1-692-15-0623","desc":"AJ Don't Shrink Curling Gel, 15oz, 6ea (2x3) Bundle","origqty":1936,"actqty":0,"minutes":304,"casepk":6,"planea":11616,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-17","shortage":-10061},{"batch":"MAIN063290","date":"2026-05-22","line":3,"item":"1-692-15-0623","desc":"AJ Don't Shrink Curling Gel, 15oz, 6ea (2x3) Bundle","origqty":1936,"actqty":0,"minutes":304,"casepk":6,"planea":11616,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-18","shortage":-10061},{"batch":"MAIN063291","date":"2026-05-22","line":3,"item":"1-692-15-0623","desc":"AJ Don't Shrink Curling Gel, 15oz, 6ea (2x3) Bundle","origqty":1936,"actqty":0,"minutes":304,"casepk":6,"planea":11616,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-18","shortage":-10061},{"batch":"MAIN063292","date":"2026-05-26","line":3,"item":"1-692-15-0623","desc":"AJ Don't Shrink Curling Gel, 15oz, 6ea (2x3) Bundle","origqty":1936,"actqty":0,"minutes":304,"casepk":6,"planea":11616,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-22","shortage":-10061},{"batch":"MAIN063293","date":"2026-05-26","line":3,"item":"1-692-15-1200","desc":"AJ Don't Shrink Curling Gel, 15oz, 12ea","origqty":968,"actqty":0,"minutes":285,"casepk":12,"planea":11616,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-22","shortage":-10061},{"batch":"MAIN063348","date":"2026-05-27","line":3,"item":"1-692-15-1200","desc":"AJ Don't Shrink Curling Gel, 15oz, 12ea","origqty":968,"actqty":0,"minutes":285,"casepk":12,"planea":11616,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-23","shortage":-10061},{"batch":"MAIN063349","date":"2026-05-27","line":3,"item":"1-692-15-1200","desc":"AJ Don't Shrink Curling Gel, 15oz, 12ea","origqty":968,"actqty":0,"minutes":285,"casepk":12,"planea":11616,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-23","shortage":-10061},{"batch":"MAIN063350","date":"2026-05-28","line":3,"item":"1-692-15-1200","desc":"AJ Don't Shrink Curling Gel, 15oz, 12ea","origqty":968,"actqty":0,"minutes":285,"casepk":12,"planea":11616,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-24","shortage":-10061},{"batch":"MAIN063351","date":"2026-05-28","line":3,"item":"1-692-15-1200","desc":"AJ Don't Shrink Curling Gel, 15oz, 12ea","origqty":968,"actqty":0,"minutes":285,"casepk":12,"planea":11616,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-24","shortage":-10061},{"batch":"MAIN063352","date":"2026-05-29","line":3,"item":"1-692-15-1200","desc":"AJ Don't Shrink Curling Gel, 15oz, 12ea","origqty":968,"actqty":0,"minutes":285,"casepk":12,"planea":11616,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-25","shortage":-10061},{"batch":"MAIN063336","date":"2026-05-29","line":3,"item":"1-692-18-1200","desc":"AJ Don't Shrink Curling Gel, 18oz, 12ea","origqty":810,"actqty":0,"minutes":254,"casepk":12,"planea":9720,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-25","shortage":-10061},{"batch":"MAIN063599","date":"2026-05-30","line":3,"item":"1-692-18-1200","desc":"AJ Don't Shrink Curling Gel, 18oz, 12ea","origqty":810,"actqty":0,"minutes":254,"casepk":12,"planea":9720,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-26","shortage":-10061},{"batch":"MAIN063471","date":"2026-05-30","line":3,"item":"1-658-18-1200","desc":"AJ Ice Curls Styling Gel, 18oz, 12ea","origqty":777,"actqty":0,"minutes":244,"casepk":12,"planea":9324,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-26","shortage":-6271},{"batch":"MAIN063300","date":"2026-06-01","line":3,"item":"1-658-15-0600","desc":"AJ Ice Curls Styling Gel, 15oz, 6ea","origqty":1829,"actqty":0,"minutes":269,"casepk":6,"planea":10974,"actualea":0,"status":"NOT STARTED","cmpd":"","risk":"","cmpddue":"","shortage":0},{"batch":"MAIN063301","date":"2026-06-01","line":3,"item":"1-658-15-0600","desc":"AJ Ice Curls Styling Gel, 15oz, 6ea","origqty":1829,"actqty":0,"minutes":269,"casepk":6,"planea":10974,"actualea":0,"status":"NOT STARTED","cmpd":"","risk":"","cmpddue":"","shortage":0},{"batch":"MAIN063005","date":"2026-05-01","line":4,"item":"1-502-07-1200","desc":"ORI Kids Gro Strong, 7oz, 12ea","origqty":936,"actqty":921,"minutes":322,"casepk":12,"planea":11232,"actualea":11052,"status":"COMPLETED","cmpd":"","risk":"","cmpddue":"","shortage":0},{"batch":"MAIN063172","date":"2026-05-02","line":4,"item":"1-114-05-1200","desc":"AB Super Gro, 5.25oz, 12ea","origqty":1305,"actqty":1220,"minutes":400,"casepk":12,"planea":15660,"actualea":14640,"status":"COMPLETED","cmpd":"","risk":"","cmpddue":"","shortage":0},{"batch":"MAIN063328","date":"2026-05-04","line":4,"item":"1-107-05-1200","desc":"AB Max Strength Super Gro, 5.25oz, 12ea","origqty":1600,"actqty":1600,"minutes":411,"casepk":12,"planea":19200,"actualea":19200,"status":"COMPLETED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-04-30","shortage":-5872},{"batch":"MAIN063328","date":"2026-05-04","line":4,"item":"1-107-05-1243","desc":"AB Max Strength Super Gro, 5oz, 12ea (4x3) Bundle","origqty":796,"actqty":733,"minutes":261,"casepk":12,"planea":9552,"actualea":8796,"status":"COMPLETED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-04-30","shortage":-5872},{"batch":"MAIN063302","date":"2026-05-05","line":4,"item":"1-107-05-1243","desc":"AB Max Strength Super Gro, 5oz, 12ea (4x3) Bundle","origqty":2396,"actqty":2416,"minutes":787,"casepk":12,"planea":28752,"actualea":28992,"status":"COMPLETED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-01","shortage":-5872},{"batch":"MAIN063303","date":"2026-05-07","line":4,"item":"1-107-05-1243","desc":"AB Max Strength Super Gro, 5oz, 12ea (4x3) Bundle","origqty":2396,"actqty":2392,"minutes":787,"casepk":12,"planea":28752,"actualea":28704,"status":"COMPLETED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-03","shortage":-5872},{"batch":"MAIN063489","date":"2026-05-08","line":4,"item":"1-2124-05-1243","desc":"ORI Aloe & Avocado Conditioning Hair Food, 5.25oz, 12ea (4x3","origqty":1349,"actqty":416,"minutes":443,"casepk":12,"planea":16188,"actualea":4992,"status":"RUNNING","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-04","shortage":0},{"batch":"MAIN063311","date":"2026-05-09","line":4,"item":"1-K035-04-1200","desc":"KZ Indian Hemp Hair & Scalp, 4oz, 12ea","origqty":1770,"actqty":0,"minutes":543,"casepk":12,"planea":21240,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-05","shortage":0},{"batch":"MAIN063312","date":"2026-05-11","line":4,"item":"1-K035-08-0600","desc":"KZ Indian Hemp Hair & Scalp, 7.7oz, 6ea","origqty":1840,"actqty":0,"minutes":541,"casepk":6,"planea":11040,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-07","shortage":0},{"batch":"MAIN063446","date":"2026-05-13","line":4,"item":"1-687-07-0600","desc":"AJ Butter Creme, 7.5oz, 6ea","origqty":3344,"actqty":0,"minutes":525,"casepk":6,"planea":20064,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-09","shortage":0},{"batch":"MAIN063295","date":"2026-05-14","line":4,"item":"1-207-15-1200","desc":"ORI Hair Mayonnaise, 15oz, 12ea","origqty":944,"actqty":0,"minutes":282,"casepk":12,"planea":11328,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-10","shortage":-12472},{"batch":"MAIN063296","date":"2026-05-14","line":4,"item":"1-207-15-1200","desc":"ORI Hair Mayonnaise, 15oz, 12ea","origqty":944,"actqty":0,"minutes":282,"casepk":12,"planea":11328,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-10","shortage":-12472},{"batch":"MAIN063297","date":"2026-05-15","line":4,"item":"1-207-15-1200","desc":"ORI Hair Mayonnaise, 15oz, 12ea","origqty":944,"actqty":0,"minutes":282,"casepk":12,"planea":11328,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-11","shortage":-12472},{"batch":"MAIN063508","date":"2026-05-15","line":4,"item":"1-207-15-1200","desc":"ORI Hair Mayonnaise, 15oz, 12ea","origqty":944,"actqty":0,"minutes":282,"casepk":12,"planea":11328,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-11","shortage":-12472},{"batch":"MAIN063509","date":"2026-05-16","line":4,"item":"1-207-15-1200","desc":"ORI Hair Mayonnaise, 15oz, 12ea","origqty":944,"actqty":0,"minutes":282,"casepk":12,"planea":11328,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-12","shortage":-12472},{"batch":"MAIN063306","date":"2026-05-16","line":4,"item":"1-207-15-1243","desc":"ORI Hair Mayonnaise, 15oz, 12ea (4x3) Bundle","origqty":944,"actqty":0,"minutes":296,"casepk":12,"planea":11328,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-12","shortage":-12472},{"batch":"MAIN063307","date":"2026-05-18","line":4,"item":"1-207-15-1243","desc":"ORI Hair Mayonnaise, 15oz, 12ea (4x3) Bundle","origqty":944,"actqty":0,"minutes":296,"casepk":12,"planea":11328,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-14","shortage":-12472},{"batch":"MAIN063345","date":"2026-05-19","line":4,"item":"1-925-12-1200","desc":"RF Tub O' Butter Cocoa Butter Cream, 12oz, 12ea","origqty":1022,"actqty":0,"minutes":240,"casepk":12,"planea":12264,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-15","shortage":-4117},{"batch":"MAIN063346","date":"2026-05-20","line":4,"item":"1-925-12-1200","desc":"RF Tub O' Butter Cocoa Butter Cream, 12oz, 12ea","origqty":1022,"actqty":0,"minutes":240,"casepk":12,"planea":12264,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-16","shortage":-4117},{"batch":"MAIN063347","date":"2026-05-20","line":4,"item":"1-925-12-1200","desc":"RF Tub O' Butter Cocoa Butter Cream, 12oz, 12ea","origqty":1022,"actqty":0,"minutes":240,"casepk":12,"planea":12264,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-16","shortage":-4117},{"batch":"MAIN063533","date":"2026-05-21","line":4,"item":"1-925-12-1200","desc":"RF Tub O' Butter Cocoa Butter Cream, 12oz, 12ea","origqty":1022,"actqty":0,"minutes":240,"casepk":12,"planea":12264,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-17","shortage":0},{"batch":"MAIN063313","date":"2026-05-21","line":4,"item":"1-K035-08-0600","desc":"KZ Indian Hemp Hair & Scalp, 7.7oz, 6ea","origqty":1840,"actqty":0,"minutes":541,"casepk":6,"planea":11040,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-18","shortage":0},{"batch":"MAIN063316","date":"2026-05-22","line":4,"item":"1-K035-18-0600","desc":"KZ Indian Hemp Hair & Scalp, 18oz, 6ea","origqty":787,"actqty":0,"minutes":121,"casepk":6,"planea":4722,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-22","shortage":0},{"batch":"MAIN063329","date":"2026-05-26","line":4,"item":"1-K035-18-0600","desc":"KZ Indian Hemp Hair & Scalp, 18oz, 6ea","origqty":787,"actqty":0,"minutes":121,"casepk":6,"planea":4722,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-22","shortage":0},{"batch":"MAIN063330","date":"2026-05-26","line":4,"item":"1-K035-18-0600","desc":"KZ Indian Hemp Hair & Scalp, 18oz, 6ea","origqty":787,"actqty":0,"minutes":121,"casepk":6,"planea":4722,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-23","shortage":0},{"batch":"MAIN063331","date":"2026-05-27","line":4,"item":"1-K035-18-0600","desc":"KZ Indian Hemp Hair & Scalp, 18oz, 6ea","origqty":787,"actqty":0,"minutes":121,"casepk":6,"planea":4722,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-23","shortage":0},{"batch":"MAIN063332","date":"2026-05-27","line":4,"item":"1-K035-18-0600","desc":"KZ Indian Hemp Hair & Scalp, 18oz, 6ea","origqty":787,"actqty":0,"minutes":121,"casepk":6,"planea":4722,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-24","shortage":0},{"batch":"MAIN063333","date":"2026-05-28","line":4,"item":"1-K035-18-0600","desc":"KZ Indian Hemp Hair & Scalp, 18oz, 6ea","origqty":787,"actqty":0,"minutes":121,"casepk":6,"planea":4722,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-24","shortage":0},{"batch":"MAIN063334","date":"2026-05-28","line":4,"item":"1-K035-18-0600","desc":"KZ Indian Hemp Hair & Scalp, 18oz, 6ea","origqty":787,"actqty":0,"minutes":121,"casepk":6,"planea":4722,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-25","shortage":0},{"batch":"MAIN063339","date":"2026-05-29","line":4,"item":"1-667-15-0600","desc":"AJ Soft N Sassy Conditioner, 15oz, 6ea","origqty":1831,"actqty":0,"minutes":269,"casepk":6,"planea":10986,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-26","shortage":0},{"batch":"MAIN063323","date":"2026-05-30","line":4,"item":"1-697-15-1200","desc":"AJ In Control Conditioner, 15oz, 12ea","origqty":966,"actqty":0,"minutes":310,"casepk":12,"planea":11592,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-26","shortage":0},{"batch":"MAIN063598","date":"2026-05-30","line":4,"item":"1-697-15-1200","desc":"AJ In Control Conditioner, 15oz, 12ea","origqty":518,"actqty":0,"minutes":166,"casepk":12,"planea":6216,"actualea":0,"status":"NOT STARTED","cmpd":"","risk":"","cmpddue":"","shortage":0},{"batch":"MAIN063426","date":"2026-05-09","line":5,"item":"1-247-01-0600-16","desc":"ORI Value Kit Super 2 App, 1oz, 6ea Paulina","origqty":3200,"actqty":3247,"minutes":565,"casepk":6,"planea":19200,"actualea":19482,"status":"COMPLETED","cmpd":"COMPOUND CRITICAL","risk":"WILL MISS","cmpddue":"2026-05-05","shortage":0},{"batch":"MAIN063369","date":"2026-05-01","line":5,"item":"1-118-01-1200","desc":"AB No-Lye Relaxer Kit Super, 1, 12ea","origqty":1800,"actqty":1831,"minutes":410,"casepk":12,"planea":21600,"actualea":21972,"status":"COMPLETED","cmpd":"","risk":"","cmpddue":"","shortage":0},{"batch":"MAIN063370","date":"2026-05-06","line":5,"item":"1-118-01-1243","desc":"AB No-Lye Relaxer Kit Super, 1, 12ea (4x3) Bundle","origqty":1800,"actqty":540,"minutes":438,"casepk":12,"planea":21600,"actualea":6480,"status":"RUNNING","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-02","shortage":-11577},{"batch":"MAIN063368","date":"2026-05-07","line":5,"item":"1-117-01-1243","desc":"AB No-Lye Relaxer Kit Regular, 1, 12ea (4x3) Bundle","origqty":2250,"actqty":0,"minutes":548,"casepk":12,"planea":27000,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-03","shortage":-13545},{"batch":"MAIN063371","date":"2026-05-14","line":5,"item":"1-236-01-1200","desc":"ORI Olive Oil Kit Regular, 1, 12ea","origqty":1500,"actqty":0,"minutes":316,"casepk":12,"planea":18000,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-10","shortage":-4171},{"batch":"MAIN063372","date":"2026-05-15","line":5,"item":"1-237-01-1200","desc":"ORI Olive Oil Kit Super, 1, 12ea","origqty":1000,"actqty":0,"minutes":211,"casepk":12,"planea":12000,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-11","shortage":0},{"batch":"MAIN063373","date":"2026-05-16","line":5,"item":"1-238-01-1200","desc":"TMW Men'S Texturizing Kit, 1oz, 12ea","origqty":1500,"actqty":0,"minutes":460,"casepk":12,"planea":18000,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-12","shortage":0},{"batch":"MAIN063506","date":"2026-05-27","line":5,"item":"1-247-01-0600-16","desc":"ORI Value Kit Super 2 App, 1oz, 6ea Paulina","origqty":3000,"actqty":0,"minutes":529,"casepk":6,"planea":18000,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND ON TRACK","risk":"ON TRACK","cmpddue":"2026-05-23","shortage":0},{"batch":"MAIN063377","date":"2026-05-21","line":5,"item":"1-117-01-1200","desc":"AB No-Lye Relaxer Kit Regular, 1, 12ea","origqty":3000,"actqty":0,"minutes":683,"casepk":12,"planea":36000,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND AT RISK","risk":"AT RISK","cmpddue":"2026-05-17","shortage":-13545},{"batch":"MAIN063434","date":"2026-05-01","line":6,"item":"2-934-02-00","desc":"Adult Act Sup, 1.85oz, bulk","origqty":19030,"actqty":14100,"minutes":203,"casepk":1,"planea":19030,"actualea":14100,"status":"COMPLETED","cmpd":"","risk":"","cmpddue":"","shortage":0},{"batch":"MAIN063249","date":"2026-05-06","line":6,"item":"2-933-02-00","desc":"Adult Act Reg, 1.6oz, bulk","origqty":32640,"actqty":33836,"minutes":349,"casepk":1,"planea":32640,"actualea":33836,"status":"COMPLETED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-02","shortage":0},{"batch":"MAIN063391","date":"2026-05-07","line":6,"item":"2-933-02-00","desc":"Adult Act Reg, 1.6oz, bulk","origqty":32640,"actqty":33840,"minutes":349,"casepk":1,"planea":32640,"actualea":33840,"status":"COMPLETED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-03","shortage":0},{"batch":"MAIN063392","date":"2026-05-08","line":6,"item":"2-933-02-00","desc":"Adult Act Reg, 1.6oz, bulk","origqty":32640,"actqty":18800,"minutes":349,"casepk":1,"planea":32640,"actualea":18800,"status":"RUNNING","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-04","shortage":0},{"batch":"MAIN063435","date":"2026-05-13","line":6,"item":"2-934-02-00","desc":"Adult Act Sup, 1.85oz, bulk","origqty":28430,"actqty":0,"minutes":304,"casepk":1,"planea":28430,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-09","shortage":0},{"batch":"MAIN063436","date":"2026-05-22","line":6,"item":"2-934-02-00","desc":"Adult Act Sup, 1.85oz, bulk","origqty":28430,"actqty":0,"minutes":304,"casepk":1,"planea":28430,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-18","shortage":0},{"batch":"MAIN063379","date":"2026-04-22","line":8,"item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","origqty":11736,"actqty":10133,"minutes":251,"casepk":1,"planea":11736,"actualea":10133,"status":"COMPLETED","cmpd":"","risk":"","cmpddue":"","shortage":0},{"batch":"MAIN063405","date":"2026-04-23","line":8,"item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","origqty":17160,"actqty":17328,"minutes":367,"casepk":1,"planea":17160,"actualea":17328,"status":"COMPLETED","cmpd":"","risk":"","cmpddue":"","shortage":0},{"batch":"MAIN063406","date":"2026-04-24","line":8,"item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","origqty":17160,"actqty":3743,"minutes":367,"casepk":1,"planea":17160,"actualea":3743,"status":"RUNNING","cmpd":"","risk":"","cmpddue":"","shortage":0},{"batch":"MAIN063407","date":"2026-04-29","line":8,"item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","origqty":17160,"actqty":0,"minutes":367,"casepk":1,"planea":17160,"actualea":0,"status":"NOT STARTED","cmpd":"","risk":"","cmpddue":"","shortage":0},{"batch":"MAIN063408","date":"2026-04-30","line":8,"item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","origqty":17160,"actqty":0,"minutes":367,"casepk":1,"planea":17160,"actualea":0,"status":"NOT STARTED","cmpd":"","risk":"","cmpddue":"","shortage":0},{"batch":"MAIN063409","date":"2026-05-01","line":8,"item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","origqty":17160,"actqty":0,"minutes":367,"casepk":1,"planea":17160,"actualea":0,"status":"NOT STARTED","cmpd":"","risk":"","cmpddue":"","shortage":0},{"batch":"MAIN063410","date":"2026-05-02","line":8,"item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","origqty":17160,"actqty":0,"minutes":367,"casepk":1,"planea":17160,"actualea":0,"status":"NOT STARTED","cmpd":"","risk":"","cmpddue":"","shortage":0},{"batch":"MAIN063411","date":"2026-05-06","line":8,"item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","origqty":17160,"actqty":0,"minutes":367,"casepk":1,"planea":17160,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-02","shortage":0},{"batch":"MAIN063412","date":"2026-05-07","line":8,"item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","origqty":17160,"actqty":0,"minutes":367,"casepk":1,"planea":17160,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-03","shortage":0},{"batch":"MAIN063413","date":"2026-05-08","line":8,"item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","origqty":17160,"actqty":0,"minutes":367,"casepk":1,"planea":17160,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-04","shortage":0},{"batch":"MAIN063414","date":"2026-05-13","line":8,"item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","origqty":17160,"actqty":0,"minutes":367,"casepk":1,"planea":17160,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-09","shortage":0},{"batch":"MAIN063421","date":"2026-05-15","line":8,"item":"2-226-04","desc":"TMW Mens Txtr CrÃ¨me, 4oz, bulk","origqty":25288,"actqty":0,"minutes":541,"casepk":1,"planea":25288,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-11","shortage":0},{"batch":"MAIN063430","date":"2026-05-20","line":8,"item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","origqty":17160,"actqty":0,"minutes":367,"casepk":1,"planea":17160,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-16","shortage":0},{"batch":"MAIN063431","date":"2026-05-21","line":8,"item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","origqty":17160,"actqty":0,"minutes":367,"casepk":1,"planea":17160,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-17","shortage":0},{"batch":"MAIN063432","date":"2026-05-27","line":8,"item":"2-121-06","desc":"Universal Base, 6.5oz, bulk","origqty":17160,"actqty":0,"minutes":367,"casepk":1,"planea":17160,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-23","shortage":0},{"batch":"MAIN063437","date":"2026-05-06","line":10,"item":"2-3191-01-402","desc":"dual packet, Hair Mayo1.5/Olive Oil Cream.5, bulk","origqty":150000,"actqty":20000,"minutes":3922,"casepk":1,"planea":150000,"actualea":20000,"status":"RUNNING","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-02","shortage":0},{"batch":"MAINS63381","date":"2026-05-13","line":10,"item":"2-106-15-77","desc":"AB Deep Cnd, 1.5oz(packet), bulk","origqty":100000,"actqty":0,"minutes":1384,"casepk":1,"planea":100000,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-09","shortage":0},{"batch":"MAINR63260","date":"2026-05-16","line":10,"item":"2-290-15-77","desc":"Olive Oil Neut Shamp, 1.5oz(packet), bulk","origqty":150000,"actqty":0,"minutes":1939,"casepk":1,"planea":150000,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-12","shortage":0},{"batch":"MAINR63387","date":"2026-05-25","line":10,"item":"2-290-15-77","desc":"Olive Oil Neut Shamp, 1.5oz(packet), bulk","origqty":100000,"actqty":0,"minutes":1293,"casepk":1,"planea":100000,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-21","shortage":0},{"batch":"MAIN063200","date":"2026-05-01","line":11,"item":"1-HB590-02-72612-12DT","desc":"HB Tea Tree Oil, 2oz, 72ea (6x12) Display 2wide","origqty":717,"actqty":636,"minutes":1761,"casepk":72,"planea":51624,"actualea":45792,"status":"COMPLETED","cmpd":"","risk":"","cmpddue":"","shortage":0},{"batch":"MAIN063468","date":"2026-05-06","line":11,"item":"1-698-24-0600","desc":"AJ Knot On My Watch Detangler, 24oz, 6ea","origqty":1032,"actqty":588,"minutes":331,"casepk":6,"planea":6192,"actualea":3528,"status":"RUNNING","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-02","shortage":-5201},{"batch":"MAIN063324","date":"2026-05-07","line":11,"item":"1-693-24-0600","desc":"AJ Quench Leave-In Conditioner, 24oz, 6ea","origqty":1035,"actqty":0,"minutes":332,"casepk":6,"planea":6210,"actualea":0,"status":"NOT STARTED","cmpd":"COMPOUND OVERDUE","risk":"WILL MISS","cmpddue":"2026-05-03","shortage":-3883},{"batch":"MAIN063402","date":"2026-05-08","line":11,"item":"1-HB552-08-1200","desc":"HB Coconut Oil, 8oz, 12ea","origqty":533,"actqty":0,"minutes":215,"casepk":12,"planea":6396,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-04","shortage":0},{"batch":"MAIN063442","date":"2026-05-09","line":11,"item":"1-HB590-08-1243","desc":"HB Tea Tree Oil, 8oz, 12ea (4x3) Bundle","origqty":1867,"actqty":0,"minutes":753,"casepk":12,"planea":22404,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-05","shortage":0},{"batch":"MAIN063441","date":"2026-05-12","line":11,"item":"1-HB567-08-1200","desc":"HB Batana Oil, 8oz, 12ea","origqty":1420,"actqty":0,"minutes":376,"casepk":12,"planea":17040,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-08","shortage":0},{"batch":"MAIN063441","date":"2026-05-13","line":11,"item":"1-HB567-02-72126","desc":"HB Batana Oil, 2oz, 72ea (12x6)","origqty":250,"actqty":0,"minutes":614,"casepk":72,"planea":18000,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-08","shortage":0},{"batch":"MAIN063440","date":"2026-05-15","line":11,"item":"1-HB576-02-72126","desc":"HB Jojoba Oil, 2oz, 72ea (12x6) Display","origqty":1197,"actqty":0,"minutes":2898,"casepk":72,"planea":86184,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-11","shortage":0},{"batch":"MAIN063214","date":"2026-05-22","line":11,"item":"1-636-04-1243","desc":"AJ Curl LaLa Bounce Back! Serum, 4oz, 12ea (4x3)","origqty":3526,"actqty":0,"minutes":939,"casepk":12,"planea":42312,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-18","shortage":0},{"batch":"MAIN063215","date":"2026-05-26","line":11,"item":"1-636-04-1243","desc":"AJ Curl LaLa Bounce Back! Serum, 4oz, 12ea (4x3)","origqty":3526,"actqty":0,"minutes":939,"casepk":12,"planea":42312,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-22","shortage":0},{"batch":"MAIN063467","date":"2026-05-22","line":11,"item":"1-HB590-02-72126","desc":"HB Tea Tree Oil, 2oz, 72ea (12x6) Display","origqty":1244,"actqty":0,"minutes":3055,"casepk":72,"planea":89568,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-18","shortage":0},{"batch":"MAINR62222","date":"2026-04-06","line":14,"item":"2-230-06-77","desc":"TMW Curl Keeper, 0.6oz(packet), bulk","origqty":2100,"actqty":2100,"minutes":55,"casepk":1,"planea":2100,"actualea":2100,"status":"COMPLETED","cmpd":"","risk":"","cmpddue":"","shortage":0},{"batch":"MAINT63382","date":"2026-05-01","line":14,"item":"2-240-06-77","desc":"TMW Mens Wave Keeper, 0.6oz(packet), bulk","origqty":20000,"actqty":21700,"minutes":523,"casepk":1,"planea":20000,"actualea":0,"status":"COMPLETED","cmpd":"","risk":"","cmpddue":"","shortage":0},{"batch":"MAINS63383","date":"2026-05-06","line":14,"item":"2-243-06-77","desc":"TMW Mens Pre-Text Control, 0.6oz(packet), bulk","origqty":20000,"actqty":7000,"minutes":523,"casepk":1,"planea":20000,"actualea":7000,"status":"RUNNING","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-02","shortage":0},{"batch":"MAINR63438","date":"2026-05-07","line":14,"item":"2-207-75-77-53-1","desc":"TMW Hair Mayo, 0.75oz(packet), bulk","origqty":20000,"actqty":0,"minutes":523,"casepk":1,"planea":20000,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-03","shortage":0},{"batch":"MAINR63438","date":"2026-05-08","line":14,"item":"2-207-75-77-53","desc":"TMW Hair Mayo, 0.75oz(packet), bulk","origqty":20000,"actqty":0,"minutes":523,"casepk":1,"planea":20000,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-03","shortage":0},{"batch":"MAINS62222","date":"2026-05-12","line":14,"item":"2-230-06-77","desc":"TMW Curl Keeper, 0.6oz(packet), bulk","origqty":20000,"actqty":0,"minutes":523,"casepk":1,"planea":20000,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-08","shortage":0},{"batch":"MAINR63242","date":"2026-05-14","line":14,"item":"2-231-06-77","desc":"TMW Text Control, 0.6oz(packet), bulk","origqty":20000,"actqty":0,"minutes":523,"casepk":1,"planea":20000,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-10","shortage":0},{"batch":"MAINR63175","date":"2026-04-01","line":15,"item":"2-290-15-77","desc":"Olive Oil Neut Shamp, 1.5oz(packet), bulk","origqty":105000,"actqty":70000,"minutes":802,"casepk":1,"planea":105000,"actualea":70000,"status":"RUNNING","cmpd":"","risk":"","cmpddue":"","shortage":0},{"batch":"MAINS63260","date":"2026-05-06","line":15,"item":"2-290-15-77","desc":"Olive Oil Neut Shamp, 1.5oz(packet), bulk","origqty":100000,"actqty":0,"minutes":1293,"casepk":1,"planea":100000,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-02","shortage":0},{"batch":"MAINR63631","date":"2026-05-25","line":15,"item":"2-505-15-77","desc":"KOri Neut Shamp, 1.5oz, bulk","origqty":10000,"actqty":0,"minutes":151,"casepk":1,"planea":10000,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-21","shortage":0},{"batch":"MAINT61796","date":"2026-05-11","line":16,"item":"2-692-03","desc":"AJ Flxsd Dont Shrink Gel, 3 oz, bulk","origqty":6000,"actqty":0,"minutes":282,"casepk":1,"planea":6000,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-07","shortage":0},{"batch":"MAINT60787","date":"2026-05-26","line":16,"item":"2-693-03","desc":"AJ Quench Lv-In Cnd, 3 oz, bulk (7-2907-693 ETA 5/19)","origqty":6000,"actqty":0,"minutes":282,"casepk":1,"planea":6000,"actualea":0,"status":"NOT STARTED","cmpd":"NO COMPOUND STD","risk":"UNKNOWN","cmpddue":"2026-05-22","shortage":0}];
+
+// ═══════════════════════════════════════════════════════════════════
+// HOC SHARED SYNC BUS  —  all 3 tools read + write hoc_sync_v1
+// Schema: { batchId: { prod:{status,actqty,dt,name,notes,ts},
+//                      cmpd:{status,actual,tank,lbs,notes,updater,ts},
+//                      qc:{status,ph,visc,dens,color,odor,appear,release,hrs,tech,notes,ts} } }
+// ═══════════════════════════════════════════════════════════════════
+const SYNC_KEY = 'hoc_sync_v1';
+
+function syncRead() {
+  try { return JSON.parse(localStorage.getItem(SYNC_KEY) || '{}'); } catch(e) { return {}; }
+}
+function syncWrite(data) {
+  try { localStorage.setItem(SYNC_KEY, JSON.stringify(data)); } catch(e) {}
+}
+function syncGet(batchId) {
+  return syncRead()[batchId] || { prod:{}, cmpd:{}, qc:{} };
+}
+function syncSet(batchId, section, fields) {
+  const all = syncRead();
+  if (!all[batchId]) all[batchId] = { prod:{}, cmpd:{}, qc:{} };
+  all[batchId][section] = { ...all[batchId][section], ...fields, ts: new Date().toISOString() };
+  syncWrite(all);
+  return all[batchId];
+}
+function syncClear() { localStorage.removeItem(SYNC_KEY); }
+function syncCount() { return Object.keys(syncRead()).length; }
+function syncCountSection(sec) { return Object.values(syncRead()).filter(v=>v[sec]&&Object.keys(v[sec]).length>1).length; }
+
+// Get effective production status (sync overrides Excel)
+function getStatus(b) {
+  const s = syncGet(b.batch);
+  return (s.prod && s.prod.status) ? s.prod.status : b.status;
+}
+// Get effective compound status
+function getCmpd(batchId, fallback) {
+  const s = syncGet(batchId);
+  return (s.cmpd && s.cmpd.cmpd_status) ? s.cmpd.cmpd_status : (fallback||'');
+}
+// Get effective QC status
+function getQC(batchId) {
+  const s = syncGet(batchId);
+  return (s.qc && s.qc.qc_status) ? s.qc.qc_status : '';
+}
+
+
+const N  = n => typeof n==='number' ? n.toLocaleString() : (n||'—');
+function _excelToDate(serial){var n=Number(serial);if(isNaN(n)||n<1||n>200000)return null;return new Date(Math.round((n-25569)*86400*1000));}
+const fD = s => {if(!s)return'—';try{if(typeof s==='number'||(typeof s==='string'&&/^\d{4,6}(\.\d+)?$/.test(s.trim()))){var ed=_excelToDate(s);if(ed&&!isNaN(ed.getTime()))return ed.toLocaleDateString('en-US',{month:'numeric',day:'numeric'});}return new Date(s+'T12:00:00').toLocaleDateString('en-US',{month:'numeric',day:'numeric'});}catch{return s;}};
+const fDL= s => {if(!s)return'—';try{if(typeof s==='number'||(typeof s==='string'&&/^\d{4,6}(\.\d+)?$/.test(s.trim()))){var ed=_excelToDate(s);if(ed&&!isNaN(ed.getTime()))return ed.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});}return new Date(s+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});}catch{return s;}};
+const pct= v => (v*100).toFixed(1)+'%';
+
+function stBadge(b) {
+  const st=getStatus(b);
+  if(st==='COMPLETED') return '<span class="pill p-done">COMPLETED</span>';
+  if(st==='RUNNING')   return '<span class="pill p-run">RUNNING</span>';
+  if(st==='ON HOLD'||st==='SHORT RUN') return '<span class="pill p-hold">'+st+'</span>';
+  return '<span class="pill p-ns">NOT STARTED</span>';
+}
+function cmpdBadge(c) {
+  if(!c) return '<span class="t3">—</span>';
+  const s=c.replace('COMPOUND ','');
+  if(c.includes('OVERDUE')||c.includes('CRITICAL')) return '<span class="pill p-od">'+s+'</span>';
+  if(c.includes('AT RISK'))  return '<span class="pill p-ar">'+s+'</span>';
+  if(c.includes('ON TRACK')) return '<span class="pill p-ot">'+s+'</span>';
+  if(c.includes('FILLING')||c.includes('COMPLETE')) return '<span class="pill p-run">'+s+'</span>';
+  return '<span class="pill p-ns">'+s+'</span>';
+}
+function sigBadge(s) {
+  if(s==='⚠ CRITICAL') return '<span class="pill p-od">⚠ CRITICAL</span>';
+  if(s==='! WATCH')    return '<span class="pill p-ar">! WATCH</span>';
+  if(s==='LINE OFF')   return '<span class="pill p-ns">LINE OFF</span>';
+  return '<span class="pill p-ot">✓ MONITOR</span>';
+}
+function qcBadge(st) {
+  if(!st) return '<span class="t3">—</span>';
+  if(st==='QC RELEASED') return '<span class="pill p-rel">QC RELEASED</span>';
+  if(st==='IN PROCESS')  return '<span class="pill p-qc">IN PROCESS</span>';
+  if(st==='QC HOLD')     return '<span class="pill p-ar">QC HOLD</span>';
+  if(st==='APPROVED')    return '<span class="pill p-ot">APPROVED</span>';
+  if(st==='REJECTED')    return '<span class="pill p-od">REJECTED</span>';
+  return '<span class="pill p-ns">'+st+'</span>';
+}
+function priBadge(p) {
+  if(p==='MUST RUN')   return '<span class="pill p-must">MUST</span>';
+  if(p==='SHOULD RUN') return '<span class="pill p-should">SHOULD</span>';
+  return '<span class="pill p-ns">NEXT WK</span>';
+}
+function syncBadge(batchId) {
+  const s=syncRead()[batchId];
+  if(!s) return '';
+  const parts=[];
+  if(s.prod&&s.prod.status) parts.push(s.prod.status);
+  if(s.cmpd&&s.cmpd.cmpd_status) parts.push(s.cmpd.cmpd_status);
+  if(s.qc&&s.qc.qc_status) parts.push(s.qc.qc_status);
+  return parts.length ? '<span class="pill p-sync" style="font-size:7px">⚡ '+parts.join(' · ')+'</span>' : '';
+}
+
+function renderSyncBar(el) {
+  const all=syncRead(); const n=Object.keys(all).length;
+  const pUpd=Object.values(all).filter(v=>v.prod&&v.prod.status).length;
+  const cUpd=Object.values(all).filter(v=>v.cmpd&&v.cmpd.cmpd_status).length;
+  const qUpd=Object.values(all).filter(v=>v.qc&&v.qc.qc_status).length;
+  if(n===0){el.innerHTML='<span class="sync-dot"></span><span class="t3">No floor updates yet — all data from Excel snapshot</span>';return;}
+  el.innerHTML=`<span class="sync-dot"></span><b style="color:var(--purple)">${n} batches updated this session</b>`+
+    (pUpd?` · <span style="color:var(--green)">${pUpd} production</span>`:'')+
+    (cUpd?` · <span style="color:var(--blue)">${cUpd} compound</span>`:'')+
+    (qUpd?` · <span style="color:var(--teal)">${qUpd} QC</span>`:'')+
+    `<button onclick="if(confirm('Clear all floor updates?')){syncClear();location.reload();}" style="margin-left:auto;padding:2px 8px;background:transparent;border:1px solid var(--border);border-radius:4px;color:var(--text3);cursor:pointer;font:inherit;font-size:9px">Clear All</button>`;
+}
+
+function exportAllCSV() {
+  const all=syncRead();
+  if(!Object.keys(all).length){alert('No floor updates to export.');return;}
+  const hdrs=['Batch','Section','Status','ActQty','CmpdStatus','QCStatus','pH','Viscosity','Density','Tech','Notes','Timestamp'];
+  const rows=[];
+  Object.entries(all).forEach(([id,s])=>{
+    if(s.prod&&s.prod.status) rows.push([id,'PRODUCTION',s.prod.status,s.prod.actqty||'','','','','','',s.prod.name||'',s.prod.notes||'',s.prod.ts||'']);
+    if(s.cmpd&&s.cmpd.cmpd_status) rows.push([id,'COMPOUND','','' ,s.cmpd.cmpd_status,'','','','',s.cmpd.updater||'',s.cmpd.notes||'',s.cmpd.ts||'']);
+    if(s.qc&&s.qc.qc_status) rows.push([id,'QC','','','',s.qc.qc_status,s.qc.ph||'',s.qc.visc||'',s.qc.dens||'',s.qc.tech||'',s.qc.notes||'',s.qc.ts||'']);
+  });
+  const csv=[hdrs,...rows].map(r=>r.map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='hoc_floor_updates_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+function showPage(id, map) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.nb')[map[id]].classList.add('active');
+}
+
+let vFilter='ALL', invFilter='ALL', activeVer=null, alertsSent=[];
+const PM = {cmd:0,verify:1,inventory:2,alerts:3,sync:4};
+function P(id){showPage(id,PM);if(id==='verify')renderVerify();if(id==='inventory')renderInventory();if(id==='alerts')renderAlerts();}
+
+function getCCStatus(batchId){ return syncGet(batchId).cc?.status||''; }
+function getCCBlock(batchId){ return syncGet(batchId).cc?.blocked||false; }
+
+function rawBadge(s){
+  if(s==='VERIFIED'||s.includes('PROCEED')) return '<span class="pill p-ot">✓ VERIFIED</span>';
+  if(s.includes('SHORT')||s.includes('HOLD')||s.includes('EMERGENCY')) return '<span class="pill p-od">SHORT</span>';
+  if(s==='CRITICALLY SHORT') return '<span class="pill p-od">⚠ CRITICALLY SHORT</span>';
+  if(s==='LOW') return '<span class="pill p-ar">LOW</span>';
+  return '<span class="pill p-ns">UNVERIFIED</span>';
+}
+function proceedBadge(batchId){
+  const st=getCCStatus(batchId);
+  if(st.includes('PROCEED')) return '<span class="pill p-ot">✅ GO</span>';
+  if(st.includes('HOLD')||st.includes('EMERGENCY')) return '<span class="pill p-od">🚫 BLOCKED</span>';
+  if(st.includes('PARTIAL')) return '<span class="pill p-ar">⚠ PARTIAL</span>';
+  return '<span class="pill p-ns">—</span>';
+}
+
+function renderAll(){
+  renderSyncBar(document.getElementById('sync-bar'));
+  renderBadges();renderAlert();renderKPIs();renderCmdTable();renderSyncList();renderBlockedList();
+}
+
+function renderBadges(){
+  const crit=BATCHES.filter(b=>b.urgency==='CRITICAL').length;
+  const unver=BATCHES.filter(b=>!getCCStatus(b.batch)&&b.urgency!=='DONE').length;
+  const blocked=Object.values(syncRead()).filter(v=>v.cc&&v.cc.blocked).length;
+  const n=syncCount();
+  document.getElementById('badges').innerHTML=
+    `<span class="badge b-red">${crit} CRITICAL</span>`+
+    `<span class="badge b-amb">${unver} UNVERIFIED</span>`+
+    (blocked?`<span class="badge b-red">${blocked} BLOCKED</span>`:'')+
+    (n?`<span class="badge b-pur">${n} SYNCED</span>`:'');
+}
+
+function renderAlert(){
+  const crit=BATCHES.filter(b=>b.urgency==='CRITICAL'&&!getCCStatus(b.batch).includes('PROCEED'));
+  const short=BATCHES.filter(b=>b.raw_status==='CRITICALLY SHORT'&&b.urgency!=='DONE');
+  let h='';
+  if(crit.length){
+    h+=`<div class="alert-s" style="background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.2);margin-bottom:10px">
+      <div class="at" style="color:var(--red)">CRITICAL — ${crit.length} Batches Need Verification Now (Compound Overdue/Critical)</div>
+      <div class="ag">`;
+    crit.slice(0,4).forEach(b=>{
+      h+=`<div class="ai" style="background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.15);cursor:pointer" onclick="P('verify');openVD('${b.batch}')">
+        <div style="font-size:9px;font-weight:700;color:var(--red)">F.${b.formula} · L${b.line} · ${b.batch}</div>
+        <div style="font-size:10px;font-weight:600;color:var(--text);margin:2px 0">${b.desc.slice(0,40)}</div>
+        <div style="font-size:9px;color:var(--text3)">Shortage: ${b.shortage<0?N(b.shortage)+' lbs':'None'} · ${b.cmpd_status}</div>
+      </div>`;
+    });
+    h+=`</div></div>`;
+  }
+  if(short.length){
+    h+=`<div class="alert-s" style="background:rgba(245,158,11,.04);border:1px solid rgba(245,158,11,.2);margin-bottom:10px">
+      <div class="at" style="color:var(--amber)">Raw Material Shortage Detected — ${short.length} Formulas Impacted</div>
+      <div class="ag">`;
+    short.slice(0,4).forEach(b=>{h+=`<div class="ai" style="background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.15)">
+      <div style="font-size:9px;font-weight:700;color:var(--amber)">F.${b.formula} · ${b.batch}</div>
+      <div style="font-size:10px;color:var(--text)">${b.desc.slice(0,40)}</div>
+      <div style="font-size:9px;color:var(--text3)">${N(b.shortage)} lbs short</div></div>`;});
+    h+=`</div></div>`;
+  }
+  document.getElementById('alert-area').innerHTML=h;
+}
+
+// ── Labor standards lookup (from Fill Labor Extract upload) ──────────
+// Returns {comp_time, fill_time, time_type, description} or null.
+// time_type 'Hours/LB in' or 'Hours/LB Out' means multiply by LBs for forecast hours.
+function getLaborStandard(formula){
+  if(!formula) return null;
+  try {
+    var raw = localStorage.getItem('hoc_labor_standards_v1');
+    if(!raw) return null;
+    var data = JSON.parse(raw);
+    var map = data.standards || data;
+    return map[String(formula)] || null;
+  } catch(e){ return null; }
+}
+
+// Returns forecast compound labor hours for a batch (lbs × comp_time)
+function getBatchLaborHrs(b){
+  var std = getLaborStandard(b.formula);
+  if(!std || !std.comp_time || !b.lbs) return null;
+  // Hours/LB in × lbs = hours
+  return std.comp_time * b.lbs;
+}
+
+function renderKPIs(){
+  const total=BATCHES.length;
+  const crit=BATCHES.filter(b=>b.urgency==='CRITICAL').length;
+  const ar=BATCHES.filter(b=>b.urgency==='AT RISK').length;
+  const ot=BATCHES.filter(b=>b.urgency==='ON TRACK').length;
+  const verified=BATCHES.filter(b=>getCCStatus(b.batch).includes('PROCEED')).length;
+  const blocked=Object.values(syncRead()).filter(v=>v.cc&&v.cc.blocked).length;
+  const short=BATCHES.filter(b=>b.shortage<0&&b.urgency!=='DONE').length;
+  const filling=BATCHES.filter(b=>b.urgency==='FILLING').length;
+
+  // Forecast compound labor hours: sum across all non-completed batches that
+  // have a labor standard. Falls back to "—" if Labor Extract not uploaded.
+  var forecastHrs = 0;
+  var forecastCount = 0;
+  var missingCount = 0;
+  BATCHES.forEach(function(b){
+    if(b.urgency === 'DONE' || b.urgency === 'FILLING') return;
+    if(!b.lbs) return;
+    var hrs = getBatchLaborHrs(b);
+    if(hrs != null){ forecastHrs += hrs; forecastCount++; }
+    else missingCount++;
+  });
+  var hasLaborData = false;
+  try { hasLaborData = !!localStorage.getItem('hoc_labor_standards_v1'); } catch(e){}
+
+  document.getElementById('cmd-kpis').innerHTML=[
+    {l:'Total Batches',v:total,s:'With compound formula',c:'var(--text)'},
+    {l:'Critical',v:crit,s:'Overdue or critical',c:'var(--red)'},
+    {l:'At Risk',v:ar,s:'Need attention',c:'var(--amber)'},
+    {l:'On Track',v:ot,s:'Schedule OK',c:'var(--green)'},
+    {l:'CC Verified',v:verified,s:'Ready to proceed',c:'var(--green)'},
+    {l:'Blocked',v:blocked,s:'Short — upstream stopped',c:'var(--red)'},
+    {l:'Raw Short',v:short,s:'Formula shortage',c:'var(--amber)'},
+    {l:'Filling Now',v:filling,s:'Active on line',c:'var(--blue)'},
+    {l:'Forecast Cmpd Hrs',v:hasLaborData?Math.round(forecastHrs):'—',s:hasLaborData?(forecastCount+' batches'+(missingCount?' · '+missingCount+' missing std':'')):'Upload Labor Extract',c:hasLaborData?'var(--purple)':'var(--text3)'},
+  ].map(k=>`<div class="kpi"><div class="kl">${k.l}</div><div class="kv" style="color:${k.c}">${k.v}</div><div class="ks">${k.s}</div></div>`).join('');
+}
+
+function renderCmdTable(){
+  document.getElementById('cmd-tbody').innerHTML=BATCHES.map(b=>{
+    const cc=getCCStatus(b.batch);
+    const bc=b.urgency==='CRITICAL'?'rgba(239,68,68,.03)':b.urgency==='AT RISK'?'rgba(245,158,11,.02)':'';
+    const lhrs = getBatchLaborHrs(b);
+    const lhrsCell = lhrs != null
+      ? '<span style="color:var(--purple);font-weight:600">'+lhrs.toFixed(1)+'h</span>'
+      : '<span class="t3">—</span>';
+    return`<tr onclick="P('verify');openVD('${b.batch}')" style="cursor:pointer;background:${bc}">
+      <td style="font-size:10px;font-weight:600;color:var(--text2)">${b.batch}</td>
+      <td style="font-weight:700;color:var(--blue)">L${b.line}</td>
+      <td>${fD(b.date)}</td>
+      <td style="font-size:10px;max-width:155px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.desc}</td>
+      <td style="font-weight:700;color:var(--blue)">F.${b.formula}</td>
+      <td style="text-align:right">${N(b.lbs)}</td>
+      <td style="text-align:right;font-size:10px">${lhrsCell}</td>
+      <td>${cmpdBadge(b.cmpd_status)}</td>
+      <td>${rawBadge(cc||b.raw_status)}</td>
+      <td class="${b.shortage<0?'num-red':'t3'}">${b.shortage<0?N(b.shortage)+' lbs':'—'}</td>
+      <td style="font-size:9px;${b.correction&&b.correction.includes('VARIANCE')?'color:var(--amber)':'color:var(--green)'}">${b.correction?b.correction.slice(0,30):'✓ OK'}</td>
+      <td>${cc?'<span style="font-size:9px;color:var(--blue)">'+cc.slice(0,15)+'</span>':'<span class="t3">—</span>'}</td>
+      <td>${proceedBadge(b.batch)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderVerify(){
+  const cnts={ALL:BATCHES.length,CRITICAL:BATCHES.filter(b=>b.urgency==='CRITICAL').length,'AT RISK':BATCHES.filter(b=>b.urgency==='AT RISK').length,UNVERIFIED:BATCHES.filter(b=>!getCCStatus(b.batch)&&b.urgency!=='DONE').length,BLOCKED:Object.values(syncRead()).filter(v=>v.cc&&v.cc.blocked).length,VERIFIED:BATCHES.filter(b=>getCCStatus(b.batch).includes('PROCEED')).length};
+  document.getElementById('vf').innerHTML=Object.keys(cnts).map(f=>`<button class="fb${vFilter===f?' active':''}" onclick="setVF('${f}')">${f} (${cnts[f]})</button>`).join('');
+  let rows=[...BATCHES];
+  if(vFilter==='CRITICAL') rows=rows.filter(b=>b.urgency==='CRITICAL');
+  else if(vFilter==='AT RISK') rows=rows.filter(b=>b.urgency==='AT RISK');
+  else if(vFilter==='UNVERIFIED') rows=rows.filter(b=>!getCCStatus(b.batch)&&b.urgency!=='DONE');
+  else if(vFilter==='BLOCKED') rows=rows.filter(b=>getCCStatus(b.batch).includes('HOLD')||getCCStatus(b.batch).includes('EMERGENCY'));
+  else if(vFilter==='VERIFIED') rows=rows.filter(b=>getCCStatus(b.batch).includes('PROCEED'));
+  rows.sort((a,b)=>{const uo={CRITICAL:0,'AT RISK':1,'ON TRACK':2,FILLING:3,'NO STD':4,DONE:5};return (uo[a.urgency]||3)-(uo[b.urgency]||3);});
+  document.getElementById('ver-tbody').innerHTML=rows.map(b=>{
+    const cc=getCCStatus(b.batch);
+    return`<tr onclick="openVD('${b.batch}')" style="cursor:pointer">
+      <td style="font-size:10px;font-weight:600;color:var(--text2)">${b.batch}</td>
+      <td style="font-weight:700;color:var(--blue)">L${b.line}</td>
+      <td>${fD(b.date)}</td>
+      <td style="font-size:10px;max-width:155px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.desc}</td>
+      <td style="font-weight:700;color:var(--blue)">F.${b.formula}</td>
+      <td style="text-align:right">${N(b.lbs)}</td>
+      <td>${fD(b.cmpd_due)}</td>
+      <td>${cmpdBadge(b.cmpd_status)}</td>
+      <td>${rawBadge(cc||b.raw_status)}</td>
+      <td>${cc?`<span style="font-size:9px;color:var(--blue)">${cc.slice(0,20)}</span>`:'<span class="t3">—</span>'}</td>
+      <td>${proceedBadge(b.batch)}</td>
+    </tr>`;
+  }).join('');
+}
+function setVF(f){vFilter=f;renderVerify();closeVD();}
+
+function openVD(id){
+  const b=BATCHES.find(x=>x.batch===id);if(!b)return;
+  activeVer=b;
+  const s=syncGet(id);const u=s.cc||{};
+  document.getElementById('vd-title').textContent='Verification: '+id+' · F.'+b.formula;
+  document.getElementById('vd-info').innerHTML=[
+    ['Batch',id],['Line','Line '+b.line],['Date',fDL(b.date)],
+    ['Formula','F.'+b.formula],['Lbs Needed',N(b.lbs)],['Cmpd Batches',b.batches_n||'—'],
+    ['Compound Due',fDL(b.cmpd_due)],['Cmpd Status',b.cmpd_status||'—'],
+    ['Urgency',b.urgency],['Formula Shortage',b.shortage<0?N(b.shortage)+' lbs':'None'],
+    ['Rem Lbs',N(b.rem_lbs)],['Correction',b.correction||'✓ OK'],
+  ].map(([l,v])=>`<div class="df"><label>${l}</label><span>${v}</span></div>`).join('');
+  
+  // Checklist: standard raw verification steps
+  document.getElementById('vd-checks').innerHTML=`
+    <div class="check-row ${b.lbs>0?'':''}" ><span class="check-label">1. Formula lbs required confirmed</span><span class="check-val" style="color:var(--text)">${N(b.lbs)} lbs</span></div>
+    <div class="check-row"><span class="check-label">2. Formula shortage from system</span><span class="check-val" style="color:${b.shortage<0?'var(--red)':'var(--green)'}">${b.shortage<0?N(b.shortage)+' lbs SHORT':'None'}</span></div>
+    <div class="check-row"><span class="check-label">3. Correction flag from production</span><span class="check-val" style="font-size:9px;color:${b.correction&&b.correction.includes('VARIANCE')?'var(--amber)':'var(--green)'}">${b.correction?b.correction.slice(0,30):'✓ IN SYNC'}</span></div>
+    <div class="check-row"><span class="check-label">4. Tank availability (from Compound tool)</span><span class="check-val" style="color:var(--text2)">${s.cmpd?.tank||'Check Compound Scheduler'}</span></div>
+    <div class="check-row"><span class="check-label">5. Pre-weigh status</span><span class="check-val">${s.pw?.pw_status||'Not started'}</span></div>
+    <div class="check-row"><span class="check-label">6. QC status (previous batch same formula)</span><span class="check-val">${s.qc?.qc_status||'No prior QC entry'}</span></div>`;
+  
+  document.getElementById('v-status').value=u.status||'';
+  document.getElementById('v-short-item').value=u.short_item||'';
+  document.getElementById('v-short-qty').value=u.short_qty||'';
+  document.getElementById('v-by').value=u.verified_by||'';
+  document.getElementById('v-notes').value=u.notes||'';
+  document.getElementById('alert-log').textContent=u.alerts_sent?'Alerts sent: '+u.alerts_sent.join(', '):'';
+  document.getElementById('vd-saved').classList.remove('show');
+
+  // Populate batch-specific raw materials (BOM) section.
+  // We look in 3 places, in order of preference:
+  //   1. _UPLOAD.boms[formula_id]  — if a BOM upload exists per formula
+  //   2. _UPLOAD.bom_lookup[batch] — if per-batch BOM available
+  //   3. Fall back to derived signals: shortage value + formula number + a
+  //      placeholder list pulled from CHEMICALS inventory if formula data exists
+  (function populateBOM(){
+    var bomList = document.getElementById('bom-list');
+    var bomSrc = document.getElementById('bom-source');
+    if(!bomList) return;
+    var up = (typeof _UPLOAD !== 'undefined') ? _UPLOAD : null;
+    var rows = null;
+    if(up && up.bom_lookup && up.bom_lookup[b.batch]) {
+      rows = up.bom_lookup[b.batch];
+      bomSrc.textContent = '· from BOM upload (batch-specific)';
+    } else if(up && up.boms && up.boms[b.formula]) {
+      rows = up.boms[b.formula];
+      bomSrc.textContent = '· from BOM upload (formula F.' + b.formula + ')';
+    }
+    if(rows && rows.length){
+      bomList.innerHTML = '<table style="width:100%;font-size:11px;border-collapse:collapse">' +
+        '<thead><tr><th style="text-align:left;padding:4px;color:var(--text3);font-size:9px;font-weight:700;letter-spacing:.05em;border-bottom:1px solid var(--border)">SKU</th>' +
+        '<th style="text-align:left;padding:4px;color:var(--text3);font-size:9px;font-weight:700;letter-spacing:.05em;border-bottom:1px solid var(--border)">Description</th>' +
+        '<th style="text-align:right;padding:4px;color:var(--text3);font-size:9px;font-weight:700;letter-spacing:.05em;border-bottom:1px solid var(--border)">Need (lbs)</th>' +
+        '<th style="text-align:right;padding:4px;color:var(--text3);font-size:9px;font-weight:700;letter-spacing:.05em;border-bottom:1px solid var(--border)">On Hand</th>' +
+        '<th style="text-align:center;padding:4px;color:var(--text3);font-size:9px;font-weight:700;letter-spacing:.05em;border-bottom:1px solid var(--border)">OK?</th></tr></thead><tbody>' +
+        rows.map(function(r){
+          var need = parseFloat(r.qty_need || r.lbs_need || r.need || 0) || 0;
+          var have = parseFloat(r.qty_have || r.qoh || r.have || 0) || 0;
+          var ok = have >= need;
+          return '<tr><td style="padding:4px;font-family:ui-monospace,monospace;color:var(--text)">' + (r.sku||r.item||'—') + '</td>' +
+            '<td style="padding:4px;color:var(--text2)">' + (r.desc||r.description||'—') + '</td>' +
+            '<td style="padding:4px;text-align:right;color:var(--text)">' + need.toLocaleString(undefined,{maximumFractionDigits:1}) + '</td>' +
+            '<td style="padding:4px;text-align:right;color:' + (ok?'var(--text)':'var(--red)') + '">' + have.toLocaleString(undefined,{maximumFractionDigits:1}) + '</td>' +
+            '<td style="padding:4px;text-align:center;color:' + (ok?'var(--green)':'var(--red)') + '">' + (ok?'✓':'⚠') + '</td></tr>';
+        }).join('') +
+        '</tbody></table>';
+    } else {
+      // No BOM data available — explain the gap and what the operator should do
+      bomSrc.textContent = '· BOM not yet integrated';
+      bomList.innerHTML = '<div style="padding:6px 0">' +
+        '<div style="color:var(--text)">Formula <b>F.' + b.formula + '</b> · ' + N(b.lbs) + ' lbs total compound</div>' +
+        '<div style="color:var(--text3);margin-top:4px;font-size:10px">Per-batch BOM data is not yet uploaded. ' +
+          'To verify raw materials for this batch:</div>' +
+        '<ol style="color:var(--text3);margin:6px 0 0 16px;font-size:10px;line-height:1.7">' +
+          '<li>Pull formula sheet for F.' + b.formula + ' from Vicinity</li>' +
+          '<li>Walk staging area + chemical pull area</li>' +
+          '<li>Confirm each raw is on hand and at correct quantity</li>' +
+          '<li>If anything is short, log it below in "Raw Material Shortages"</li>' +
+        '</ol>' +
+        ((b.shortage && b.shortage < 0) ? '<div style="margin-top:6px;padding:5px 8px;background:rgba(239,68,68,.08);border-radius:4px;color:var(--red);font-size:10px">⚠ System flagged shortage: ' + N(b.shortage) + ' lbs</div>' : '') +
+        '</div>';
+    }
+  })();
+
+  document.getElementById('ver-detail').classList.add('open');
+  document.getElementById('ver-detail').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function closeVD(){document.getElementById('ver-detail').classList.remove('open');activeVer=null;}
+
+function alertTeam(team){
+  if(!activeVer)return;
+  const id=activeVer.batch;
+  const s=syncGet(id);const u=s.cc||{};
+  const alerts=(u.alerts_sent||[]);
+  if(!alerts.includes(team))alerts.push(team);
+  syncSet(id,'cc',{...u,alerts_sent:alerts,blocked:team==='PRE-WEIGH'||team==='COMPOUND'?true:u.blocked,alert_ts:new Date().toISOString()});
+  document.getElementById('alert-log').textContent='Alerts sent: '+alerts.join(', ')+' — '+new Date().toLocaleTimeString();
+  // Fire to audit/notification bus
+  try {
+    var targetMap = {
+      'PRE-WEIGH':       ['preweigh_operator','compound_coordinator'],
+      'COMPOUND':        ['compound_scheduler','production_coordinator'],
+      'PROCUREMENT':     ['procurement','demand_supply'],
+      'DEMAND/SUPPLY':   ['demand_supply','procurement'],
+      'LEADERSHIP':      ['leadership'],
+      'MAINTENANCE':     ['maintenance'],
+      'QC':              ['qc_team']
+    };
+    HOC_EVENTS && HOC_EVENTS.fire('alert_'+team.toLowerCase().replace(/[^a-z]/g,'_'), {
+      batch: id,
+      source: 'compound_coordinator',
+      message: 'Alert sent to ' + team + ' team',
+      team: team
+    }, 'warning', targetMap[team] || ['all']);
+  } catch(e){}
+  renderAll();
+}
+
+function saveVerification(){
+  if(!activeVer)return;
+  const st=document.getElementById('v-status').value;
+  const isBlocked=st.includes('HOLD')||st.includes('EMERGENCY');
+  const isVerified=st.includes('VERIFIED')||st.includes('PROCEED');
+  syncSet(activeVer.batch,'cc',{
+    status:st,
+    shortages:currentShortages,
+    short_item:currentShortages.length?currentShortages[0].sku:'',
+    short_qty:currentShortages.length?currentShortages[0].qty_short:0,
+    shortage_count:currentShortages.length,
+    verified_by:document.getElementById('v-by').value,
+    notes:document.getElementById('v-notes').value,
+    blocked:isBlocked,ts:new Date().toISOString()
+  });
+  // When a batch is VERIFIED — PROCEED, also flag it as ready for pre-weigh.
+  // PreWeigh Scheduler reads `pw.pw_status === 'QUEUED'` and surfaces these
+  // as priority items at the top of its queue. This is the "auto-push to
+  // pre-weigh" behavior that closes the compound → pre-weigh flow handoff.
+  if(isVerified && !isBlocked && !currentShortages.length){
+    syncSet(activeVer.batch,'pw',{
+      pw_status:'QUEUED',
+      queued_by:'compound_coordinator',
+      queued_from:'verification',
+      ts:new Date().toISOString()
+    });
+  }
+  // Fire event for any shortage or block
+  try {
+    if(isBlocked || currentShortages.length){
+      HOC_EVENTS && HOC_EVENTS.fire('material_blocker', {
+        batch: activeVer.batch,
+        source: 'compound_coordinator',
+        message: 'Compound verification: '+st+(currentShortages.length?' · '+currentShortages.length+' shortage(s)':''),
+        blocker: st,
+        shortage_count: currentShortages.length,
+        first_short_item: currentShortages.length ? currentShortages[0].sku : null
+      }, isBlocked?'critical':'warning', ['procurement','demand_supply','production_coordinator','compound_scheduler']);
+    } else {
+      HOC_EVENTS && HOC_EVENTS.fire('cc_verified', {
+        batch: activeVer.batch,
+        source: 'compound_coordinator',
+        message: 'Batch verified: '+st
+      }, 'info', ['production_coordinator','compound_scheduler']);
+    }
+  } catch(e){}
+  document.getElementById('vd-saved').classList.add('show');
+  renderAll();renderVerify();
+}
+
+function markProceed(){
+  if(!activeVer)return;
+  document.getElementById('v-status').value='VERIFIED — PROCEED';
+  saveVerification();
+}
+
+function renderInventory(){
+  let rows=[...CHEMICALS];
+  if(invFilter==='SHORT') rows=rows.filter(c=>c.status==='SHORT');
+  else if(invFilter==='LOW') rows=rows.filter(c=>c.status==='LOW');
+  else if(invFilter==='OK') rows=rows.filter(c=>c.status==='OK');
+  document.getElementById('inv-tbody').innerHTML=rows.map((c,i)=>`
+    <tr style="background:${i%2?'rgba(255,255,255,.01)':'transparent'}">
+      <td style="font-size:10px;color:var(--text2)">${c.sku}</td>
+      <td style="font-size:10px">${c.desc||'—'}</td>
+      <td style="text-align:right">${N(c.qoh)}</td>
+      <td style="text-align:right">${N(c.req)}</td>
+      <td style="text-align:right;color:var(--teal)">${N(c.po_qty)}</td>
+      <td style="text-align:right" class="${c.net<0?'num-red':c.status==='LOW'?'':'num-grn'}">${N(c.net)}</td>
+      <td>${rawBadge(c.status)}</td>
+    </tr>`).join('');
+}
+function setInv(f){invFilter=f;['ALL','SHORT','LOW','OK'].forEach(x=>document.getElementById('inv-'+x).classList.remove('active'));document.getElementById('inv-'+f).classList.add('active');renderInventory();}
+
+function renderAlerts(){
+  const all=syncRead();
+  const blocked=Object.entries(all).filter(([,v])=>v.cc&&v.cc.blocked);
+  const alerts=Object.entries(all).filter(([,v])=>v.cc&&v.cc.alerts_sent&&v.cc.alerts_sent.length);
+  
+  const el=document.getElementById('alert-list');
+  if(!alerts.length){el.textContent='No alerts raised yet.';}
+  else{el.innerHTML=alerts.map(([id,s])=>{
+    const b=BATCHES.find(x=>x.batch===id)||{};
+    return`<div style="padding:6px 10px;margin-bottom:4px;background:rgba(239,68,68,.06);border-radius:6px;border-left:3px solid var(--red)">
+      <b style="color:var(--red)">${id}</b> F.${b.formula||'?'} · ${(b.desc||'').slice(0,40)} ·
+      <span style="color:var(--amber)">Teams alerted: ${s.cc.alerts_sent.join(', ')}</span>
+      <span class="t3" style="float:right">${s.cc.alert_ts?new Date(s.cc.alert_ts).toLocaleTimeString():''}</span>
+    </div>`;
+  }).join('');}
+  
+  const bl=document.getElementById('blocked-list');
+  if(!blocked.length)bl.textContent='No batches blocked.';
+  else bl.innerHTML=blocked.map(([id,s])=>{
+    const b=BATCHES.find(x=>x.batch===id)||{};
+    return`<div style="padding:5px 8px;margin-bottom:3px;background:rgba(239,68,68,.05);border-radius:5px;border-left:3px solid var(--red)">
+      <b style="color:var(--red)">${id}</b> · ${(b.desc||'').slice(0,40)} ·
+      <span style="color:var(--text2)">${s.cc?.status||'BLOCKED'}</span>
+      <span class="t3" style="float:right">by ${s.cc?.verified_by||'CC'}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderBlockedList(){renderAlerts();}
+
+function renderSyncList(){
+  const all=syncRead();const el=document.getElementById('sync-list');
+  if(!Object.keys(all).length){el.textContent='No updates yet.';return;}
+  el.innerHTML=Object.entries(all).slice(0,20).map(([id,s])=>{
+    const parts=[];
+    if(s.cc&&s.cc.status) parts.push(`<span style="color:var(--blue)">CC:${s.cc.status.slice(0,20)}</span>`);
+    if(s.pw&&s.pw.pw_status) parts.push(`<span style="color:var(--purple)">PW:${s.pw.pw_status.slice(0,15)}</span>`);
+    if(s.cmpd&&s.cmpd.cmpd_status) parts.push(`<span style="color:var(--teal)">CMPD:${s.cmpd.cmpd_status}</span>`);
+    const b=BATCHES.find(x=>x.batch===id)||{};
+    return`<div style="padding:4px 8px;margin-bottom:3px;background:var(--bg2);border-radius:5px;border-left:3px solid var(--blue);font-size:10px">
+      <b style="color:var(--blue)">${id}</b> F.${b.formula||'?'} · ${parts.join(' · ')}
+    </div>`;
+  }).join('');
+}
+
+function exportAllCSV(){
+  const all=syncRead();
+  const hdrs=['Batch','Formula','CC_Status','Short_Item','Short_Qty','Verified_By','Blocked','Alerts_Sent','Notes','Timestamp'];
+  const rows=Object.entries(all).filter(([,v])=>v.cc&&v.cc.status).map(([id,s])=>[id,BATCHES.find(x=>x.batch===id)?.formula||'',s.cc.status,s.cc.short_item||'',s.cc.short_qty||'',s.cc.verified_by||'',s.cc.blocked||false,(s.cc.alerts_sent||[]).join(';'),s.cc.notes||'',s.cc.ts||'']);
+  if(!rows.length){alert('No verifications to export yet.');return;}
+  const csv=[hdrs,...rows].map(r=>r.map(v=>`"${String(v||'').replace(/"/g,'""')}"` ).join(',')).join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='compound_coord_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+}
+
+renderAll();
+
+
+// ── Supabase: pull schedule for tablets without a local upload ─────────
+(function(){
+  var SUPA_URL = 'https://yemtpvrumqvbzrzpwnyy.supabase.co';
+  var SUPA_KEY = 'sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl';
+  function pullSchedule(){
+    try{
+      fetch(SUPA_URL+'/rest/v1/hoc_schedule?id=eq.1', {
+        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+      }).then(function(r){ return r.ok ? r.json() : []; })
+        .then(function(rows){
+          if(!rows || !rows.length || !rows[0].data) return;
+          var remote;
+          try { remote = JSON.parse(rows[0].data); } catch(e) { return; }
+          var local = {};
+          try { local = JSON.parse(localStorage.getItem('hoc_upload_v1')||'{}'); } catch(e){}
+          var remoteTs = new Date(remote._updated||0).getTime();
+          var localTs  = new Date((local && local._updated)||0).getTime();
+          if(remoteTs > localTs){
+            localStorage.setItem('hoc_upload_v1', JSON.stringify(remote));
+            try { reloadBatches(); } catch(e){}
+            try { if(typeof renderAll==="function") renderAll(); } catch(e){}
+            try { if(typeof renderKPIs==="function") { renderKPIs(); renderDays && renderDays(); renderQueue && renderQueue(); } } catch(e){}
+          }
+        }).catch(function(){});
+    }catch(e){}
+  }
+  pullSchedule();
+  setInterval(pullSchedule, 30000);
+})();
+
+// ── Auto-refresh: sync bus + upload watcher ──────────────────────────
+// Fires when another browser tab writes to the sync bus or uploads new data
+window.addEventListener('storage', function(e) {
+  if (e.key === 'hoc_sync_v1') {
+    try { renderAll(); } catch(err) {}
+  }
+  if (e.key === 'hoc_upload_v1' || e.key === 'hoc_labor_standards_v1') {
+    try { reloadBatches(); renderAll(); } catch(err) {}
+  }
+});
+// Poll every 30 seconds as fallback (same-tab writes + file:// protocol)
+setInterval(function() {
+  try { reloadBatches(); renderAll(); } catch(err) {}
+}, 30000);
+renderInventory();
+</script><script src="hoc_events.js"></script>
+<script>
+// Auto-update header date placeholder
+(function(){
+  var today = new Date().toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'});
+  document.querySelectorAll('.js-today-date').forEach(function(el){ el.textContent = today; });
+})();
+</script>
+</body></html>

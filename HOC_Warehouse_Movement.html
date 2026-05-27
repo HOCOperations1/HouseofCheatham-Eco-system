@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HOC OES — Warehouse Movement</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root{
+  --bg:#0B0E17;--bg2:#111520;--bg3:#161C28;
+  --border:#1E293B;--border2:#293548;
+  --text:#E2E8F3;--text2:#94A3B8;--text3:#64748B;
+  --green:#22C55E;--red:#EF4444;--amber:#F59E0B;--blue:#3B82F6;
+  --purple:#A78BFA;--cyan:#22D3EE;--pink:#F472B6;--orange:#F97316;
+  --green-l:rgba(34,197,94,.1);--red-l:rgba(239,68,68,.1);
+  --amber-l:rgba(245,158,11,.1);--blue-l:rgba(59,130,246,.1);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:ui-monospace,monospace;background:var(--bg);color:var(--text);font-size:11px;min-height:100vh}
+.topbar{display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;flex-wrap:wrap}
+.topbar a{color:var(--text2);text-decoration:none;padding:5px 9px;border-radius:5px;font-size:11px}
+.topbar a:hover{background:var(--bg3);color:var(--text)}
+.brand{font-size:13px;font-weight:700;color:var(--orange);margin-right:8px}
+.brand-sub{font-size:9px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase}
+.user-badge{font-size:10px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:4px 9px;border-radius:5px;cursor:pointer}
+.user-badge:hover{border-color:var(--blue);color:var(--text)}
+nav.nav{display:flex;gap:0;border-bottom:1px solid var(--border);background:var(--bg2);padding:0 16px;flex-wrap:wrap;overflow-x:auto}
+.nb{font:inherit;font-size:11px;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--text2);padding:10px 14px;cursor:pointer;letter-spacing:.04em;font-weight:600;white-space:nowrap}
+.nb:hover{color:var(--text)}
+.nb.active{color:var(--orange);border-bottom-color:var(--orange)}
+.nb-badge{display:inline-block;background:var(--orange);color:#000;font-size:8px;font-weight:800;padding:1px 5px;border-radius:8px;margin-left:5px;vertical-align:1px}
+.content{padding:14px 16px;max-width:1800px;margin:0 auto}
+.page{display:none}
+.page.active{display:block}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.card-title{font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px;letter-spacing:.04em;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.kl{font-size:9px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px}
+.kv{font-size:22px;font-weight:700;color:var(--text);margin-bottom:1px;line-height:1}
+.ks{font-size:9px;color:var(--text2)}
+table{width:100%;border-collapse:collapse;font-size:10px}
+thead th{background:var(--bg3);color:var(--text3);font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:6px 8px;text-align:left;border-bottom:1px solid var(--border);font-size:9px;position:sticky;top:0}
+tbody td{padding:7px 8px;border-bottom:1px solid rgba(30,41,59,.45)}
+tbody tr:hover{background:rgba(249,115,22,.04);cursor:pointer}
+.pill{display:inline-block;font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;letter-spacing:.04em}
+.p-grn{background:var(--green-l);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.p-amb{background:var(--amber-l);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.p-red{background:var(--red-l);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.p-blu{background:var(--blue-l);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.p-grey{background:rgba(100,116,139,.1);color:var(--text3);border:1px solid rgba(100,116,139,.25)}
+.p-orange{background:rgba(249,115,22,.12);color:var(--orange);border:1px solid rgba(249,115,22,.3)}
+input,select,textarea{font:inherit;font-size:12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:7px 10px;width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange)}
+button.btn{font:inherit;font-size:11px;font-weight:700;padding:8px 14px;border-radius:6px;border:none;cursor:pointer}
+.btn-pri{background:var(--orange);color:#000}
+.btn-pri:hover{filter:brightness(1.1)}
+.btn-ok{background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.35)}
+.btn-warn{background:rgba(245,158,11,.15);color:var(--amber);border:1px solid rgba(245,158,11,.35)}
+.btn-danger{background:rgba(239,68,68,.1);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--text);border-color:var(--border2)}
+.btn-big{padding:14px 18px;font-size:13px}
+.row{display:grid;gap:8px;margin-bottom:8px}
+.row-2{grid-template-columns:1fr 1fr}
+.row-3{grid-template-columns:1fr 1fr 1fr}
+.row-4{grid-template-columns:1fr 1fr 1fr 1fr}
+.field-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+.tbl-wrap{overflow-x:auto;border-radius:6px;border:1px solid var(--border);max-height:520px;overflow-y:auto}
+.empty-state{text-align:center;padding:30px;color:var(--text3);font-style:italic}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:1000;padding:14px}
+.modal-bg.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px 18px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:14px;color:var(--orange);margin-bottom:12px}
+.role-pick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.role-btn{padding:18px 12px;border-radius:10px;border:2px solid var(--border);background:var(--bg3);color:var(--text2);font:inherit;font-size:11px;font-weight:700;cursor:pointer;text-align:center}
+.role-btn:hover{border-color:var(--orange);color:var(--text)}
+.role-btn.active{border-color:var(--orange);color:var(--orange);background:rgba(249,115,22,.08)}
+.role-icon{font-size:28px;display:block;margin-bottom:5px}
+.pick-card{background:var(--bg2);border:1px solid var(--border);border-left:4px solid var(--orange);border-radius:8px;padding:12px 14px;margin-bottom:8px}
+.pick-card.done{border-left-color:var(--green);opacity:.55}
+.pick-card.staged{border-left-color:var(--blue)}
+.pick-card.urgent{border-left-color:var(--red)}
+.pick-h{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+.pick-batch{font-size:14px;font-weight:700;color:var(--text)}
+.pick-meta{display:flex;gap:6px;flex-wrap:wrap;font-size:9px}
+.pick-detail{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px 14px;margin:6px 0;font-size:10px}
+.pick-detail strong{display:block;color:var(--text3);font-size:9px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:1px}
+.pick-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="brand">HOC OES</span>
+  <span class="brand-sub">Warehouse Movement · pick · receive · ship</span>
+  <span style="flex:1"></span>
+  <a href="index.html">← Hub</a>
+  <a href="HOC_Inventory.html" style="color:#22D3EE">📦 Inventory</a>
+  <a href="HOC_FG_Reconciliation.html">FG Recon</a>
+  <a href="HOC_Procurement_Dashboard.html">Procurement</a>
+  <span class="user-badge" id="user-badge" onclick="openUserModal()">👤 <span id="user-name">Sign in</span></span>
+</div>
+
+<nav class="nav">
+  <button class="nb active" onclick="P('pick')">📋 Pick Queue<span class="nb-badge" id="bdg-pick">0</span></button>
+  <button class="nb"        onclick="P('receive')">📥 Receiving<span class="nb-badge" id="bdg-rcv">0</span></button>
+  <button class="nb"        onclick="P('ship')">📤 Outbound Ship<span class="nb-badge" id="bdg-ship">0</span></button>
+  <button class="nb"        onclick="P('locate')">🗺 Locations</button>
+  <button class="nb"        onclick="P('log')">📜 Movement Log</button>
+</nav>
+
+<div class="page active" id="page-pick"><div class="content">
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kl">Today's Picks</div><div class="kv" id="k-pick-total">—</div><div class="ks">scheduled compound batches</div></div>
+    <div class="kpi"><div class="kl">Pulled</div><div class="kv" id="k-pick-done" style="color:var(--green)">—</div><div class="ks">marked complete</div></div>
+    <div class="kpi"><div class="kl">In Progress</div><div class="kv" id="k-pick-prog" style="color:var(--blue)">—</div><div class="ks">started, not done</div></div>
+    <div class="kpi"><div class="kl">Urgent</div><div class="kv" id="k-pick-urgent" style="color:var(--red)">—</div><div class="ks">overdue compound</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span>Today's Pick Queue — materials to pull for compound</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <select id="pick-filter" onchange="renderPickQueue()" style="width:160px">
+          <option value="today">Today's batches</option>
+          <option value="tomorrow">Today + tomorrow</option>
+          <option value="urgent">Urgent only</option>
+          <option value="all">All open</option>
+        </select>
+        <button class="btn btn-ghost" onclick="renderPickQueue()">↻ Refresh</button>
+      </div>
+    </div>
+    <p style="font-size:10px;color:var(--text2);margin-bottom:10px;line-height:1.6">
+      Pick queue auto-builds from upcoming compound batches with status NOT STARTED. Each card represents a batch needing raw materials pulled. Tap <strong>Start Pull</strong> when you begin, <strong>Mark Picked</strong> when done. <strong>Materials Needed</strong> opens Inventory's FIFO Picker pre-loaded.
+    </p>
+    <div id="pick-list"></div>
+  </div>
+</div></div>
+
+<div class="page" id="page-receive"><div class="content">
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kl">Expected Today</div><div class="kv" id="k-rcv-exp">—</div><div class="ks">POs due to arrive</div></div>
+    <div class="kpi"><div class="kl">Received Today</div><div class="kv" id="k-rcv-done" style="color:var(--green)">—</div><div class="ks">logged in system</div></div>
+    <div class="kpi"><div class="kl">Awaiting Put-Away</div><div class="kv" id="k-rcv-pending" style="color:var(--amber)">—</div><div class="ks">MUs with no location</div></div>
+    <div class="kpi"><div class="kl">Receipts (30d)</div><div class="kv" id="k-rcv-30d">—</div><div class="ks">historical</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span>Expected Deliveries</span>
+      <a href="HOC_Inventory.html" style="font-size:11px;color:var(--orange);text-decoration:none;font-weight:700">+ Full Receive in Inventory →</a>
+    </div>
+    <p style="font-size:10px;color:var(--text2);margin-bottom:8px;line-height:1.6">
+      Expected POs based on hoc_purchase_orders. Mark "Arrived" to quick-log a receipt, or use full Inventory → Receive PO for line-item detail. <strong>Newly received MUs without locations</strong> appear in Put-Away below.
+    </p>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>PO #</th><th>Supplier</th><th>Expected</th><th>Items</th><th>Status</th><th></th></tr></thead>
+      <tbody id="rcv-expected-tbody"></tbody>
+    </table></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span>Put-Away Queue — newly received MUs needing locations</span>
+      <span style="font-size:10px;color:var(--text3)">tap to assign location</span>
+    </div>
+    <div class="tbl-wrap"><table>
+      <thead><tr>
+        <th>MU #</th><th>SKU</th><th>Description</th>
+        <th style="text-align:right">Qty</th><th>PO</th><th>Received</th>
+        <th>Suggested Location</th><th></th>
+      </tr></thead>
+      <tbody id="putaway-tbody"></tbody>
+    </table></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Recent Receipts (last 30 days)</div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Date</th><th>PO</th><th>Supplier</th><th>Lines</th><th>Qty</th><th>By</th></tr></thead>
+      <tbody id="rcv-recent-tbody"></tbody>
+    </table></div>
+  </div>
+</div></div>
+
+<div class="page" id="page-ship"><div class="content">
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kl">Ready to Ship</div><div class="kv" id="k-ship-ready">—</div><div class="ks">FG completed batches</div></div>
+    <div class="kpi"><div class="kl">Shipped Today</div><div class="kv" id="k-ship-today" style="color:var(--blue)">—</div><div class="ks">outbound logged</div></div>
+    <div class="kpi"><div class="kl">Total Cases (today)</div><div class="kv" id="k-ship-cases" style="color:var(--green)">—</div><div class="ks">cases out the door</div></div>
+    <div class="kpi"><div class="kl">Shipped (30d)</div><div class="kv" id="k-ship-30d">—</div><div class="ks">batches shipped</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">FG batches ready for outbound</div>
+    <p style="font-size:10px;color:var(--text2);margin-bottom:8px;line-height:1.6">
+      Pulls completed/running batches from the production schedule. Click <strong>Log Shipment</strong> to record: BOL#, carrier, destination, dock door, cases, eaches, driver, weight. Shipped batches flow back to FG Reconciliation and Sales.
+    </p>
+    <div class="tbl-wrap"><table>
+      <thead><tr>
+        <th>Batch</th><th>Line</th><th>Date</th><th>Description</th>
+        <th style="text-align:right">FG Cases</th><th style="text-align:right">Eaches</th>
+        <th>Status</th><th style="text-align:right">Shipped</th><th></th>
+      </tr></thead>
+      <tbody id="ship-tbody"></tbody>
+    </table></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Recent shipments (last 30 days)</div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Date/Time</th><th>Batch</th><th>BOL #</th><th>Carrier</th><th>Destination</th><th style="text-align:right">Cases</th><th>Driver</th><th>By</th></tr></thead>
+      <tbody id="ship-recent-tbody"></tbody>
+    </table></div>
+  </div>
+</div></div>
+
+<div class="page" id="page-locate"><div class="content">
+  <div class="card">
+    <div class="card-title">Where is SKU X right now?</div>
+    <div class="row row-2">
+      <div>
+        <div class="field-label">Search by SKU</div>
+        <input type="text" id="loc-sku" placeholder="e.g. 7-1056" oninput="renderLocateBySku()">
+      </div>
+      <div>
+        <div class="field-label">Search by location</div>
+        <input type="text" id="loc-loc" placeholder="e.g. 1090-11-001" oninput="renderLocateByLoc()">
+      </div>
+    </div>
+    <div id="locate-result" style="margin-top:10px"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">All locations with inventory</div>
+    <p style="font-size:10px;color:var(--text2);margin-bottom:8px">Locations populated as warehouse assigns put-away spots to MUs. Click a location to see what's there.</p>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Location</th><th style="text-align:right">MUs</th><th>SKUs Stored</th><th>Total Qty</th><th>Oldest MU age</th></tr></thead>
+      <tbody id="locations-tbody"></tbody>
+    </table></div>
+  </div>
+</div></div>
+
+<div class="page" id="page-log"><div class="content">
+  <div class="card">
+    <div class="card-title">Movement log — audit trail of every action</div>
+    <div class="row row-3">
+      <div>
+        <div class="field-label">Filter by type</div>
+        <select id="log-type" onchange="renderLog()">
+          <option value="">All types</option>
+          <option value="pick">Picks</option>
+          <option value="receive">Receipts</option>
+          <option value="putaway">Put-aways</option>
+          <option value="ship">Shipments</option>
+        </select>
+      </div>
+      <div>
+        <div class="field-label">Filter by user</div>
+        <input type="text" id="log-user" placeholder="user name" oninput="renderLog()">
+      </div>
+      <div>
+        <div class="field-label">Search SKU / Batch / MU / PO</div>
+        <input type="text" id="log-search" placeholder="any term" oninput="renderLog()">
+      </div>
+    </div>
+    <div class="tbl-wrap" style="margin-top:10px"><table>
+      <thead><tr><th>When</th><th>Type</th><th>User</th><th>Detail</th><th>Reference</th></tr></thead>
+      <tbody id="log-tbody"></tbody>
+    </table></div>
+  </div>
+</div></div>
+
+<div class="modal-bg" id="user-modal">
+  <div class="modal">
+    <h3>Who's using this tablet?</h3>
+    <p style="font-size:10px;color:var(--text2);margin-bottom:12px;line-height:1.6">Pick your role so picks, receipts, and shipments log under your name. You can switch any time from the badge at top-right.</p>
+    <div class="role-pick">
+      <button class="role-btn" onclick="pickRole('material-handler')"><span class="role-icon">📋</span>Material<br>Handler</button>
+      <button class="role-btn" onclick="pickRole('receiver')"><span class="role-icon">📥</span>Receiver</button>
+      <button class="role-btn" onclick="pickRole('shipper')"><span class="role-icon">📤</span>Shipping<br>Clerk</button>
+    </div>
+    <div class="field-label">Your name</div>
+    <input type="text" id="user-input-name" placeholder="First Last" style="margin-bottom:10px">
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeUserModal()">Cancel</button>
+      <button class="btn btn-pri" onclick="saveUser()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="ship-modal">
+  <div class="modal" style="max-width:640px">
+    <h3 id="ship-modal-title">Log Outbound Shipment</h3>
+    <div id="ship-modal-info" style="font-size:10px;color:var(--text2);margin-bottom:10px"></div>
+    <div class="row row-2">
+      <div><div class="field-label">BOL # *</div><input type="text" id="s-bol" placeholder="required"></div>
+      <div><div class="field-label">Carrier</div><input type="text" id="s-carrier" placeholder="e.g. UPS, FedEx Freight"></div>
+    </div>
+    <div class="row row-2">
+      <div><div class="field-label">Destination / Customer</div><input type="text" id="s-dest" placeholder="DC, customer name"></div>
+      <div><div class="field-label">Dock door</div><input type="text" id="s-dock" placeholder="e.g. 3"></div>
+    </div>
+    <div class="row row-3">
+      <div><div class="field-label">Cases shipped *</div><input type="number" id="s-cases" placeholder="0"></div>
+      <div><div class="field-label">Eaches (optional)</div><input type="number" id="s-eaches" placeholder="0"></div>
+      <div><div class="field-label">Weight (lbs)</div><input type="number" id="s-weight" placeholder="0"></div>
+    </div>
+    <div class="row row-2">
+      <div><div class="field-label">Driver</div><input type="text" id="s-driver" placeholder="name"></div>
+      <div><div class="field-label">Ship date/time</div><input type="datetime-local" id="s-time"></div>
+    </div>
+    <div class="field-label">Notes</div>
+    <textarea id="s-notes" rows="2" placeholder="anything else..."></textarea>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button class="btn btn-ghost" onclick="closeShipModal()">Cancel</button>
+      <button class="btn btn-pri" onclick="saveShipment()">💾 Log Shipment</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="putaway-modal">
+  <div class="modal">
+    <h3>Assign Put-Away Location</h3>
+    <div id="pa-info" style="font-size:11px;color:var(--text2);margin-bottom:10px"></div>
+    <div class="field-label">Pick location (FASCOR format)</div>
+    <input type="text" id="pa-loc" placeholder="e.g. 1090-11-001" list="pa-loc-list" style="margin-bottom:6px">
+    <datalist id="pa-loc-list"></datalist>
+    <div style="font-size:9px;color:var(--text3);font-style:italic;margin-bottom:10px">Type new or pick existing. Format aisle-bay-position.</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closePutawayModal()">Cancel</button>
+      <button class="btn btn-pri" onclick="savePutaway()">Assign</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="pick-modal">
+  <div class="modal">
+    <h3>Mark Pick Complete</h3>
+    <div id="pick-info" style="font-size:11px;color:var(--text2);margin-bottom:10px"></div>
+    <div class="field-label">MUs pulled (comma-separated, optional)</div>
+    <input type="text" id="pk-mus" placeholder="e.g. MU-1234, MU-1235" style="margin-bottom:8px">
+    <div class="field-label">Notes</div>
+    <input type="text" id="pk-notes" placeholder="anything to flag" style="margin-bottom:8px">
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closePickModal()">Cancel</button>
+      <button class="btn btn-ok" onclick="savePickComplete()">✓ Mark Picked</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// HOC OES Warehouse Movement v6.22 rebuild
+// Source of truth for inventory = HOC_Inventory.html. This dashboard
+// surfaces actionable views + logs movements. Shared-tablet UX:
+// material handler / receiver / shipper all use same device.
+
+const SUPA_URL = 'https://yemtpvrumqvbzrzpwnyy.supabase.co';
+const SUPA_KEY = 'sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl';
+const H  = function(){ return {apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY}; };
+const HJ = function(){ return {apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY, 'Content-Type':'application/json'}; };
+
+const LS_PICKS = 'hoc_wh_picks_v1';
+const LS_SHIPS = 'hoc_wh_shipments_v1';
+const LS_LOG   = 'hoc_wh_log_v1';
+const LS_USER  = 'hoc_wh_user_v1';
+
+function load(k, def){ try { return JSON.parse(localStorage.getItem(k) || JSON.stringify(def)); } catch(e){ return def; } }
+function save(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+function N(n){ return typeof n === 'number' ? n.toLocaleString() : (n || '—'); }
+function fD(s){
+  if(!s||s==='—') return '—';
+  try {
+    var d = new Date(s.length === 10 ? s+'T12:00:00' : s);
+    if(isNaN(d)) return s;
+    return d.toLocaleDateString('en-US',{month:'numeric',day:'numeric'});
+  } catch(e){ return s; }
+}
+function fDT(iso){
+  if(!iso) return '—';
+  try { return new Date(iso).toLocaleString('en-US',{month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit'}); }
+  catch(e){ return iso; }
+}
+function todayIso(){ return new Date().toISOString().slice(0,10); }
+function tomorrowIso(){ var d = new Date(); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); }
+function ageDays(iso){
+  if(!iso) return 0;
+  try { return Math.round((Date.now() - new Date(iso).getTime()) / 86400000); }
+  catch(e){ return 0; }
+}
+
+function getBatches(){
+  try {
+    var u = JSON.parse(localStorage.getItem('hoc_upload_v1') || '{}');
+    var floor = JSON.parse(localStorage.getItem('hoc_floor_v1') || '{}') || {};
+    return (u.batches || []).map(function(b){
+      return Object.assign({}, b, floor[b.batch] || {});
+    });
+  } catch(e){ return []; }
+}
+function getMUs(){ return load('hoc_inventory_mus_v1', []); }
+function getReceipts(){ return load('hoc_inventory_receipts_v1', []); }
+function getPicks(){ return load(LS_PICKS, []); }
+function getShipments(){ return load(LS_SHIPS, []); }
+function getLog(){ return load(LS_LOG, []); }
+
+function logEvent(type, detail, ref){
+  var log = getLog();
+  log.unshift({
+    ts: new Date().toISOString(),
+    type: type, detail: detail,
+    ref: ref || '',
+    user: (load(LS_USER, {}).name) || 'unknown',
+    role: (load(LS_USER, {}).role) || ''
+  });
+  save(LS_LOG, log.slice(0, 1000));
+  syncToBus();
+}
+
+async function syncToBus(){
+  try {
+    var r = await fetch(SUPA_URL+'/rest/v1/hoc_sync_bus?id=eq.1&select=payload', {headers:H()});
+    if(!r.ok) return;
+    var rows = await r.json();
+    var existing = (rows[0] && rows[0].payload) || {};
+    existing.warehouse = {
+      picks:     getPicks(),
+      shipments: getShipments(),
+      log:       getLog().slice(0, 200),
+      ts:        new Date().toISOString()
+    };
+    await fetch(SUPA_URL+'/rest/v1/hoc_sync_bus?id=eq.1', {
+      method:'PATCH', headers:Object.assign({}, HJ(), {Prefer:'return=minimal'}),
+      body: JSON.stringify({updated_at:new Date().toISOString(), payload:existing})
+    });
+  } catch(e){}
+}
+var _lastBusAt = null;
+async function pullFromBus(){
+  try {
+    var r = await fetch(SUPA_URL+'/rest/v1/hoc_sync_bus?id=eq.1&select=updated_at,payload', {headers:H()});
+    if(!r.ok) return;
+    var rows = await r.json();
+    if(!rows.length) return;
+    var row = rows[0];
+    if(_lastBusAt && row.updated_at <= _lastBusAt) return;
+    _lastBusAt = row.updated_at;
+    var wh = (row.payload && row.payload.warehouse) || null;
+    if(wh){
+      if(wh.picks)     save(LS_PICKS, wh.picks);
+      if(wh.shipments) save(LS_SHIPS, wh.shipments);
+      if(wh.log)       save(LS_LOG, wh.log);
+    }
+    var inv = (row.payload && row.payload.inventory) || null;
+    if(inv){
+      if(inv.mus)      save('hoc_inventory_mus_v1', inv.mus);
+      if(inv.receipts) save('hoc_inventory_receipts_v1', inv.receipts);
+      if(inv.tanks)    save('hoc_inventory_tanks_v1', inv.tanks);
+    }
+    renderAll();
+  } catch(e){}
+}
+
+// USER / ROLE ─────────────────────────────────────────────────
+var _userPicking = '';
+function openUserModal(){
+  var u = load(LS_USER, {});
+  document.getElementById('user-input-name').value = u.name || '';
+  _userPicking = u.role || '';
+  document.querySelectorAll('.role-btn').forEach(function(b){ b.classList.remove('active'); });
+  if(u.role){ var idx = ['material-handler','receiver','shipper'].indexOf(u.role); if(idx>=0) document.querySelectorAll('.role-btn')[idx].classList.add('active'); }
+  document.getElementById('user-modal').classList.add('open');
+}
+function closeUserModal(){ document.getElementById('user-modal').classList.remove('open'); }
+function pickRole(role){
+  _userPicking = role;
+  document.querySelectorAll('.role-btn').forEach(function(b){ b.classList.remove('active'); });
+  var idx = ['material-handler','receiver','shipper'].indexOf(role);
+  if(idx >= 0) document.querySelectorAll('.role-btn')[idx].classList.add('active');
+}
+function saveUser(){
+  var name = document.getElementById('user-input-name').value.trim();
+  if(!name){ alert('Enter your name.'); return; }
+  if(!_userPicking){ alert('Pick a role.'); return; }
+  save(LS_USER, {name:name, role:_userPicking, ts:new Date().toISOString()});
+  closeUserModal();
+  renderUserBadge();
+}
+function renderUserBadge(){
+  var u = load(LS_USER, {});
+  var el = document.getElementById('user-name');
+  if(u.name){
+    var roleAbbr = u.role === 'material-handler' ? 'MH' : u.role === 'receiver' ? 'RCV' : u.role === 'shipper' ? 'SHIP' : '';
+    el.textContent = u.name + (roleAbbr ? ' · '+roleAbbr : '');
+  } else {
+    el.textContent = 'Sign in';
+  }
+}
+
+// PAGE NAV ────────────────────────────────────────────────────
+function P(id){
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.nb').forEach(function(b){ b.classList.remove('active'); });
+  var el = document.getElementById('page-'+id);
+  if(el) el.classList.add('active');
+  var map = {pick:0,receive:1,ship:2,locate:3,log:4};
+  var idx = map[id]; if(idx != null) document.querySelectorAll('.nb')[idx].classList.add('active');
+  renderAll();
+}
+
+// PICK QUEUE ─────────────────────────────────────────────────
+function renderPickQueue(){
+  var filterEl = document.getElementById('pick-filter');
+  var filter = filterEl ? filterEl.value : 'today';
+  var batches = getBatches();
+  var picks = getPicks();
+  var today = todayIso();
+  var tomorrow = tomorrowIso();
+
+  var candidates = batches.filter(function(b){
+    var cs = String(b.cmpd_status||'').toUpperCase();
+    var fs = String(b.fill_status||'').toUpperCase();
+    if(cs.indexOf('COMPLETE') >= 0 || fs === 'COMPLETED') return false;
+    return true;
+  });
+
+  if(filter === 'today'){
+    candidates = candidates.filter(function(b){ return (b.cmpddue || b.start_by || b.date || '') <= today; });
+  } else if(filter === 'tomorrow'){
+    candidates = candidates.filter(function(b){ return (b.cmpddue || b.start_by || b.date || '') <= tomorrow; });
+  } else if(filter === 'urgent'){
+    candidates = candidates.filter(function(b){ return /OVERDUE|CRITICAL/i.test(b.cmpd_status||''); });
+  }
+
+  candidates.sort(function(a,b){
+    var ao = /OVERDUE/i.test(a.cmpd_status||'') ? 0 : /CRITICAL/i.test(a.cmpd_status||'') ? 1 : /AT RISK/i.test(a.cmpd_status||'') ? 2 : 3;
+    var bo = /OVERDUE/i.test(b.cmpd_status||'') ? 0 : /CRITICAL/i.test(b.cmpd_status||'') ? 1 : /AT RISK/i.test(b.cmpd_status||'') ? 2 : 3;
+    if(ao !== bo) return ao - bo;
+    return (a.cmpddue||a.date||'').localeCompare(b.cmpddue||b.date||'');
+  });
+
+  var todays = candidates.filter(function(b){ return (b.cmpddue || b.date || '') <= today; });
+  document.getElementById('k-pick-total').textContent = todays.length;
+  document.getElementById('k-pick-done').textContent = todays.filter(function(b){ return picks.find(function(p){ return p.batch === b.batch && p.status === 'picked'; }); }).length;
+  document.getElementById('k-pick-prog').textContent = todays.filter(function(b){ return picks.find(function(p){ return p.batch === b.batch && p.status === 'started'; }); }).length;
+  document.getElementById('k-pick-urgent').textContent = candidates.filter(function(b){ return /OVERDUE|CRITICAL/i.test(b.cmpd_status||''); }).length;
+  document.getElementById('bdg-pick').textContent = todays.length;
+
+  var list = document.getElementById('pick-list');
+  if(!candidates.length){
+    list.innerHTML = '<div class="empty-state">No picks queued. Either no compound batches are open, or the filter is too narrow.</div>';
+    return;
+  }
+  list.innerHTML = candidates.slice(0, 50).map(function(b){
+    var pick = picks.find(function(p){ return p.batch === b.batch; });
+    var cls = 'pick-card';
+    var statusPill = '<span class="pill p-grey">QUEUED</span>';
+    if(pick && pick.status === 'picked'){ cls += ' done'; statusPill = '<span class="pill p-grn">✓ PICKED · '+fDT(pick.completed_at)+'</span>'; }
+    else if(pick && pick.status === 'started'){ cls += ' staged'; statusPill = '<span class="pill p-blu">IN PROGRESS · started '+fDT(pick.started_at)+'</span>'; }
+    if(/OVERDUE|CRITICAL/i.test(b.cmpd_status||'')) cls += ' urgent';
+
+    var cmpdPill = b.cmpd_status ? ('<span class="pill '+(/OVERDUE|CRITICAL/i.test(b.cmpd_status)?'p-red':/AT RISK/i.test(b.cmpd_status)?'p-amb':/ON TRACK/i.test(b.cmpd_status)?'p-grn':'p-grey')+'">'+b.cmpd_status+'</span>') : '';
+
+    var actions = '';
+    if(!pick){
+      actions = '<button class="btn btn-pri" onclick="startPick(\''+b.batch+'\')">▶ Start Pull</button>' +
+        '<button class="btn btn-ghost" onclick="openFifoForBatch(\''+b.batch+'\')">📦 Materials Needed</button>';
+    } else if(pick.status === 'started'){
+      actions = '<button class="btn btn-ok" onclick="markPicked(\''+b.batch+'\')">✓ Mark Picked</button>' +
+        '<button class="btn btn-ghost" onclick="openFifoForBatch(\''+b.batch+'\')">📦 Materials</button>' +
+        '<button class="btn btn-danger" onclick="cancelPick(\''+b.batch+'\')">Cancel</button>';
+    } else if(pick.status === 'picked'){
+      actions = '<button class="btn btn-ghost" onclick="reopenPick(\''+b.batch+'\')">↺ Reopen</button>';
+    }
+
+    return '<div class="'+cls+'">' +
+      '<div class="pick-h">' +
+        '<div>' +
+          '<div class="pick-batch">'+b.batch+'</div>' +
+          '<div style="font-size:10px;color:var(--text2);margin-top:2px">'+(b.desc||'')+'</div>' +
+        '</div>' +
+        '<div class="pick-meta">'+cmpdPill+' '+statusPill+'</div>' +
+      '</div>' +
+      '<div class="pick-detail">' +
+        '<div><strong>Line</strong>L'+(b.line||'—')+'</div>' +
+        '<div><strong>Formula</strong>'+(b.formula ? 'F.'+b.formula : '—')+'</div>' +
+        '<div><strong>Lbs</strong>'+(b.lbs ? N(b.lbs) : '—')+'</div>' +
+        '<div><strong>Compound Due</strong>'+fD(b.cmpddue)+'</div>' +
+        '<div><strong>Start By</strong>'+fD(b.start_by)+'</div>' +
+        '<div><strong>Tank</strong>'+(b.tank || '—')+'</div>' +
+      '</div>' +
+      '<div class="pick-actions">'+actions+'</div>' +
+    '</div>';
+  }).join('');
+}
+
+function startPick(batch){
+  var u = load(LS_USER, {});
+  if(!u.name){ alert('Sign in first (badge top-right).'); openUserModal(); return; }
+  var picks = getPicks();
+  var ex = picks.find(function(p){ return p.batch === batch; });
+  if(ex){ ex.status = 'started'; ex.started_at = new Date().toISOString(); ex.started_by = u.name; }
+  else picks.push({batch:batch, status:'started', started_at:new Date().toISOString(), started_by:u.name});
+  save(LS_PICKS, picks);
+  logEvent('pick', 'Started pull · '+batch, batch);
+  renderAll();
+}
+
+var _pickBatch = null;
+function markPicked(batch){
+  _pickBatch = batch;
+  document.getElementById('pick-info').innerHTML = '<strong>Batch:</strong> '+batch;
+  document.getElementById('pk-mus').value = '';
+  document.getElementById('pk-notes').value = '';
+  document.getElementById('pick-modal').classList.add('open');
+}
+function closePickModal(){ document.getElementById('pick-modal').classList.remove('open'); _pickBatch = null; }
+function savePickComplete(){
+  if(!_pickBatch) return;
+  var u = load(LS_USER, {});
+  if(!u.name){ alert('Sign in first.'); return; }
+  var mus = document.getElementById('pk-mus').value.trim();
+  var notes = document.getElementById('pk-notes').value.trim();
+  var picks = getPicks();
+  var ex = picks.find(function(p){ return p.batch === _pickBatch; });
+  if(ex){
+    ex.status = 'picked';
+    ex.completed_at = new Date().toISOString();
+    ex.completed_by = u.name;
+    ex.mus = mus;
+    ex.notes = notes;
+  } else {
+    picks.push({batch:_pickBatch, status:'picked', completed_at:new Date().toISOString(), completed_by:u.name, mus:mus, notes:notes});
+  }
+  save(LS_PICKS, picks);
+  logEvent('pick', 'Completed pull · '+_pickBatch+(mus?' · MUs: '+mus:''), _pickBatch);
+  if(mus){
+    var muIds = mus.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+    var invMus = getMUs();
+    muIds.forEach(function(id){
+      var m = invMus.find(function(x){ return x.mu_id === id; });
+      if(m){
+        m.status = 'staged';
+        m.last_pick_at = new Date().toISOString();
+        m.last_picker = u.name;
+      }
+    });
+    save('hoc_inventory_mus_v1', invMus);
+  }
+  closePickModal();
+  renderAll();
+}
+function cancelPick(batch){
+  if(!confirm('Cancel pick for '+batch+'? Status returns to queued.')) return;
+  var picks = getPicks().filter(function(p){ return p.batch !== batch; });
+  save(LS_PICKS, picks);
+  logEvent('pick', 'Cancelled pull · '+batch, batch);
+  renderAll();
+}
+function reopenPick(batch){
+  if(!confirm('Reopen '+batch+'? Will return to queued.')) return;
+  var picks = getPicks().filter(function(p){ return p.batch !== batch; });
+  save(LS_PICKS, picks);
+  logEvent('pick', 'Reopened · '+batch, batch);
+  renderAll();
+}
+
+function openFifoForBatch(batch){
+  // Hand off to Inventory's FIFO Picker. ?tab=fifo opens the right tab;
+  // ?batch= gives Inventory a hint for the "For batch" field.
+  window.location.href = 'HOC_Inventory.html?tab=fifo&batch=' + encodeURIComponent(batch);
+}
+
+// RECEIVING ──────────────────────────────────────────────────
+var _expectedPOs = [];
+async function loadExpectedPOs(){
+  try {
+    var r = await fetch(SUPA_URL+'/rest/v1/hoc_purchase_orders?select=*&order=expected_date.asc&limit=200', {headers:H()});
+    if(!r.ok) return;
+    _expectedPOs = await r.json();
+  } catch(e){ _expectedPOs = []; }
+}
+
+function renderReceiving(){
+  var today = todayIso();
+  var receipts = getReceipts();
+  var mus = getMUs();
+
+  var recvToday = receipts.filter(function(r){ return r.date === today; }).length;
+  var receivedPos = new Set(receipts.map(function(r){ return r.po; }));
+  var expectedToday = _expectedPOs.filter(function(p){ return p.expected_date === today && !receivedPos.has(p.po_number); }).length;
+  var awaitingPA = mus.filter(function(m){ return (!m.location || m.location.trim() === '') && m.status === 'available'; }).length;
+  var recv30 = receipts.filter(function(r){ return ageDays(r.ts) <= 30; }).length;
+  document.getElementById('k-rcv-exp').textContent = expectedToday;
+  document.getElementById('k-rcv-done').textContent = recvToday;
+  document.getElementById('k-rcv-pending').textContent = awaitingPA;
+  document.getElementById('k-rcv-30d').textContent = recv30;
+  document.getElementById('bdg-rcv').textContent = expectedToday + awaitingPA;
+
+  var expectedTbody = document.getElementById('rcv-expected-tbody');
+  var upcoming = _expectedPOs.filter(function(p){ return !receivedPos.has(p.po_number); }).slice(0, 25);
+  expectedTbody.innerHTML = upcoming.length ? upcoming.map(function(p){
+    var expDate = p.expected_date || '—';
+    var late = expDate < today;
+    return '<tr><td><strong>'+p.po_number+'</strong></td>' +
+      '<td>'+(p.supplier||'—')+'</td>' +
+      '<td style="color:'+(late?'var(--red)':'var(--text2)')+'">'+fD(expDate)+(late?' (late)':'')+'</td>' +
+      '<td>'+(p.line_items_count||'—')+'</td>' +
+      '<td><span class="pill '+(late?'p-red':'p-grey')+'">'+(late?'LATE':'PENDING')+'</span></td>' +
+      '<td><button class="btn btn-ok" onclick="quickReceive(\''+p.po_number+'\',\''+String(p.supplier||'').replace(/\'/g,"\\\\\'")+'\')">Mark Arrived</button></td></tr>';
+  }).join('') : '<tr><td colspan="6" class="empty-state">No upcoming POs. Procurement adds POs to hoc_purchase_orders; if empty, log receipts directly in Inventory → Receive PO.</td></tr>';
+
+  var putaway = mus.filter(function(m){ return (!m.location || m.location.trim() === '') && m.status === 'available'; })
+                    .sort(function(a,b){ return (a.received_at||'').localeCompare(b.received_at||''); })
+                    .slice(0, 50);
+  var locSet = {};
+  mus.forEach(function(m){ if(m.location) locSet[m.location] = true; });
+  var knownLocs = Object.keys(locSet).sort();
+  document.getElementById('pa-loc-list').innerHTML = knownLocs.map(function(l){ return '<option value="'+l+'">'; }).join('');
+
+  var paTbody = document.getElementById('putaway-tbody');
+  paTbody.innerHTML = putaway.length ? putaway.map(function(m){
+    var sameSku = mus.find(function(x){ return x.sku === m.sku && x.location && x.mu_id !== m.mu_id; });
+    var suggested = sameSku ? sameSku.location : '';
+    return '<tr><td><strong>'+m.mu_id+'</strong></td>' +
+      '<td>'+(m.sku||'')+'</td>' +
+      '<td style="color:var(--text2);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(m.desc||'')+'</td>' +
+      '<td style="text-align:right">'+N(m.qty)+'</td>' +
+      '<td style="color:var(--blue)">'+(m.po||'')+'</td>' +
+      '<td style="color:var(--text3)">'+fD(m.received_at)+'</td>' +
+      '<td style="color:var(--text2)">'+(suggested?'<em>'+suggested+'</em>':'<em style="color:var(--text3)">— pick new —</em>')+'</td>' +
+      '<td><button class="btn btn-warn" onclick="openPutaway(\''+m.mu_id+'\',\''+suggested+'\')">Assign Loc</button></td></tr>';
+  }).join('') : '<tr><td colspan="8" class="empty-state">No MUs awaiting put-away.</td></tr>';
+
+  var recent = receipts.slice(0, 30);
+  document.getElementById('rcv-recent-tbody').innerHTML = recent.length ? recent.map(function(r){
+    var totalQty = (r.lines||[]).reduce(function(s,l){ return s+(parseFloat(l.qty)||0); }, 0);
+    return '<tr><td style="color:var(--text3)">'+fD(r.date)+'</td>' +
+      '<td><strong>'+r.po+'</strong></td>' +
+      '<td>'+(r.supplier||'—')+'</td>' +
+      '<td style="text-align:right">'+(r.lines||[]).length+'</td>' +
+      '<td style="text-align:right">'+totalQty.toLocaleString()+'</td>' +
+      '<td style="color:var(--text2)">'+(r.user||'—')+'</td></tr>';
+  }).join('') : '<tr><td colspan="6" class="empty-state">No receipts logged. Use Inventory → Receive PO.</td></tr>';
+}
+
+function quickReceive(po, supplier){
+  var u = load(LS_USER, {});
+  if(!u.name){ alert('Sign in first.'); openUserModal(); return; }
+  var conf = confirm('Quick-mark PO '+po+' as arrived?\n\nThis creates a receipt with no line items (placeholder). Use Inventory → Receive PO to log line-item detail and create MUs.');
+  if(!conf) return;
+  var receipts = getReceipts();
+  receipts.unshift({po:po, supplier:supplier, date:todayIso(), ts:new Date().toISOString(), user:u.name, lines:[]});
+  save('hoc_inventory_receipts_v1', receipts.slice(0, 500));
+  logEvent('receive', 'PO arrived (quick-mark) · '+po+' from '+(supplier||'unknown'), po);
+  alert('✓ PO '+po+' marked arrived. Add line items in Inventory.');
+  renderAll();
+}
+
+var _paMu = null;
+function openPutaway(muId, suggested){
+  var m = getMUs().find(function(x){ return x.mu_id === muId; });
+  if(!m){ alert('MU not found.'); return; }
+  _paMu = muId;
+  document.getElementById('pa-info').innerHTML = '<strong>'+m.mu_id+'</strong> · '+m.sku+' · qty '+N(m.qty)+'<br><span style="color:var(--text3);font-size:10px">PO '+(m.po||'—')+' · received '+fD(m.received_at)+'</span>';
+  document.getElementById('pa-loc').value = suggested || '';
+  document.getElementById('putaway-modal').classList.add('open');
+}
+function closePutawayModal(){ document.getElementById('putaway-modal').classList.remove('open'); _paMu = null; }
+function savePutaway(){
+  if(!_paMu) return;
+  var loc = document.getElementById('pa-loc').value.trim();
+  if(!loc){ alert('Enter a location.'); return; }
+  var u = load(LS_USER, {});
+  var mus = getMUs();
+  var m = mus.find(function(x){ return x.mu_id === _paMu; });
+  if(m){
+    var old = m.location || '';
+    m.location = loc;
+    m.put_away_at = new Date().toISOString();
+    m.put_away_by = u.name || 'unknown';
+    save('hoc_inventory_mus_v1', mus);
+    logEvent('putaway', 'Put-away · '+m.mu_id+' → '+loc+(old?' (was '+old+')':''), m.mu_id);
+    try {
+      var placardLocs = JSON.parse(localStorage.getItem('hoc_placard_locations_v1') || '{}');
+      if(!placardLocs[m.sku]) placardLocs[m.sku] = [];
+      if(placardLocs[m.sku].indexOf(loc) < 0){
+        placardLocs[m.sku].unshift(loc);
+        placardLocs[m.sku] = placardLocs[m.sku].slice(0, 5);
+        localStorage.setItem('hoc_placard_locations_v1', JSON.stringify(placardLocs));
+      }
+    } catch(e){}
+  }
+  closePutawayModal();
+  renderAll();
+}
+
+// SHIPPING ───────────────────────────────────────────────────
+function renderShipping(){
+  var batches = getBatches();
+  var shipments = getShipments();
+  var today = todayIso();
+
+  var ready = batches.filter(function(b){
+    var fs = String(b.fill_status||'').toUpperCase();
+    return fs === 'COMPLETED' || fs === 'RUNNING';
+  });
+
+  var shipsByBatch = {};
+  shipments.forEach(function(s){ if(!shipsByBatch[s.batch]) shipsByBatch[s.batch] = []; shipsByBatch[s.batch].push(s); });
+
+  var shippedTodayCount = shipments.filter(function(s){ return s.ts && s.ts.slice(0,10) === today; }).length;
+  var shippedTodayCases = shipments.filter(function(s){ return s.ts && s.ts.slice(0,10) === today; }).reduce(function(s,x){ return s+(parseInt(x.cases)||0); }, 0);
+  document.getElementById('k-ship-ready').textContent = ready.length;
+  document.getElementById('k-ship-today').textContent = shippedTodayCount;
+  document.getElementById('k-ship-cases').textContent = shippedTodayCases.toLocaleString();
+  document.getElementById('k-ship-30d').textContent = shipments.filter(function(s){ return ageDays(s.ts) <= 30; }).length;
+  document.getElementById('bdg-ship').textContent = ready.length;
+
+  var tbody = document.getElementById('ship-tbody');
+  if(!ready.length){
+    tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No completed/running batches yet. Once production finishes a batch, it appears here.</td></tr>';
+  } else {
+    tbody.innerHTML = ready.slice(0, 100).map(function(b){
+      var myShips = shipsByBatch[b.batch] || [];
+      var totalShipped = myShips.reduce(function(s,x){ return s+(parseInt(x.cases)||0); }, 0);
+      var cases = b.actqty || b.prod_actqty || b.fg_cases || 0;
+      var casepk = b.casepk || 12;
+      var eaches = cases * casepk;
+      var statusPill = totalShipped >= cases && cases > 0 ?
+        '<span class="pill p-grn">✓ FULLY SHIPPED</span>' :
+        totalShipped > 0 ?
+        '<span class="pill p-blu">PARTIAL ('+totalShipped+'/'+cases+')</span>' :
+        '<span class="pill p-amb">READY</span>';
+      var descClean = String(b.desc||'').replace(/'/g, "\\'");
+      return '<tr><td><strong>'+b.batch+'</strong></td>' +
+        '<td>L'+(b.line||'—')+'</td>' +
+        '<td>'+fD(b.date)+'</td>' +
+        '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(b.desc||'')+'</td>' +
+        '<td style="text-align:right;font-weight:700">'+N(cases)+'</td>' +
+        '<td style="text-align:right;color:var(--text2)">'+N(eaches)+'</td>' +
+        '<td>'+statusPill+'</td>' +
+        '<td style="text-align:right;color:'+(totalShipped>0?'var(--blue)':'var(--text3)')+';font-weight:700">'+N(totalShipped)+'</td>' +
+        '<td><button class="btn btn-pri" onclick="openShipModal(\''+b.batch+'\','+cases+',\''+descClean.slice(0,40)+'\')">Log Shipment</button></td></tr>';
+    }).join('');
+  }
+
+  var recent = shipments.slice(0, 30);
+  document.getElementById('ship-recent-tbody').innerHTML = recent.length ? recent.map(function(s){
+    return '<tr><td style="color:var(--text3)">'+fDT(s.ts)+'</td>' +
+      '<td><strong>'+s.batch+'</strong></td>' +
+      '<td>'+(s.bol||'—')+'</td>' +
+      '<td>'+(s.carrier||'—')+'</td>' +
+      '<td>'+(s.destination||'—')+'</td>' +
+      '<td style="text-align:right">'+N(s.cases)+'</td>' +
+      '<td>'+(s.driver||'—')+'</td>' +
+      '<td style="color:var(--text2)">'+(s.user||'—')+'</td></tr>';
+  }).join('') : '<tr><td colspan="8" class="empty-state">No shipments logged yet.</td></tr>';
+}
+
+var _shipBatch = null;
+function openShipModal(batch, cases, desc){
+  _shipBatch = batch;
+  document.getElementById('ship-modal-title').textContent = 'Log Shipment · '+batch;
+  document.getElementById('ship-modal-info').innerHTML = '<strong>'+batch+'</strong> · '+desc+' · '+N(cases)+' cases available';
+  ['s-bol','s-carrier','s-dest','s-dock','s-cases','s-eaches','s-weight','s-driver','s-notes'].forEach(function(id){ var e = document.getElementById(id); if(e) e.value = ''; });
+  document.getElementById('s-time').value = new Date().toISOString().slice(0,16);
+  document.getElementById('ship-modal').classList.add('open');
+}
+function closeShipModal(){ document.getElementById('ship-modal').classList.remove('open'); _shipBatch = null; }
+function saveShipment(){
+  if(!_shipBatch) return;
+  var u = load(LS_USER, {});
+  if(!u.name){ alert('Sign in first.'); return; }
+  var bol = document.getElementById('s-bol').value.trim();
+  var cases = parseInt(document.getElementById('s-cases').value) || 0;
+  if(!bol){ alert('BOL # required.'); return; }
+  if(!cases){ alert('Cases shipped required.'); return; }
+  var ship = {
+    batch: _shipBatch,
+    bol: bol,
+    carrier: document.getElementById('s-carrier').value.trim(),
+    destination: document.getElementById('s-dest').value.trim(),
+    dock: document.getElementById('s-dock').value.trim(),
+    cases: cases,
+    eaches: parseInt(document.getElementById('s-eaches').value) || 0,
+    weight: parseFloat(document.getElementById('s-weight').value) || 0,
+    driver: document.getElementById('s-driver').value.trim(),
+    ship_time: document.getElementById('s-time').value || new Date().toISOString(),
+    notes: document.getElementById('s-notes').value.trim(),
+    ts: new Date().toISOString(),
+    user: u.name
+  };
+  var shipments = getShipments();
+  shipments.unshift(ship);
+  save(LS_SHIPS, shipments.slice(0, 1000));
+  logEvent('ship', 'Shipped '+cases+' cases · BOL '+bol+' to '+(ship.destination||'—'), _shipBatch);
+  closeShipModal();
+  alert('✓ Shipment logged.');
+  renderAll();
+}
+
+// LOCATIONS ──────────────────────────────────────────────────
+function renderLocateBySku(){
+  var q = (document.getElementById('loc-sku').value || '').trim().toLowerCase();
+  var result = document.getElementById('locate-result');
+  if(!q){ result.innerHTML = ''; return; }
+  var mus = getMUs().filter(function(m){ return (m.sku||'').toLowerCase().indexOf(q) >= 0 && (m.status === 'available' || m.status === 'staged'); });
+  if(!mus.length){ result.innerHTML = '<div class="empty-state">No MUs found for SKU "'+q+'".</div>'; return; }
+  var byLoc = {};
+  mus.forEach(function(m){
+    var loc = m.location || '(unassigned)';
+    if(!byLoc[loc]) byLoc[loc] = {total:0, mus:[]};
+    byLoc[loc].total += parseFloat(m.qty_remaining || m.qty || 0);
+    byLoc[loc].mus.push(m);
+  });
+  var html = '<div class="card-title" style="margin-top:10px">SKU "'+q+'" found in '+Object.keys(byLoc).length+' location(s)</div>';
+  html += '<div class="tbl-wrap"><table><thead><tr><th>Location</th><th>MUs there</th><th style="text-align:right">Qty</th><th>Oldest</th></tr></thead><tbody>';
+  Object.entries(byLoc).sort(function(a,b){ return b[1].total - a[1].total; }).forEach(function(entry){
+    var loc = entry[0], info = entry[1];
+    info.mus.sort(function(a,b){ return (a.received_at||'').localeCompare(b.received_at||''); });
+    var oldest = info.mus[0];
+    var oldestAge = ageDays(oldest.received_at);
+    html += '<tr><td><strong>'+(loc==='(unassigned)'?'<em style="color:var(--text3)">unassigned</em>':loc)+'</strong></td>' +
+      '<td style="color:var(--text2)">'+info.mus.map(function(m){ return m.mu_id; }).join(', ').slice(0,80)+(info.mus.length>3?'…':'')+'</td>' +
+      '<td style="text-align:right;font-weight:700">'+info.total.toLocaleString()+'</td>' +
+      '<td style="color:var(--text2)">'+oldestAge+'d ('+oldest.mu_id+')</td></tr>';
+  });
+  html += '</tbody></table></div>';
+  result.innerHTML = html;
+}
+
+function renderLocateByLoc(){
+  var q = (document.getElementById('loc-loc').value || '').trim().toLowerCase();
+  var result = document.getElementById('locate-result');
+  if(!q){ result.innerHTML = ''; return; }
+  var mus = getMUs().filter(function(m){ return (m.location||'').toLowerCase().indexOf(q) >= 0 && (m.status === 'available' || m.status === 'staged'); });
+  if(!mus.length){ result.innerHTML = '<div class="empty-state">No MUs at location matching "'+q+'".</div>'; return; }
+  mus.sort(function(a,b){ return (a.received_at||'').localeCompare(b.received_at||''); });
+  var html = '<div class="card-title" style="margin-top:10px">Location "'+q+'" contains '+mus.length+' MU(s)</div>';
+  html += '<div class="tbl-wrap"><table><thead><tr><th>MU#</th><th>SKU</th><th>Description</th><th style="text-align:right">Qty</th><th>Received</th><th>Age</th><th>PO</th></tr></thead><tbody>';
+  mus.forEach(function(m){
+    html += '<tr><td><strong>'+m.mu_id+'</strong></td>' +
+      '<td>'+m.sku+'</td>' +
+      '<td style="color:var(--text2);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(m.desc||'')+'</td>' +
+      '<td style="text-align:right">'+N(m.qty_remaining || m.qty)+'</td>' +
+      '<td style="color:var(--text3)">'+fD(m.received_at)+'</td>' +
+      '<td>'+ageDays(m.received_at)+'d</td>' +
+      '<td style="color:var(--blue)">'+m.po+'</td></tr>';
+  });
+  html += '</tbody></table></div>';
+  result.innerHTML = html;
+}
+
+function renderLocations(){
+  var mus = getMUs().filter(function(m){ return m.location && (m.status === 'available' || m.status === 'staged'); });
+  var byLoc = {};
+  mus.forEach(function(m){
+    if(!byLoc[m.location]) byLoc[m.location] = {mus:[], skus:new Set(), qty:0};
+    byLoc[m.location].mus.push(m);
+    byLoc[m.location].skus.add(m.sku);
+    byLoc[m.location].qty += parseFloat(m.qty_remaining || m.qty || 0);
+  });
+  var sorted = Object.entries(byLoc).sort(function(a,b){ return a[0].localeCompare(b[0]); });
+  var tbody = document.getElementById('locations-tbody');
+  if(!sorted.length){
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No locations populated yet. Assign MUs to locations via Receiving → Put-Away.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = sorted.map(function(entry){
+    var loc = entry[0], info = entry[1];
+    info.mus.sort(function(a,b){ return (a.received_at||'').localeCompare(b.received_at||''); });
+    var oldestAge = ageDays(info.mus[0].received_at);
+    return '<tr onclick="document.getElementById(\'loc-loc\').value=\''+loc+'\';renderLocateByLoc();"><td><strong>'+loc+'</strong></td>' +
+      '<td style="text-align:right">'+info.mus.length+'</td>' +
+      '<td style="color:var(--text2);max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+Array.from(info.skus).join(', ')+'</td>' +
+      '<td style="text-align:right;font-weight:700">'+info.qty.toLocaleString()+'</td>' +
+      '<td style="color:'+(oldestAge>90?'var(--amber)':'var(--text2)')+'">'+oldestAge+'d</td></tr>';
+  }).join('');
+}
+
+// LOG ────────────────────────────────────────────────────────
+function renderLog(){
+  var log = getLog();
+  var type = document.getElementById('log-type').value;
+  var user = (document.getElementById('log-user').value || '').toLowerCase().trim();
+  var search = (document.getElementById('log-search').value || '').toLowerCase().trim();
+  if(type) log = log.filter(function(l){ return l.type === type; });
+  if(user) log = log.filter(function(l){ return (l.user||'').toLowerCase().indexOf(user) >= 0; });
+  if(search) log = log.filter(function(l){ return (l.detail||'').toLowerCase().indexOf(search) >= 0 || (l.ref||'').toLowerCase().indexOf(search) >= 0; });
+  log = log.slice(0, 300);
+  var tbody = document.getElementById('log-tbody');
+  if(!log.length){
+    tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No log entries match filter.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = log.map(function(l){
+    var typeClass = l.type === 'pick' ? 'p-orange' : l.type === 'receive' ? 'p-grn' : l.type === 'ship' ? 'p-blu' : l.type === 'putaway' ? 'p-amb' : 'p-grey';
+    return '<tr><td style="color:var(--text3);white-space:nowrap">'+fDT(l.ts)+'</td>' +
+      '<td><span class="pill '+typeClass+'">'+(l.type||'').toUpperCase()+'</span></td>' +
+      '<td>'+(l.user||'—')+'</td>' +
+      '<td style="font-size:10px">'+l.detail+'</td>' +
+      '<td style="font-size:9px;color:var(--text3)">'+(l.ref||'')+'</td></tr>';
+  }).join('');
+}
+
+// BOOT ───────────────────────────────────────────────────────
+function renderAll(){
+  renderUserBadge();
+  try { renderPickQueue(); } catch(e){ console.warn('pick',e); }
+  try { renderReceiving(); } catch(e){ console.warn('rcv',e); }
+  try { renderShipping(); } catch(e){ console.warn('ship',e); }
+  try { renderLocations(); } catch(e){}
+  try { renderLog(); } catch(e){}
+}
+
+(async function init(){
+  await loadExpectedPOs();
+  renderAll();
+  if(!load(LS_USER, {}).name){ setTimeout(openUserModal, 400); }
+  pullFromBus();
+  setInterval(pullFromBus, 20000);
+  setInterval(loadExpectedPOs, 60000);
+  setInterval(renderAll, 30000);
+})();
+
+window.addEventListener('storage', function(e){
+  if(['hoc_inventory_mus_v1','hoc_inventory_receipts_v1','hoc_upload_v1','hoc_floor_v1'].indexOf(e.key) >= 0){
+    renderAll();
+  }
+});
+
+document.body.insertAdjacentHTML('beforeend',
+  '<button onclick="window.location.href=\'HOC_Onboarding.html\'" title="Onboarding & operations guide" style="position:fixed;bottom:24px;right:24px;width:44px;height:44px;border-radius:50%;background:var(--orange);color:#000;border:none;font-size:20px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(249,115,22,.4);z-index:998">?</button>');
+</script>
+<script src="hoc_events.js"></script>
+</body>
+</html>

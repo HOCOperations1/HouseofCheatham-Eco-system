@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finance · HOC-OES</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B0E17">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{
+  --bg:#0B0E17;--bg2:#111520;--bg3:#161C28;
+  --border:#1E293B;--text:#DDE4F0;--text2:#8899AA;--text3:#4A5570;
+  --green:#22C55E;--red:#EF4444;--amber:#F59E0B;--blue:#3B82F6;--purple:#8B5CF6;--cyan:#22D3EE;--gold:#FBBF24;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:ui-monospace,monospace;background:var(--bg);color:var(--text);font-size:11px;min-height:100vh}
+.topbar{display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;flex-wrap:wrap}
+.back{padding:3px 8px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text2);font-size:9px;font-weight:700;text-decoration:none;cursor:pointer}
+.brand-name{font-size:13px;font-weight:700;color:var(--text)}
+.brand-sub{font-size:9px;color:var(--text3)}
+.logo{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;background:linear-gradient(135deg,#FBBF24,#D97706)}
+.spacer{flex:1}
+.nav{display:flex;gap:4px;padding:0 16px;background:var(--bg2);border-bottom:1px solid var(--border);overflow-x:auto}
+.nb{padding:6px 12px;border-radius:6px 6px 0 0;font:inherit;font-size:10px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--text2);border-bottom:2px solid transparent;white-space:nowrap}
+.nb:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.nb.active{color:var(--gold);border-bottom-color:var(--gold)}
+.content{padding:12px 16px;max-width:1500px;margin:0 auto}
+.sync-bar{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 12px;margin-bottom:10px;font-size:9px;color:var(--text3);display:flex;align-items:center;gap:8px}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.card-title{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:10px}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.kl{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.kv{font-size:22px;font-weight:700;color:var(--text);line-height:1.1;font-variant-numeric:tabular-nums}
+.ks{font-size:9px;color:var(--text3);margin-top:2px}
+.kpi.red .kv{color:var(--red)}.kpi.amber .kv{color:var(--amber)}.kpi.green .kv{color:var(--green)}.kpi.blue .kv{color:var(--blue)}.kpi.gold .kv{color:var(--gold)}
+.btn{padding:6px 12px;border-radius:6px;font:inherit;font-size:10px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text)}
+.btn:hover{background:var(--border)}
+.btn-primary{background:var(--gold);color:#000;border-color:var(--gold)}
+.btn-ghost{background:transparent}
+input,select{background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font:inherit;font-size:11px;padding:6px 8px}
+.tbl-wrap{overflow-x:auto;max-height:520px}
+table{width:100%;border-collapse:collapse;font-size:10px}
+th{text-align:left;padding:6px 8px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;background:var(--bg2);position:sticky;top:0}
+td{padding:6px 8px;border-bottom:1px solid var(--border);font-size:10px}
+tr:hover td{background:rgba(255,255,255,.02)}
+.t-num{font-variant-numeric:tabular-nums;text-align:right;font-family:ui-monospace}
+.pill{display:inline-block;font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;letter-spacing:.05em}
+.pill-red{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.25)}
+.pill-amber{background:rgba(245,158,11,.12);color:var(--amber);border:1px solid rgba(245,158,11,.25)}
+.pill-green{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.25)}
+.pill-blue{background:rgba(59,130,246,.12);color:var(--blue);border:1px solid rgba(59,130,246,.25)}
+.empty-state{padding:32px;text-align:center;color:var(--text3);font-size:11px}
+.chart-wrap{height:280px;position:relative}
+.assumptions-card{background:rgba(251,191,36,.05);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:10px;color:var(--text2)}
+.assumptions-card strong{color:var(--gold)}
+.input-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;align-items:end}
+.input-row .field label{display:block;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="index.html" class="back">← Home</a>
+  <div class="logo">$</div>
+  <div>
+    <div class="brand-name">Finance Dashboard</div>
+    <div class="brand-sub">Material cost · Labor variance · Scrap cost · Monthly P&amp;L rollup</div>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn btn-ghost" onclick="exportSnapshot()">↓ Export P&L</button>
+</div>
+
+<div class="nav">
+  <button class="nb active" id="tab-summary" onclick="P('summary')">P&amp;L Summary</button>
+  <button class="nb" id="tab-material" onclick="P('material')">Material Cost</button>
+  <button class="nb" id="tab-labor" onclick="P('labor')">Labor Variance</button>
+  <button class="nb" id="tab-scrap" onclick="P('scrap')">Scrap Cost</button>
+  <button class="nb" id="tab-config" onclick="P('config')">Cost Config</button>
+</div>
+
+<div class="content">
+
+  <div class="sync-bar"><span class="sync-dot"></span>Finance · derived from Production Schedule, Labor Standards, Scrap Tracker · <span id="month-label">—</span> · <span id="data-status">loading…</span></div>
+
+  <!-- ═══════════════ P&L SUMMARY ═══════════════ -->
+  <div class="page" id="page-summary">
+
+    <div class="kpi-grid">
+      <div class="kpi gold">
+        <div class="kl">Month Revenue (est.)</div>
+        <div class="kv" id="kpi-revenue">$0</div>
+        <div class="ks" id="kpi-revenue-sub">Cases produced × avg sell</div>
+      </div>
+      <div class="kpi blue">
+        <div class="kl">Material Cost (MTD)</div>
+        <div class="kv" id="kpi-material">$0</div>
+        <div class="ks" id="kpi-material-sub">From batch BOMs</div>
+      </div>
+      <div class="kpi amber">
+        <div class="kl">Labor Cost (MTD)</div>
+        <div class="kv" id="kpi-labor">$0</div>
+        <div class="ks" id="kpi-labor-sub">From hours × loaded rate</div>
+      </div>
+      <div class="kpi red">
+        <div class="kl">Scrap Cost (MTD)</div>
+        <div class="kv" id="kpi-scrap">$0</div>
+        <div class="ks" id="kpi-scrap-sub">From Scrap Tracker</div>
+      </div>
+      <div class="kpi green">
+        <div class="kl">Gross Margin (est.)</div>
+        <div class="kv" id="kpi-margin">$0</div>
+        <div class="ks" id="kpi-margin-sub">Revenue − COGS</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>Month-To-Date P&amp;L Rollup</span>
+        <span>
+          <select id="month-picker" onchange="renderAll()" style="font-size:10px"></select>
+        </span>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr><th>Line Item</th><th class="t-num">MTD Amount</th><th class="t-num">% of Revenue</th><th>Source</th><th>Notes</th></tr>
+          </thead>
+          <tbody id="pnl-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Cost Breakdown by Line</div>
+      <div class="chart-wrap"><canvas id="chart-cost-by-line"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Daily P&amp;L Trend (last 30 days)</div>
+      <div class="chart-wrap"><canvas id="chart-pnl-trend"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ MATERIAL COST ═══════════════ -->
+  <div class="page" id="page-material" style="display:none">
+    <div class="assumptions-card">
+      <strong>How this is calculated:</strong> Material cost per batch = batch lbs × average raw-material cost per lb (from <em>Cost Config → Material Rate</em>). 
+      Replace with per-formula BOM rollups once Vicinity component cost view is wired.
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi blue">
+        <div class="kl">Total Material (MTD)</div>
+        <div class="kv" id="mat-mtd">$0</div>
+        <div class="ks" id="mat-mtd-sub">Across all batches</div>
+      </div>
+      <div class="kpi amber">
+        <div class="kl">Avg Cost per Batch</div>
+        <div class="kv" id="mat-avg">$0</div>
+        <div class="ks" id="mat-avg-sub">—</div>
+      </div>
+      <div class="kpi green">
+        <div class="kl">Material per Case</div>
+        <div class="kv" id="mat-per-case">$0</div>
+        <div class="ks" id="mat-per-case-sub">MTD weighted</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Material Cost per Batch (MTD)</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Batch</th><th>Line</th><th>Item</th><th class="t-num">Lbs</th><th class="t-num">Cases</th><th class="t-num">Material $</th><th class="t-num">$/case</th></tr></thead>
+          <tbody id="material-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ LABOR VARIANCE ═══════════════ -->
+  <div class="page" id="page-labor" style="display:none">
+    <div class="assumptions-card">
+      <strong>How this is calculated:</strong> Labor cost = (compound hours + fill hours) × loaded labor rate. 
+      Standard hours come from <code>hoc_labor_standards_v1</code> (Vicinity Fill Labor Extract). Actual hours estimated from batch start/end timestamps; replace with timecard integration when available.
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi amber">
+        <div class="kl">Total Labor (MTD)</div>
+        <div class="kv" id="lab-mtd">$0</div>
+        <div class="ks" id="lab-mtd-sub">Std hrs × rate</div>
+      </div>
+      <div class="kpi blue">
+        <div class="kl">Std Hours (MTD)</div>
+        <div class="kv" id="lab-std-hrs">0</div>
+        <div class="ks">From standards</div>
+      </div>
+      <div class="kpi red">
+        <div class="kl">Labor Variance</div>
+        <div class="kv" id="lab-var">$0</div>
+        <div class="ks" id="lab-var-sub">Actual − Std</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Labor by Batch (MTD)</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Batch</th><th>Line</th><th>Item</th><th class="t-num">Lbs</th><th class="t-num">Std hrs</th><th class="t-num">Actual hrs</th><th class="t-num">Std $</th><th class="t-num">Actual $</th><th class="t-num">Variance $</th></tr></thead>
+          <tbody id="labor-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ SCRAP COST ═══════════════ -->
+  <div class="page" id="page-scrap" style="display:none">
+    <div class="assumptions-card">
+      <strong>How this is calculated:</strong> Scrap cost = scrap quantity (units / lbs) × per-unit material cost. 
+      Pulls live from <code>hoc_scrap_v1</code> (Scrap Tracker). Per-unit cost defaults to the Material Rate in Cost Config until a per-part cost lookup is added.
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi red">
+        <div class="kl">Total Scrap $ (MTD)</div>
+        <div class="kv" id="scrap-mtd">$0</div>
+        <div class="ks" id="scrap-mtd-sub">From Scrap Tracker</div>
+      </div>
+      <div class="kpi amber">
+        <div class="kl">Scrap Units (MTD)</div>
+        <div class="kv" id="scrap-units">0</div>
+        <div class="ks">Across all reasons</div>
+      </div>
+      <div class="kpi blue">
+        <div class="kl">Top Cost Reason</div>
+        <div class="kv" id="scrap-top-reason" style="font-size:13px">—</div>
+        <div class="ks" id="scrap-top-reason-sub">—</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Scrap Cost by Reason (MTD)</div>
+      <div class="chart-wrap"><canvas id="chart-scrap-reason"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Scrap Entries Cost-Out</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Part</th><th>Batch</th><th class="t-num">Qty</th><th>Reason</th><th>Line</th><th class="t-num">Unit $</th><th class="t-num">Cost $</th></tr></thead>
+          <tbody id="scrap-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ COST CONFIG ═══════════════ -->
+  <div class="page" id="page-config" style="display:none">
+    <div class="assumptions-card">
+      Set the cost rates used throughout Finance. These are <strong>defaults</strong> applied when batch-specific data isn't available. As Vicinity component costs and timecard data come online, these become fallbacks rather than primary sources.
+    </div>
+    <div class="card">
+      <div class="card-title">Rate Configuration</div>
+      <div class="input-row">
+        <div class="field">
+          <label>Average sell price per case ($)</label>
+          <input type="number" id="cfg-sell-per-case" step="0.01" min="0">
+        </div>
+        <div class="field">
+          <label>Avg raw material cost per lb ($)</label>
+          <input type="number" id="cfg-material-per-lb" step="0.01" min="0">
+        </div>
+        <div class="field">
+          <label>Loaded labor rate per hour ($)</label>
+          <input type="number" id="cfg-labor-rate" step="0.01" min="0">
+        </div>
+        <div class="field">
+          <label>Overhead rate (% of revenue)</label>
+          <input type="number" id="cfg-overhead-pct" step="0.1" min="0" max="100">
+        </div>
+        <div class="field">
+          <label>Default scrap unit cost (if no part match) ($)</label>
+          <input type="number" id="cfg-scrap-unit" step="0.01" min="0">
+        </div>
+      </div>
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button class="btn btn-primary" onclick="saveCostConfig()">Save Configuration</button>
+        <button class="btn btn-ghost" onclick="resetCostConfig()">Reset to Defaults</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Data Source Status</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Source</th><th>Status</th><th>Last Updated</th><th>Records</th></tr></thead>
+          <tbody id="source-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// HOC Finance Dashboard — v6.34d
+//
+// Data sources (read-only):
+//   hoc_upload_v1            — Production Schedule (batches with lbs, line, dates)
+//   hoc_labor_standards_v1   — Vicinity Fill Labor Extract (formula → std hrs)
+//   hoc_scrap_v1             — Scrap Tracker entries
+//   hoc_floor_v1             — Floor state (actual qty + completion timestamps)
+//
+// Stored locally:
+//   hoc_finance_cfg_v1       — Cost rate configuration
+//
+// No Supabase writes. No event-bus firing. Pure derivation/aggregation.
+// ═══════════════════════════════════════════════════════════════════
+
+const CFG_KEY = 'hoc_finance_cfg_v1';
+
+const DEFAULTS = {
+  sell_per_case: 25.00,
+  material_per_lb: 1.85,
+  labor_rate: 38.50,
+  overhead_pct: 12.0,
+  scrap_unit: 1.85
+};
+
+let cfg = Object.assign({}, DEFAULTS);
+let _selectedMonth = null;
+let charts = {};
+
+function loadCfg(){
+  try {
+    var s = localStorage.getItem(CFG_KEY);
+    if(s){ cfg = Object.assign({}, DEFAULTS, JSON.parse(s)); }
+  } catch(e){ cfg = Object.assign({}, DEFAULTS); }
+}
+function saveCfg(){
+  try { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); } catch(e){}
+}
+
+function P(p){
+  document.querySelectorAll('[id^="page-"]').forEach(function(el){ el.style.display = 'none'; });
+  document.querySelectorAll('.nb').forEach(function(el){ el.classList.remove('active'); });
+  var pg = document.getElementById('page-'+p);
+  var tb = document.getElementById('tab-'+p);
+  if(pg) pg.style.display = 'block';
+  if(tb) tb.classList.add('active');
+  if(p === 'summary')  renderSummary();
+  if(p === 'material') renderMaterial();
+  if(p === 'labor')    renderLabor();
+  if(p === 'scrap')    renderScrap();
+  if(p === 'config')   renderConfig();
+}
+
+function getUpload(){
+  try { return JSON.parse(localStorage.getItem('hoc_upload_v1')||'{}'); } catch(e){ return {}; }
+}
+function getLabor(){
+  try { return JSON.parse(localStorage.getItem('hoc_labor_standards_v1')||'{}'); } catch(e){ return {}; }
+}
+function getScrap(){
+  try { return JSON.parse(localStorage.getItem('hoc_scrap_v1')||'[]'); } catch(e){ return []; }
+}
+function getFloor(){
+  try { return JSON.parse(localStorage.getItem('hoc_floor_v1')||'{}'); } catch(e){ return {}; }
+}
+
+function $(num){
+  if(!isFinite(num) || num === null) return '$0';
+  var sign = num < 0 ? '-' : '';
+  num = Math.abs(num);
+  if(num >= 1000000) return sign+'$'+(num/1000000).toFixed(2)+'M';
+  if(num >= 1000)    return sign+'$'+(num/1000).toFixed(1)+'K';
+  return sign+'$'+num.toFixed(2);
+}
+function $exact(num){
+  if(!isFinite(num) || num === null) return '$0.00';
+  return (num < 0 ? '-' : '')+'$'+Math.abs(num).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+function getMonthPrefix(d){
+  d = d || new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+}
+
+function buildMonthPicker(){
+  var sel = document.getElementById('month-picker');
+  if(!sel) return;
+  var upload = getUpload();
+  var months = {};
+  (upload.batches||[]).forEach(function(b){ if(b && b.date) months[b.date.slice(0,7)] = 1; });
+  var current = getMonthPrefix();
+  months[current] = 1;
+  var keys = Object.keys(months).sort().reverse();
+  _selectedMonth = _selectedMonth || current;
+  sel.innerHTML = keys.map(function(k){
+    return '<option value="'+k+'"'+(k===_selectedMonth?' selected':'')+'>'+k+'</option>';
+  }).join('');
+  sel.onchange = function(){ _selectedMonth = sel.value; renderAll(); };
+  document.getElementById('month-label').textContent = _selectedMonth;
+}
+
+function batchesForMonth(){
+  var upload = getUpload();
+  var prefix = _selectedMonth || getMonthPrefix();
+  return (upload.batches||[]).filter(function(b){
+    return b && b.date && String(b.date).indexOf(prefix) === 0;
+  });
+}
+
+function scrapForMonth(){
+  var prefix = _selectedMonth || getMonthPrefix();
+  return getScrap().filter(function(e){ return e.date && String(e.date).indexOf(prefix) === 0; });
+}
+
+// ── Material cost per batch ─────────────────────────────────────
+function materialCostForBatch(b){
+  var lbs = Number(b.lbs) || 0;
+  // Fallback: estimate lbs from cases × 10 if no lbs (typical product weight)
+  if(!lbs && b.actqty) lbs = Number(b.actqty) * 10;
+  if(!lbs && b.origqty) lbs = Number(b.origqty) * 10;
+  return lbs * cfg.material_per_lb;
+}
+
+// ── Labor cost per batch ───────────────────────────────────────
+function laborStdHoursForBatch(b){
+  var labor = getLabor();
+  var stds = labor.standards || {};
+  var fid = b.formula ? String(b.formula) : null;
+  var lbs = Number(b.lbs) || 0;
+  if(!lbs && b.origqty) lbs = Number(b.origqty) * 10;
+  if(fid && stds[fid]){
+    var s = stds[fid];
+    var compHrs = (Number(s.comp_time)||0) * lbs;
+    var fillHrs = (Number(s.fill_time)||0) * lbs;
+    var fixed   = Number(s.fixed_hours)||0;
+    return compHrs + fillHrs + fixed;
+  }
+  // Fallback: 0.04 hr/lb if no standard
+  return lbs * 0.04;
+}
+function laborActualHoursForBatch(b){
+  // Without timecard data, assume actual = std × 1.08 (8% historical overrun)
+  // Replace this when real time-on-batch becomes available
+  return laborStdHoursForBatch(b) * 1.08;
+}
+
+// ── Scrap cost per entry ────────────────────────────────────────
+function scrapCostForEntry(e){
+  var qty = Number(e.qty) || 0;
+  // For now use scrap_unit default; later: per-part lookup
+  return qty * cfg.scrap_unit;
+}
+
+// ── Aggregations for the month ──────────────────────────────────
+function computeMTD(){
+  var bs = batchesForMonth();
+  var sc = scrapForMonth();
+  var totalCases = 0, totalLbs = 0;
+  var matCost = 0, labCostStd = 0, labCostActual = 0, labHrsStd = 0;
+  bs.forEach(function(b){
+    var cases = Number(b.actqty)||Number(b.origqty)||0;
+    var lbs = Number(b.lbs)||0;
+    if(!lbs) lbs = cases * 10;
+    totalCases += cases;
+    totalLbs   += lbs;
+    matCost    += materialCostForBatch(b);
+    var stdH = laborStdHoursForBatch(b);
+    labHrsStd += stdH;
+    labCostStd    += stdH * cfg.labor_rate;
+    labCostActual += laborActualHoursForBatch(b) * cfg.labor_rate;
+  });
+  var scrapCost = sc.reduce(function(s,e){ return s + scrapCostForEntry(e); }, 0);
+  var scrapUnits = sc.reduce(function(s,e){ return s + (Number(e.qty)||0); }, 0);
+  var revenue = totalCases * cfg.sell_per_case;
+  var overhead = revenue * (cfg.overhead_pct / 100);
+  var cogs = matCost + labCostActual + scrapCost + overhead;
+  var grossMargin = revenue - cogs;
+  return {
+    totalCases: totalCases, totalLbs: totalLbs,
+    matCost: matCost,
+    labHrsStd: labHrsStd, labCostStd: labCostStd, labCostActual: labCostActual,
+    laborVariance: labCostActual - labCostStd,
+    scrapCost: scrapCost, scrapUnits: scrapUnits,
+    revenue: revenue, overhead: overhead, cogs: cogs,
+    grossMargin: grossMargin,
+    batches: bs, scrap: sc
+  };
+}
+
+// ── Renderers ───────────────────────────────────────────────────
+function renderSummary(){
+  var m = computeMTD();
+  document.getElementById('kpi-revenue').textContent = $(m.revenue);
+  document.getElementById('kpi-revenue-sub').textContent = m.totalCases.toLocaleString()+' cases × '+$exact(cfg.sell_per_case);
+  document.getElementById('kpi-material').textContent = $(m.matCost);
+  document.getElementById('kpi-material-sub').textContent = m.totalLbs.toLocaleString()+' lbs × '+$exact(cfg.material_per_lb)+'/lb';
+  document.getElementById('kpi-labor').textContent = $(m.labCostActual);
+  document.getElementById('kpi-labor-sub').textContent = (m.labHrsStd*1.08).toFixed(0)+' actual hrs × '+$exact(cfg.labor_rate);
+  document.getElementById('kpi-scrap').textContent = $(m.scrapCost);
+  document.getElementById('kpi-scrap-sub').textContent = m.scrap.length+' entries · '+m.scrapUnits.toLocaleString()+' units';
+  document.getElementById('kpi-margin').textContent = $(m.grossMargin);
+  var pct = m.revenue > 0 ? (m.grossMargin/m.revenue*100).toFixed(1)+'%' : '—';
+  document.getElementById('kpi-margin-sub').textContent = pct+' gross margin';
+
+  // P&L table
+  var tbody = document.getElementById('pnl-body');
+  var rev = m.revenue;
+  var rows = [
+    ['Revenue (Cases × Sell Price)', m.revenue, 'Production Schedule', m.totalCases+' cases'],
+    ['Material Cost', -m.matCost, 'Batch lbs × $/lb', 'Estimate'],
+    ['Labor Cost (Actual)', -m.labCostActual, 'Std hrs × 1.08 × rate', 'Replace w/ timecards'],
+    ['Scrap Cost', -m.scrapCost, 'Scrap Tracker × $/unit', m.scrap.length+' entries'],
+    ['Overhead', -m.overhead, cfg.overhead_pct+'% of revenue', 'Burden rate'],
+    ['Gross Margin', m.grossMargin, 'Revenue − COGS', (rev>0?(m.grossMargin/rev*100).toFixed(1):'—')+'%'],
+  ];
+  tbody.innerHTML = rows.map(function(r){
+    var pct = rev>0 ? (Math.abs(r[1])/rev*100).toFixed(1)+'%' : '—';
+    var color = r[1] < 0 ? 'var(--red)' : (r[0]==='Gross Margin' ? (r[1]>0?'var(--green)':'var(--red)') : 'var(--text)');
+    var weight = (r[0]==='Revenue (Cases × Sell Price)' || r[0]==='Gross Margin') ? '700' : '400';
+    return '<tr style="font-weight:'+weight+'">'+
+      '<td>'+r[0]+'</td>'+
+      '<td class="t-num" style="color:'+color+';font-weight:700">'+$exact(r[1])+'</td>'+
+      '<td class="t-num">'+pct+'</td>'+
+      '<td style="font-size:9px;color:var(--text3)">'+r[2]+'</td>'+
+      '<td style="font-size:9px;color:var(--text3)">'+r[3]+'</td>'+
+    '</tr>';
+  }).join('');
+
+  // Cost by line chart
+  var byLine = {};
+  m.batches.forEach(function(b){
+    var ln = b.line || 0;
+    byLine[ln] = (byLine[ln]||0) + materialCostForBatch(b) + laborActualHoursForBatch(b)*cfg.labor_rate;
+  });
+  var lineKeys = Object.keys(byLine).filter(function(l){return l>0;}).sort(function(a,b){return parseInt(a)-parseInt(b);});
+  upsertChart('chart-cost-by-line', {
+    type:'bar',
+    data:{ labels: lineKeys.map(function(l){return 'L'+l;}), datasets:[{ label:'Cost $', data: lineKeys.map(function(l){return byLine[l];}), backgroundColor:'#FBBF24' }] },
+    options: chartOpts('$')
+  });
+
+  // Daily P&L trend
+  var byDay = {};
+  m.batches.forEach(function(b){
+    var d = b.date;
+    if(!byDay[d]) byDay[d] = { rev:0, cost:0 };
+    var cases = Number(b.actqty)||Number(b.origqty)||0;
+    byDay[d].rev  += cases * cfg.sell_per_case;
+    byDay[d].cost += materialCostForBatch(b) + laborActualHoursForBatch(b)*cfg.labor_rate;
+  });
+  m.scrap.forEach(function(e){
+    if(!byDay[e.date]) byDay[e.date] = { rev:0, cost:0 };
+    byDay[e.date].cost += scrapCostForEntry(e);
+  });
+  var days = Object.keys(byDay).sort().slice(-30);
+  upsertChart('chart-pnl-trend', {
+    type:'line',
+    data:{ labels: days, datasets:[
+      { label:'Revenue', data: days.map(function(d){return byDay[d].rev;}), borderColor:'#22C55E', backgroundColor:'rgba(34,197,94,.1)', tension:.3, fill:false },
+      { label:'COGS',    data: days.map(function(d){return byDay[d].cost;}), borderColor:'#EF4444', backgroundColor:'rgba(239,68,68,.1)', tension:.3, fill:false }
+    ] },
+    options: chartOpts('$')
+  });
+}
+
+function renderMaterial(){
+  var m = computeMTD();
+  document.getElementById('mat-mtd').textContent = $(m.matCost);
+  document.getElementById('mat-mtd-sub').textContent = m.batches.length+' batches';
+  var avg = m.batches.length ? m.matCost/m.batches.length : 0;
+  document.getElementById('mat-avg').textContent = $(avg);
+  var perCase = m.totalCases > 0 ? m.matCost/m.totalCases : 0;
+  document.getElementById('mat-per-case').textContent = $exact(perCase);
+  document.getElementById('mat-per-case-sub').textContent = m.totalCases.toLocaleString()+' cases produced';
+
+  var tbody = document.getElementById('material-body');
+  if(!m.batches.length){
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No batches in selected month</td></tr>';
+    return;
+  }
+  var rows = m.batches.map(function(b){
+    var cases = Number(b.actqty)||Number(b.origqty)||0;
+    var lbs = Number(b.lbs)||0;
+    if(!lbs) lbs = cases * 10;
+    var cost = materialCostForBatch(b);
+    return { batch: b.main||b.batch, line: b.line, item: b.item, lbs: lbs, cases: cases, cost: cost, perCase: cases?cost/cases:0 };
+  }).sort(function(a,b){ return b.cost - a.cost; });
+  tbody.innerHTML = rows.slice(0,200).map(function(r){
+    return '<tr>'+
+      '<td style="font-family:monospace">'+(r.batch||'')+'</td>'+
+      '<td>'+(r.line?'L'+r.line:'')+'</td>'+
+      '<td style="font-family:monospace;font-size:9px">'+(r.item||'')+'</td>'+
+      '<td class="t-num">'+r.lbs.toLocaleString()+'</td>'+
+      '<td class="t-num">'+r.cases.toLocaleString()+'</td>'+
+      '<td class="t-num" style="color:var(--blue);font-weight:700">'+$exact(r.cost)+'</td>'+
+      '<td class="t-num">'+$exact(r.perCase)+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+function renderLabor(){
+  var m = computeMTD();
+  document.getElementById('lab-mtd').textContent = $(m.labCostActual);
+  document.getElementById('lab-mtd-sub').textContent = (m.labHrsStd*1.08).toFixed(0)+' hrs';
+  document.getElementById('lab-std-hrs').textContent = m.labHrsStd.toFixed(0);
+  document.getElementById('lab-var').textContent = $(m.laborVariance);
+  var pct = m.labCostStd > 0 ? (m.laborVariance/m.labCostStd*100).toFixed(1)+'%' : '0%';
+  document.getElementById('lab-var-sub').textContent = pct+' vs std';
+
+  var tbody = document.getElementById('labor-body');
+  if(!m.batches.length){
+    tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No batches in selected month</td></tr>';
+    return;
+  }
+  var rows = m.batches.map(function(b){
+    var lbs = Number(b.lbs)||0;
+    if(!lbs) lbs = (Number(b.actqty)||Number(b.origqty)||0) * 10;
+    var stdH = laborStdHoursForBatch(b);
+    var actH = laborActualHoursForBatch(b);
+    return { batch: b.main||b.batch, line: b.line, item: b.item, lbs: lbs,
+             stdH: stdH, actH: actH, stdC: stdH*cfg.labor_rate, actC: actH*cfg.labor_rate, varC: (actH-stdH)*cfg.labor_rate };
+  }).sort(function(a,b){ return b.actC - a.actC; });
+  tbody.innerHTML = rows.slice(0,200).map(function(r){
+    return '<tr>'+
+      '<td style="font-family:monospace">'+(r.batch||'')+'</td>'+
+      '<td>'+(r.line?'L'+r.line:'')+'</td>'+
+      '<td style="font-family:monospace;font-size:9px">'+(r.item||'')+'</td>'+
+      '<td class="t-num">'+r.lbs.toLocaleString()+'</td>'+
+      '<td class="t-num">'+r.stdH.toFixed(1)+'</td>'+
+      '<td class="t-num">'+r.actH.toFixed(1)+'</td>'+
+      '<td class="t-num">'+$exact(r.stdC)+'</td>'+
+      '<td class="t-num" style="color:var(--amber);font-weight:700">'+$exact(r.actC)+'</td>'+
+      '<td class="t-num" style="color:'+(r.varC>0?'var(--red)':'var(--green)')+'">'+$exact(r.varC)+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+function renderScrap(){
+  var sc = scrapForMonth();
+  var totalUnits = sc.reduce(function(s,e){ return s + (Number(e.qty)||0); }, 0);
+  var totalCost = sc.reduce(function(s,e){ return s + scrapCostForEntry(e); }, 0);
+  document.getElementById('scrap-mtd').textContent = $(totalCost);
+  document.getElementById('scrap-mtd-sub').textContent = sc.length+' entries';
+  document.getElementById('scrap-units').textContent = totalUnits.toLocaleString();
+  // Top reason by cost
+  var byReason = {};
+  sc.forEach(function(e){ byReason[e.reason] = (byReason[e.reason]||0) + scrapCostForEntry(e); });
+  var top = Object.entries(byReason).sort(function(a,b){return b[1]-a[1];})[0];
+  document.getElementById('scrap-top-reason').textContent = top ? top[0] : '—';
+  document.getElementById('scrap-top-reason-sub').textContent = top ? $exact(top[1]) : 'No scrap';
+
+  // Chart by reason
+  upsertChart('chart-scrap-reason', {
+    type:'doughnut',
+    data:{ labels: Object.keys(byReason), datasets:[{ data: Object.values(byReason), backgroundColor:['#EF4444','#F59E0B','#3B82F6','#22C55E','#8B5CF6','#22D3EE','#F97316','#EC4899','#94A3B8'] }] },
+    options: chartOpts(null, true)
+  });
+
+  // Table
+  var tbody = document.getElementById('scrap-body');
+  if(!sc.length){
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No scrap entries in selected month</td></tr>';
+    return;
+  }
+  var rows = sc.slice().sort(function(a,b){ return b.date.localeCompare(a.date); });
+  tbody.innerHTML = rows.map(function(e){
+    var unit = cfg.scrap_unit;
+    var cost = scrapCostForEntry(e);
+    return '<tr>'+
+      '<td>'+e.date+'</td>'+
+      '<td style="font-family:monospace;font-size:9px">'+(e.part||'')+'</td>'+
+      '<td style="font-family:monospace;font-size:9px">'+(e.batch||'')+'</td>'+
+      '<td class="t-num">'+e.qty+'</td>'+
+      '<td>'+(e.reason||'')+'</td>'+
+      '<td>'+(e.line?'L'+e.line:'')+'</td>'+
+      '<td class="t-num">'+$exact(unit)+'</td>'+
+      '<td class="t-num" style="color:var(--red);font-weight:700">'+$exact(cost)+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+function renderConfig(){
+  document.getElementById('cfg-sell-per-case').value  = cfg.sell_per_case;
+  document.getElementById('cfg-material-per-lb').value = cfg.material_per_lb;
+  document.getElementById('cfg-labor-rate').value      = cfg.labor_rate;
+  document.getElementById('cfg-overhead-pct').value    = cfg.overhead_pct;
+  document.getElementById('cfg-scrap-unit').value      = cfg.scrap_unit;
+
+  var tbody = document.getElementById('source-body');
+  var upload = getUpload();
+  var labor = getLabor();
+  var scrap = getScrap();
+  var floor = getFloor();
+  var sources = [
+    ['Production Schedule', upload.batches ? 'OK' : 'MISSING', upload._updated || '—', upload.batches ? upload.batches.length : 0],
+    ['Labor Standards',     labor.standards ? 'OK' : 'MISSING', labor._updated || '—', labor.stats ? labor.stats.formulas : 0],
+    ['Scrap Tracker',       scrap.length ? 'OK' : 'EMPTY', '—', scrap.length],
+    ['Floor State',         floor && Object.keys(floor).length ? 'OK' : 'EMPTY', floor._updated || '—', Object.keys(floor).length || 0],
+  ];
+  tbody.innerHTML = sources.map(function(s){
+    var pillClass = s[1]==='OK' ? 'pill-green' : (s[1]==='EMPTY' ? 'pill-amber' : 'pill-red');
+    return '<tr><td><strong>'+s[0]+'</strong></td><td><span class="pill '+pillClass+'">'+s[1]+'</span></td><td style="font-size:9px;color:var(--text3)">'+s[2]+'</td><td class="t-num">'+s[3]+'</td></tr>';
+  }).join('');
+}
+
+function saveCostConfig(){
+  cfg.sell_per_case = parseFloat(document.getElementById('cfg-sell-per-case').value)  || DEFAULTS.sell_per_case;
+  cfg.material_per_lb = parseFloat(document.getElementById('cfg-material-per-lb').value) || DEFAULTS.material_per_lb;
+  cfg.labor_rate    = parseFloat(document.getElementById('cfg-labor-rate').value)      || DEFAULTS.labor_rate;
+  cfg.overhead_pct  = parseFloat(document.getElementById('cfg-overhead-pct').value)    || DEFAULTS.overhead_pct;
+  cfg.scrap_unit    = parseFloat(document.getElementById('cfg-scrap-unit').value)      || DEFAULTS.scrap_unit;
+  saveCfg();
+  alert('✓ Cost configuration saved');
+  renderAll();
+}
+function resetCostConfig(){
+  if(!confirm('Reset all rates to defaults?')) return;
+  cfg = Object.assign({}, DEFAULTS);
+  saveCfg();
+  renderConfig();
+}
+
+function chartOpts(prefix, isPie){
+  var base = {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{
+      legend:{ labels:{ color:'#DDE4F0', font:{size:10, family:'ui-monospace'} } },
+      tooltip:{ backgroundColor:'#111520', titleColor:'#DDE4F0', bodyColor:'#DDE4F0', borderColor:'#1E293B', borderWidth:1,
+        callbacks: prefix==='$' ? { label: function(ctx){ return ctx.dataset.label+': '+'$'+ctx.parsed.y.toLocaleString(undefined,{maximumFractionDigits:0}); } } : {}
+      }
+    }
+  };
+  if(!isPie){
+    base.scales = {
+      x:{ ticks:{color:'#8899AA', font:{size:9, family:'ui-monospace'}}, grid:{color:'rgba(255,255,255,.04)'} },
+      y:{ ticks:{color:'#8899AA', font:{size:9, family:'ui-monospace'},
+        callback: prefix==='$' ? function(v){return '$'+v.toLocaleString();} : undefined
+      }, grid:{color:'rgba(255,255,255,.04)'}, beginAtZero:true }
+    };
+  }
+  return base;
+}
+
+function upsertChart(id, config){
+  var canvas = document.getElementById(id);
+  if(!canvas) return;
+  if(charts[id]) charts[id].destroy();
+  charts[id] = new Chart(canvas, config);
+}
+
+function exportSnapshot(){
+  var m = computeMTD();
+  var lines = [
+    'HOC Finance Snapshot - '+_selectedMonth,
+    'Generated: '+new Date().toLocaleString(),
+    '',
+    'P&L SUMMARY',
+    '  Revenue:        '+$exact(m.revenue),
+    '  Material:       '+$exact(m.matCost),
+    '  Labor (actual): '+$exact(m.labCostActual),
+    '  Scrap:          '+$exact(m.scrapCost),
+    '  Overhead:       '+$exact(m.overhead),
+    '  COGS:           '+$exact(m.cogs),
+    '  Gross Margin:   '+$exact(m.grossMargin),
+    '  Margin %:       '+(m.revenue?(m.grossMargin/m.revenue*100).toFixed(1):'0')+'%',
+    '',
+    'VOLUMES',
+    '  Cases produced: '+m.totalCases.toLocaleString(),
+    '  Lbs produced:   '+m.totalLbs.toLocaleString(),
+    '  Batches:        '+m.batches.length,
+    '  Scrap entries:  '+m.scrap.length,
+    '',
+    'CONFIG USED',
+    '  Sell per case:  '+$exact(cfg.sell_per_case),
+    '  $/lb material:  '+$exact(cfg.material_per_lb),
+    '  Labor rate:     '+$exact(cfg.labor_rate)+'/hr',
+    '  Overhead pct:   '+cfg.overhead_pct+'%',
+    '  Scrap unit:     '+$exact(cfg.scrap_unit)
+  ];
+  var blob = new Blob([lines.join('\n')], {type:'text/plain'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'hoc_finance_pnl_'+_selectedMonth+'.txt';
+  a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+}
+
+function renderAll(){
+  buildMonthPicker();
+  document.getElementById('data-status').textContent = 'live';
+  // Render currently-visible page
+  var visiblePage = document.querySelector('[id^="page-"]:not([style*="display: none"])');
+  if(!visiblePage) renderSummary();
+  else {
+    var name = visiblePage.id.replace('page-','');
+    P(name);
+  }
+}
+
+// Cross-tab live refresh
+window.addEventListener('storage', function(e){
+  if(['hoc_upload_v1','hoc_floor_v1','hoc_labor_standards_v1','hoc_scrap_v1'].indexOf(e.key) >= 0){
+    renderAll();
+  }
+});
+
+window.addEventListener('load', function(){
+  loadCfg();
+  renderAll();
+});
+</script>
+</body>
+</html>

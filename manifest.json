@@ -1,0 +1,43 @@
+{
+  "name": "HOC-OES \u2014 House of Cheatham Operational Ecosystem",
+  "short_name": "HOC-OES",
+  "description": "Production floor operational ecosystem \u2014 Pre-Weigh, Compound, QC, Production, Warehouse",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0B0E17",
+  "theme_color": "#0B0E17",
+  "categories": [
+    "productivity",
+    "utilities"
+  ],
+  "icons": [],
+  "shortcuts": [
+    {
+      "name": "Pre-Weigh",
+      "url": "./HOC_PreWeigh_Scheduler.html",
+      "description": "Pre-Weigh Scheduler"
+    },
+    {
+      "name": "Compound",
+      "url": "./HOC_Compound_Scheduler_v3.html",
+      "description": "Compound Scheduler"
+    },
+    {
+      "name": "QC Lab",
+      "url": "./HOC_Quality_Lab.html",
+      "description": "Quality Lab"
+    },
+    {
+      "name": "Production",
+      "url": "./HOC_Production_Supervisor.html",
+      "description": "Production Supervisor"
+    },
+    {
+      "name": "Warehouse",
+      "url": "./HOC_Warehouse_Movement.html",
+      "description": "Warehouse Movement"
+    }
+  ]
+}

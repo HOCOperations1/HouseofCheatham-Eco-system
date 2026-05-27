@@ -1,0 +1,878 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HOC OES — Sales & Customer View</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B0E17">
+<style>
+:root{
+  --bg:#0B0E17; --bg2:#121826; --bg3:#1a2233; --border:#1f2937;
+  --text:#E5E7EB; --text2:#9CA3AF; --text3:#6B7280;
+  --blue:#3B82F6; --green:#10B981; --amber:#F59E0B; --red:#EF4444;
+  --purple:#8B5CF6; --pink:#EC4899; --teal:#14B8A6;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font:11px ui-monospace,SFMono-Regular,Menlo,monospace;min-height:100vh}
+.topbar{display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.brand-name{font-size:13px;font-weight:700;color:var(--text)}
+.brand-sub{font-size:9px;color:var(--text3)}
+.logo{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#EC4899,#BE185D);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.nav{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}
+.nb{padding:5px 12px;border-radius:6px;font:inherit;font-size:10px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2);transition:all .1s}
+.nb:hover{background:var(--bg2);color:var(--text)}
+.nb.active{background:rgba(236,72,153,.12);border-color:rgba(236,72,153,.4);color:#F472B6}
+
+.content{padding:14px 16px;max-width:1400px;margin:0 auto}
+.sync-bar{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 12px;margin-bottom:10px;font-size:9px;color:var(--text3);display:flex;align-items:center;gap:8px}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.page{display:none}
+.page.active{display:block}
+
+/* KPI strip */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:14px}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;cursor:pointer;transition:all .12s;position:relative;overflow:hidden}
+.kpi:hover{border-color:rgba(236,72,153,.5);transform:translateY(-1px)}
+.kpi::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent,#EC4899)}
+.kpi.green::before{background:var(--green)}
+.kpi.amber::before{background:var(--amber)}
+.kpi.red::before{background:var(--red)}
+.kpi.blue::before{background:var(--blue)}
+.kl{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.kv{font-size:22px;font-weight:700;line-height:1;margin-bottom:2px}
+.ks{font-size:9px;color:var(--text3)}
+
+/* Sections */
+.section{background:var(--bg2);border:1px solid var(--border);border-radius:8px;margin-bottom:12px;overflow:hidden}
+.section-head{padding:10px 14px;border-bottom:1px solid var(--border);background:#0F1623;display:flex;justify-content:space-between;align-items:center}
+.section-title{font-size:11px;font-weight:700;color:var(--text);letter-spacing:.04em}
+.section-title .ic{margin-right:6px}
+.section-sub{font-size:9px;color:var(--text3)}
+.section-body{padding:8px 0}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;font-size:10px}
+th{text-align:left;padding:7px 12px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:7px 12px;border-bottom:1px solid rgba(30,41,59,.5);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02);cursor:pointer}
+tr.no-hover:hover td{background:transparent;cursor:default}
+
+/* Pills */
+.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.p-good{background:rgba(16,185,129,.12);color:#34D399;border:1px solid rgba(16,185,129,.3)}
+.p-warn{background:rgba(245,158,11,.12);color:#FBBF24;border:1px solid rgba(245,158,11,.3)}
+.p-risk{background:rgba(239,68,68,.12);color:#F87171;border:1px solid rgba(239,68,68,.3)}
+.p-neutral{background:rgba(156,163,175,.12);color:#9CA3AF;border:1px solid rgba(156,163,175,.3)}
+.p-info{background:rgba(59,130,246,.12);color:#60A5FA;border:1px solid rgba(59,130,246,.3)}
+
+/* Customer cards */
+.cust-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:10px;padding:10px 14px}
+.cust-card{background:#0F1623;border:1px solid var(--border);border-radius:8px;padding:14px 16px;cursor:pointer;transition:all .12s}
+.cust-card:hover{border-color:rgba(236,72,153,.5);transform:translateY(-1px)}
+.cust-name{font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+.cust-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px}
+.cust-stat{font-size:9px}
+.cust-stat-l{color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:2px}
+.cust-stat-v{font-size:14px;font-weight:700;color:var(--text)}
+.cust-stat-v.good{color:#34D399}
+.cust-stat-v.warn{color:#FBBF24}
+.cust-stat-v.risk{color:#F87171}
+
+/* Empty state */
+.empty-state{text-align:center;padding:40px 20px;color:var(--text3)}
+.empty-icon{font-size:32px;margin-bottom:8px}
+.empty-title{font-size:13px;font-weight:700;color:var(--text2);margin-bottom:4px}
+.empty-sub{font-size:10px}
+
+/* Modal */
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;padding:20px}
+.modal.open{display:flex}
+.modal-box{background:var(--bg2);border:1px solid var(--border);border-radius:10px;width:100%;max-width:720px;max-height:85vh;overflow-y:auto}
+.modal-head{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:#0F1623;position:sticky;top:0;z-index:10}
+.modal-title{font-size:13px;font-weight:700;color:var(--text)}
+.modal-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:20px;padding:0 6px}
+.modal-body{padding:14px 18px}
+.btn{padding:5px 14px;border-radius:6px;font:inherit;font-size:10px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2)}
+.btn:hover{background:var(--bg2);color:var(--text)}
+.btn-pink{background:rgba(236,72,153,.1);border-color:rgba(236,72,153,.3);color:#F472B6}
+
+/* Filter strip */
+.filter-strip{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.filter-strip label{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em}
+.filter-strip select,.filter-strip input{font:inherit;font-size:10px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:4px 8px;outline:none}
+.filter-strip select:focus,.filter-strip input:focus{border-color:var(--blue)}
+
+/* Trend bars */
+.trend-bars{display:flex;align-items:flex-end;gap:4px;height:48px;padding:0 14px 10px}
+.trend-bar{flex:1;background:linear-gradient(180deg,#EC4899,#BE185D);border-radius:3px 3px 0 0;min-height:6px;position:relative}
+.trend-bar.empty{background:rgba(236,72,153,.15)}
+.trend-label{font-size:8px;color:var(--text3);text-align:center;margin-top:2px;font-weight:700}
+
+a{color:var(--blue)}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <a href="index.html" style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text2);text-decoration:none;font-size:9px;font-weight:700;flex-shrink:0">← HOC-OES</a>
+    <div class="logo">SL</div>
+    <div>
+      <div class="brand-name">Sales &amp; Customer View</div>
+      <div class="brand-sub">Order pipeline · fill rate · ship status · brand performance · <span class="js-today-date">May 18, 2026</span></div>
+    </div>
+  </div>
+  <nav class="nav">
+    <button class="nb active" onclick="P('dash')">Dashboard</button>
+    <button class="nb" onclick="P('customers')">Customers</button>
+    <button class="nb" onclick="P('orders')">Order Pipeline</button>
+    <button class="nb" onclick="P('risks')">At-Risk Orders</button>
+  </nav>
+</div>
+
+<div class="content">
+
+  <!-- ════════════════════ DASHBOARD ════════════════════ -->
+  <div class="page active" id="page-dash">
+    <div class="sync-bar"><span class="sync-dot"></span>LIVE · cross-device sync: 15s · <span id="data-ts">checking…</span></div>
+
+    <div class="empty-state" id="empty-main" style="display:none">
+      <div class="empty-icon">📂</div>
+      <div class="empty-title">No schedule loaded</div>
+      <div class="empty-sub">Upload the Production Tracker from <a href="HOC_Data_Upload_Hub.html">Data Upload Hub</a> to see sales data.</div>
+    </div>
+
+    <div id="dash-content">
+      <!-- KPI strip -->
+      <div class="kpis" id="kpis"></div>
+
+      <!-- Top customers strip -->
+      <div class="section">
+        <div class="section-head">
+          <div>
+            <div class="section-title"><span class="ic">🏆</span>Top Customers This Month</div>
+            <div class="section-sub">By case volume · click any row to filter all views</div>
+          </div>
+          <button class="btn btn-pink" onclick="P('customers')">View all customers →</button>
+        </div>
+        <div class="section-body" id="top-customers"></div>
+      </div>
+
+      <!-- Pipeline status -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="section">
+          <div class="section-head">
+            <div>
+              <div class="section-title"><span class="ic">📦</span>Order Pipeline Status</div>
+              <div class="section-sub">Where this month's orders are right now</div>
+            </div>
+          </div>
+          <div class="section-body" id="pipeline-status"></div>
+        </div>
+        <div class="section">
+          <div class="section-head">
+            <div>
+              <div class="section-title"><span class="ic">⚠️</span>At-Risk Orders</div>
+              <div class="section-sub">Customers we should call</div>
+            </div>
+            <button class="btn btn-pink" onclick="P('risks')">View all risks →</button>
+          </div>
+          <div class="section-body" id="risk-summary"></div>
+        </div>
+      </div>
+
+      <!-- Monthly trend -->
+      <div class="section">
+        <div class="section-head">
+          <div>
+            <div class="section-title"><span class="ic">📈</span>Cases Shipped — Last 6 Months</div>
+            <div class="section-sub">Rolling 6-month view (based on COMPLETED batches in the schedule)</div>
+          </div>
+        </div>
+        <div class="trend-bars" id="trend-bars"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════ CUSTOMERS ════════════════════ -->
+  <div class="page" id="page-customers">
+    <div class="filter-strip">
+      <label>Search:</label>
+      <input type="text" id="cust-search" placeholder="filter by name..." oninput="renderCustomers()">
+      <label style="margin-left:14px">Sort by:</label>
+      <select id="cust-sort" onchange="renderCustomers()">
+        <option value="cases">Cases (high to low)</option>
+        <option value="name">Name (A-Z)</option>
+        <option value="fillrate">Fill rate (low to high)</option>
+        <option value="atrisk">Most at-risk</option>
+      </select>
+    </div>
+    <div class="section">
+      <div class="section-head">
+        <div>
+          <div class="section-title">All Customers</div>
+          <div class="section-sub" id="cust-summary"></div>
+        </div>
+      </div>
+      <div id="customer-cards"></div>
+    </div>
+  </div>
+
+  <!-- ════════════════════ ORDERS ════════════════════ -->
+  <div class="page" id="page-orders">
+    <div class="filter-strip">
+      <label>Customer:</label>
+      <select id="order-cust" onchange="renderOrders()"><option value="">All customers</option></select>
+      <label style="margin-left:14px">Status:</label>
+      <select id="order-status" onchange="renderOrders()">
+        <option value="">All statuses</option>
+        <option value="NOT STARTED">Not started</option>
+        <option value="RUNNING">In production</option>
+        <option value="COMPLETED">Ready to ship</option>
+      </select>
+      <label style="margin-left:14px">Month:</label>
+      <select id="order-month" onchange="renderOrders()"></select>
+    </div>
+    <div class="section">
+      <div class="section-head">
+        <div>
+          <div class="section-title">Order Pipeline</div>
+          <div class="section-sub" id="orders-summary"></div>
+        </div>
+      </div>
+      <div style="overflow-x:auto"><table id="orders-table"></table></div>
+    </div>
+  </div>
+
+  <!-- ════════════════════ RISKS ════════════════════ -->
+  <div class="page" id="page-risks">
+    <div class="section">
+      <div class="section-head">
+        <div>
+          <div class="section-title">⚠️ Orders at Risk</div>
+          <div class="section-sub">Orders where the customer should be proactively called</div>
+        </div>
+      </div>
+      <div style="overflow-x:auto"><table id="risks-table"></table></div>
+    </div>
+    <div class="section" style="margin-top:12px">
+      <div class="section-head">
+        <div>
+          <div class="section-title">Risk Categories</div>
+          <div class="section-sub">What's blocking what</div>
+        </div>
+      </div>
+      <div style="padding:14px 18px" id="risk-categories"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Customer detail modal -->
+<div class="modal" id="cust-modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-title" id="modal-title">Customer Detail</div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// CONFIG + STATE
+// ═══════════════════════════════════════════════════════════
+const SB_URL = 'https://yemtpvrumqvbzrzpwnyy.supabase.co';
+const SB_KEY = 'sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl';
+
+let UPLOAD = null;
+let BATCHES_REMOTE = {};   // batch updates from supabase
+let CURRENT_FILTER = null; // customer filter from KPI click
+
+function N(n){ return (Number(n)||0).toLocaleString(); }
+
+function _excelToDate(serial){var n=Number(serial);if(isNaN(n)||n<1||n>200000)return null;return new Date(Math.round((n-25569)*86400*1000));}
+
+function fD(s){
+  if(!s) return '—';
+  try {
+    if(typeof s === 'number' || (typeof s === 'string' && /^\d{4,6}(\.\d+)?$/.test(s.trim()))){
+      var ed = _excelToDate(s);
+      if(ed && !isNaN(ed.getTime())) return ed.toLocaleDateString('en-US',{month:'numeric',day:'numeric'});
+    }
+    var d = (typeof s === 'string' && s.indexOf('T') < 0) ? new Date(s+'T12:00:00') : new Date(s);
+    if(isNaN(d.getTime())) return s;
+    return d.toLocaleDateString('en-US',{month:'numeric',day:'numeric'});
+  } catch(e) { return s; }
+}
+
+function dateKey(s){
+  if(!s) return '';
+  if(typeof s === 'number' || (typeof s === 'string' && /^\d{4,6}(\.\d+)?$/.test(s.trim()))){
+    var ed = _excelToDate(s);
+    if(ed) return ed.toISOString().slice(0,7); // YYYY-MM
+  }
+  if(typeof s === 'string' && s.length >= 7) return s.slice(0,7);
+  return '';
+}
+
+// ═══════════════════════════════════════════════════════════
+// CUSTOMER DERIVATION
+// Production Tracker descriptions look like:
+// "AJ Quench Lv-In Cnd, 12 oz, 12ea"
+// "dual packet, Hair Mayo1.5/Olive Oil Cream.5, bulk"
+// "Olive Oil Cream Sample 1.5oz packet"
+// We extract the customer/brand from the leading product family.
+// ═══════════════════════════════════════════════════════════
+const CUSTOMER_PATTERNS = [
+  // Main HOC brands — leftmost match wins
+  {pattern: /\bAJ\b/i, name: 'AJ (African Pride)'},
+  {pattern: /Hair Mayo/i, name: 'Hair Mayo'},
+  {pattern: /Olive Oil Cream/i, name: 'Olive Oil Cream'},
+  {pattern: /Mango Butter/i, name: 'Mango Butter'},
+  {pattern: /Shea Butter/i, name: 'Shea Butter'},
+  {pattern: /Coconut Oil/i, name: 'Coconut Oil'},
+  {pattern: /Castor Oil/i, name: 'Castor Oil'},
+  {pattern: /Pomade/i, name: 'Pomade'},
+  {pattern: /Lustrasilk/i, name: 'Lustrasilk'},
+  {pattern: /Sulfur 8/i, name: 'Sulfur 8'},
+  {pattern: /Magic Shave/i, name: 'Magic Shave'},
+  {pattern: /Bantu/i, name: 'Bantu'},
+  {pattern: /Strong Roots/i, name: 'Strong Roots'},
+  {pattern: /Knot On My/i, name: 'AJ (Knot On My Watch)'},
+];
+
+function deriveCustomer(desc){
+  if(!desc) return 'Unknown';
+  var s = String(desc);
+  // Strip leading "dual packet, " noise
+  s = s.replace(/^dual packet[,\s]+/i, '');
+  for(var i=0; i<CUSTOMER_PATTERNS.length; i++){
+    if(CUSTOMER_PATTERNS[i].pattern.test(s)) return CUSTOMER_PATTERNS[i].name;
+  }
+  // Fall back to first word(s) of description (up to 25 chars)
+  var first = s.split(/[,\.0-9]/)[0].trim();
+  if(first.length > 25) first = first.slice(0,25).trim();
+  return first || 'Unknown';
+}
+
+// ═══════════════════════════════════════════════════════════
+// DATA LOAD
+// ═══════════════════════════════════════════════════════════
+async function loadAll(){
+  try {
+    // 1. Schedule from supabase
+    var r1 = await fetch(SB_URL + '/rest/v1/hoc_schedule?select=blob,uploaded_at&order=uploaded_at.desc&limit=1', {
+      headers: {apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY}
+    });
+    if(r1.ok){
+      var rows = await r1.json();
+      if(rows.length && rows[0].blob){
+        UPLOAD = rows[0].blob;
+        UPLOAD._uploaded_at = rows[0].uploaded_at;
+      }
+    }
+    // 2. Fallback to localStorage
+    if(!UPLOAD){
+      try {
+        var ls = localStorage.getItem('hoc_upload_v1');
+        if(ls) UPLOAD = JSON.parse(ls);
+      } catch(e){}
+    }
+    // 3. Batch updates
+    var r2 = await fetch(SB_URL + '/rest/v1/hoc_batches?select=*', {
+      headers: {apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY}
+    });
+    if(r2.ok){
+      var bs = await r2.json();
+      bs.forEach(function(b){ BATCHES_REMOTE[b.batch_id] = b; });
+    }
+  } catch(e){
+    console.warn('Load error:', e);
+  }
+  render();
+}
+
+function getBatches(){
+  if(!UPLOAD || !UPLOAD.batches) return [];
+  return UPLOAD.batches.map(function(b){
+    var floor = BATCHES_REMOTE[b.batch] || {};
+    return Object.assign({}, b, {
+      status: floor.status || b.status || 'NOT STARTED',
+      actqty: floor.actqty != null ? floor.actqty : b.actqty,
+      customer: deriveCustomer(b.descr || b.description || b.desc || b.item || '')
+    });
+  });
+}
+
+function currentMonth(){
+  var d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+
+// ═══════════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════════
+function render(){
+  var batches = getBatches();
+  if(!batches.length){
+    document.getElementById('empty-main').style.display = 'block';
+    document.getElementById('dash-content').style.display = 'none';
+    return;
+  }
+  document.getElementById('empty-main').style.display = 'none';
+  document.getElementById('dash-content').style.display = 'block';
+
+  if(UPLOAD && UPLOAD._uploaded_at){
+    var ts = new Date(UPLOAD._uploaded_at);
+    document.getElementById('data-ts').textContent = 'Last upload: ' + ts.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) + ' ' + ts.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+  }
+
+  renderKPIs(batches);
+  renderTopCustomers(batches);
+  renderPipelineStatus(batches);
+  renderRiskSummary(batches);
+  renderTrendBars(batches);
+  renderCustomers();
+  renderOrders();
+  renderRisks();
+  populateFilters(batches);
+}
+
+function renderKPIs(batches){
+  var month = currentMonth();
+  var monthBatches = batches.filter(function(b){ return dateKey(b.date) === month; });
+  var custSet = {};
+  var totalCases = 0, plannedCases = 0, atRiskCount = 0, completed = 0, runningCount = 0;
+  monthBatches.forEach(function(b){
+    custSet[b.customer] = true;
+    plannedCases += (Number(b.origqty) || 0);
+    totalCases += (Number(b.actqty) || 0);
+    var st = String(b.status || '').toUpperCase();
+    if(st === 'COMPLETED') completed++;
+    if(st === 'RUNNING') runningCount++;
+    // At-risk: not started, due in this month, no compound yet, or QC on hold
+    if(st === 'NOT STARTED' || st.indexOf('OVERDUE') >= 0 || st.indexOf('HOLD') >= 0 || st.indexOf('CRITICAL') >= 0) atRiskCount++;
+  });
+  var fillRate = plannedCases > 0 ? Math.round((totalCases / plannedCases) * 100) : 0;
+  var custCount = Object.keys(custSet).length;
+  var kpis = [
+    {l:'Active Customers', v:N(custCount), s:'with orders this month', c:'blue'},
+    {l:'Cases Shipped', v:N(totalCases), s:'completed this month', c:'green'},
+    {l:'Cases Planned', v:N(plannedCases), s:'committed this month', c:''},
+    {l:'Fill Rate', v:fillRate + '%', s:fillRate >= 95 ? 'on target' : 'below 95% target', c: fillRate >= 95 ? 'green' : 'amber'},
+    {l:'In Production', v:N(runningCount), s:'batches running now', c:'blue'},
+    {l:'Completed', v:N(completed), s:'ready to ship', c:'green'},
+    {l:'At-Risk Orders', v:N(atRiskCount), s:'need attention', c: atRiskCount > 0 ? 'red' : 'green'},
+  ];
+  var h = '';
+  kpis.forEach(function(k,i){
+    h += '<div class="kpi ' + k.c + '" onclick="kpiClick(' + i + ')">';
+    h += '<div class="kl">' + k.l + '</div>';
+    h += '<div class="kv">' + k.v + '</div>';
+    h += '<div class="ks">' + k.s + '</div>';
+    h += '</div>';
+  });
+  document.getElementById('kpis').innerHTML = h;
+}
+
+function kpiClick(idx){
+  // 0=customers tab, 6=risks tab, others = orders tab
+  if(idx === 0) P('customers');
+  else if(idx === 6) P('risks');
+  else P('orders');
+}
+
+function renderTopCustomers(batches){
+  var month = currentMonth();
+  var monthBatches = batches.filter(function(b){ return dateKey(b.date) === month; });
+  var byCust = {};
+  monthBatches.forEach(function(b){
+    if(!byCust[b.customer]) byCust[b.customer] = {planned:0, shipped:0, batches:0, atrisk:0};
+    byCust[b.customer].planned += (Number(b.origqty) || 0);
+    byCust[b.customer].shipped += (Number(b.actqty) || 0);
+    byCust[b.customer].batches++;
+    var st = String(b.status || '').toUpperCase();
+    if(st === 'NOT STARTED' || st.indexOf('OVERDUE') >= 0 || st.indexOf('HOLD') >= 0) byCust[b.customer].atrisk++;
+  });
+  var sorted = Object.keys(byCust).map(function(c){ return Object.assign({name:c}, byCust[c]); })
+    .sort(function(a,b){ return b.planned - a.planned; })
+    .slice(0,5);
+  if(!sorted.length){
+    document.getElementById('top-customers').innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">No customer activity this month</div></div>';
+    return;
+  }
+  var h = '<table><thead><tr><th>Customer</th><th style="text-align:right">Batches</th><th style="text-align:right">Cases Planned</th><th style="text-align:right">Cases Shipped</th><th style="text-align:right">Fill %</th><th style="text-align:center">At Risk</th></tr></thead><tbody>';
+  sorted.forEach(function(c){
+    var fr = c.planned > 0 ? Math.round((c.shipped / c.planned) * 100) : 0;
+    var frClass = fr >= 95 ? 'p-good' : (fr >= 80 ? 'p-warn' : 'p-risk');
+    var atRiskPill = c.atrisk > 0 ? '<span class="pill p-risk">' + c.atrisk + '</span>' : '<span class="pill p-good">0</span>';
+    h += '<tr onclick="filterCustomer(\'' + c.name.replace(/'/g, "\\'") + '\')">';
+    h += '<td><strong>' + c.name + '</strong></td>';
+    h += '<td style="text-align:right">' + N(c.batches) + '</td>';
+    h += '<td style="text-align:right">' + N(c.planned) + '</td>';
+    h += '<td style="text-align:right">' + N(c.shipped) + '</td>';
+    h += '<td style="text-align:right"><span class="pill ' + frClass + '">' + fr + '%</span></td>';
+    h += '<td style="text-align:center">' + atRiskPill + '</td>';
+    h += '</tr>';
+  });
+  h += '</tbody></table>';
+  document.getElementById('top-customers').innerHTML = h;
+}
+
+function renderPipelineStatus(batches){
+  var month = currentMonth();
+  var monthBatches = batches.filter(function(b){ return dateKey(b.date) === month; });
+  var stages = {
+    'Not Started': 0,
+    'In Production': 0,
+    'QC Pending/Hold': 0,
+    'Ready to Ship': 0,
+    'Shipped': 0
+  };
+  monthBatches.forEach(function(b){
+    var st = String(b.status || '').toUpperCase();
+    if(st === 'COMPLETED') stages['Ready to Ship']++;
+    else if(st === 'RUNNING') stages['In Production']++;
+    else if(st.indexOf('HOLD') >= 0 || st.indexOf('QC') >= 0) stages['QC Pending/Hold']++;
+    else stages['Not Started']++;
+  });
+  var total = Object.values(stages).reduce(function(a,b){ return a+b; }, 0) || 1;
+  var h = '<table><tbody>';
+  Object.keys(stages).forEach(function(s){
+    var cnt = stages[s];
+    var pct = Math.round((cnt / total) * 100);
+    var color = '#EC4899';
+    if(s === 'Not Started') color = '#9CA3AF';
+    if(s === 'In Production') color = '#3B82F6';
+    if(s === 'QC Pending/Hold') color = '#F59E0B';
+    if(s === 'Ready to Ship') color = '#10B981';
+    h += '<tr class="no-hover"><td style="width:45%"><strong>' + s + '</strong></td>';
+    h += '<td style="width:15%;text-align:right"><strong>' + cnt + '</strong></td>';
+    h += '<td style="width:40%">';
+    h += '<div style="background:rgba(255,255,255,.04);border-radius:4px;height:8px;overflow:hidden">';
+    h += '<div style="background:' + color + ';height:100%;width:' + pct + '%"></div>';
+    h += '</div></td></tr>';
+  });
+  h += '</tbody></table>';
+  document.getElementById('pipeline-status').innerHTML = h;
+}
+
+function renderRiskSummary(batches){
+  var month = currentMonth();
+  var monthBatches = batches.filter(function(b){ return dateKey(b.date) === month; });
+  var risks = monthBatches.filter(function(b){
+    var st = String(b.status || '').toUpperCase();
+    return st.indexOf('OVERDUE') >= 0 || st.indexOf('CRITICAL') >= 0 || st.indexOf('HOLD') >= 0;
+  });
+  if(!risks.length){
+    document.getElementById('risk-summary').innerHTML = '<div class="empty-state" style="padding:20px"><div style="font-size:24px;margin-bottom:6px">✓</div><div class="empty-title" style="color:#34D399">No at-risk orders</div><div class="empty-sub">All customers on track</div></div>';
+    return;
+  }
+  var byCust = {};
+  risks.forEach(function(b){
+    if(!byCust[b.customer]) byCust[b.customer] = 0;
+    byCust[b.customer]++;
+  });
+  var sorted = Object.keys(byCust).map(function(c){ return {name:c, count:byCust[c]}; })
+    .sort(function(a,b){ return b.count - a.count; }).slice(0,6);
+  var h = '<table><thead><tr><th>Customer</th><th style="text-align:right">At-Risk Batches</th></tr></thead><tbody>';
+  sorted.forEach(function(c){
+    h += '<tr onclick="filterCustomer(\'' + c.name.replace(/'/g, "\\'") + '\');P(\'risks\')">';
+    h += '<td><strong>' + c.name + '</strong></td>';
+    h += '<td style="text-align:right"><span class="pill p-risk">' + c.count + '</span></td>';
+    h += '</tr>';
+  });
+  h += '</tbody></table>';
+  document.getElementById('risk-summary').innerHTML = h;
+}
+
+function renderTrendBars(batches){
+  var now = new Date();
+  var months = [];
+  for(var i = 5; i >= 0; i--){
+    var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({
+      key: d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'),
+      label: d.toLocaleDateString('en-US',{month:'short'}),
+      cases: 0
+    });
+  }
+  batches.forEach(function(b){
+    var k = dateKey(b.date);
+    var m = months.find(function(x){ return x.key === k; });
+    if(m && String(b.status || '').toUpperCase() === 'COMPLETED'){
+      m.cases += (Number(b.actqty) || 0);
+    }
+  });
+  var maxCases = Math.max.apply(null, months.map(function(m){ return m.cases; })) || 1;
+  var h = '';
+  months.forEach(function(m){
+    var hpct = Math.max(6, (m.cases / maxCases) * 100);
+    var emptyCls = m.cases === 0 ? ' empty' : '';
+    h += '<div style="flex:1;display:flex;flex-direction:column;align-items:center">';
+    h += '<div style="font-size:9px;color:var(--text2);margin-bottom:2px;font-weight:700">' + N(m.cases) + '</div>';
+    h += '<div class="trend-bar' + emptyCls + '" style="width:80%;height:' + hpct + '%"></div>';
+    h += '<div class="trend-label">' + m.label + '</div>';
+    h += '</div>';
+  });
+  document.getElementById('trend-bars').innerHTML = h;
+}
+
+// ═══════════════════════════════════════════════════════════
+// CUSTOMERS PAGE
+// ═══════════════════════════════════════════════════════════
+function renderCustomers(){
+  var batches = getBatches();
+  var search = (document.getElementById('cust-search').value || '').toLowerCase();
+  var sort = document.getElementById('cust-sort').value;
+  var month = currentMonth();
+  var byCust = {};
+  batches.forEach(function(b){
+    if(dateKey(b.date) !== month) return;
+    if(!byCust[b.customer]) byCust[b.customer] = {name:b.customer, planned:0, shipped:0, batches:0, atrisk:0, ontrack:0};
+    byCust[b.customer].planned += (Number(b.origqty) || 0);
+    byCust[b.customer].shipped += (Number(b.actqty) || 0);
+    byCust[b.customer].batches++;
+    var st = String(b.status || '').toUpperCase();
+    if(st === 'NOT STARTED' || st.indexOf('OVERDUE') >= 0 || st.indexOf('HOLD') >= 0) byCust[b.customer].atrisk++;
+    else byCust[b.customer].ontrack++;
+  });
+  var list = Object.values(byCust);
+  if(search) list = list.filter(function(c){ return c.name.toLowerCase().indexOf(search) >= 0; });
+  list.forEach(function(c){ c.fillrate = c.planned > 0 ? Math.round((c.shipped / c.planned) * 100) : 0; });
+  if(sort === 'cases') list.sort(function(a,b){ return b.planned - a.planned; });
+  if(sort === 'name') list.sort(function(a,b){ return a.name.localeCompare(b.name); });
+  if(sort === 'fillrate') list.sort(function(a,b){ return a.fillrate - b.fillrate; });
+  if(sort === 'atrisk') list.sort(function(a,b){ return b.atrisk - a.atrisk; });
+
+  document.getElementById('cust-summary').textContent = list.length + ' customer' + (list.length === 1 ? '' : 's') + ' this month';
+
+  if(!list.length){
+    document.getElementById('customer-cards').innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">No matches</div></div>';
+    return;
+  }
+
+  var h = '<div class="cust-grid">';
+  list.forEach(function(c){
+    var frClass = c.fillrate >= 95 ? 'good' : (c.fillrate >= 80 ? 'warn' : 'risk');
+    var atRiskClass = c.atrisk === 0 ? 'good' : (c.atrisk <= 2 ? 'warn' : 'risk');
+    h += '<div class="cust-card" onclick="showCustomerDetail(\'' + c.name.replace(/'/g, "\\'") + '\')">';
+    h += '<div class="cust-name"><span>' + c.name + '</span><span class="pill p-info">' + c.batches + ' batches</span></div>';
+    h += '<div class="cust-stats">';
+    h += '<div class="cust-stat"><div class="cust-stat-l">Planned</div><div class="cust-stat-v">' + N(c.planned) + '</div></div>';
+    h += '<div class="cust-stat"><div class="cust-stat-l">Fill %</div><div class="cust-stat-v ' + frClass + '">' + c.fillrate + '%</div></div>';
+    h += '<div class="cust-stat"><div class="cust-stat-l">At Risk</div><div class="cust-stat-v ' + atRiskClass + '">' + c.atrisk + '</div></div>';
+    h += '</div></div>';
+  });
+  h += '</div>';
+  document.getElementById('customer-cards').innerHTML = h;
+}
+
+function showCustomerDetail(custName){
+  var batches = getBatches().filter(function(b){ return b.customer === custName; });
+  var monthBatches = batches.filter(function(b){ return dateKey(b.date) === currentMonth(); });
+  document.getElementById('modal-title').textContent = custName;
+  var planned = monthBatches.reduce(function(s,b){ return s + (Number(b.origqty)||0); }, 0);
+  var shipped = monthBatches.reduce(function(s,b){ return s + (Number(b.actqty)||0); }, 0);
+  var fr = planned > 0 ? Math.round((shipped/planned)*100) : 0;
+  var h = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">';
+  h += '<div class="kpi" style="cursor:default"><div class="kl">Batches</div><div class="kv">' + N(monthBatches.length) + '</div><div class="ks">this month</div></div>';
+  h += '<div class="kpi" style="cursor:default"><div class="kl">Cases Planned</div><div class="kv">' + N(planned) + '</div><div class="ks">cases</div></div>';
+  h += '<div class="kpi" style="cursor:default"><div class="kl">Fill Rate</div><div class="kv">' + fr + '%</div><div class="ks">' + N(shipped) + ' shipped</div></div>';
+  h += '</div>';
+  h += '<table><thead><tr><th>Date</th><th>Batch</th><th>Item</th><th>Line</th><th style="text-align:right">Cases</th><th>Status</th></tr></thead><tbody>';
+  monthBatches.slice(0,30).forEach(function(b){
+    var st = String(b.status || 'NOT STARTED').toUpperCase();
+    var pillClass = 'p-neutral';
+    if(st === 'COMPLETED') pillClass = 'p-good';
+    if(st === 'RUNNING') pillClass = 'p-info';
+    if(st.indexOf('HOLD') >= 0 || st.indexOf('OVERDUE') >= 0) pillClass = 'p-risk';
+    h += '<tr class="no-hover"><td>' + fD(b.date) + '</td>';
+    h += '<td><strong>' + (b.batch || '—') + '</strong></td>';
+    h += '<td>' + (b.descr || b.description || b.item || '—') + '</td>';
+    h += '<td>L' + (b.line || '—') + '</td>';
+    h += '<td style="text-align:right">' + N(b.actqty || b.origqty || 0) + '</td>';
+    h += '<td><span class="pill ' + pillClass + '">' + st + '</span></td></tr>';
+  });
+  h += '</tbody></table>';
+  document.getElementById('modal-body').innerHTML = h;
+  document.getElementById('cust-modal').classList.add('open');
+}
+
+function closeModal(){
+  document.getElementById('cust-modal').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════════════
+// ORDERS PAGE
+// ═══════════════════════════════════════════════════════════
+function populateFilters(batches){
+  var custSel = document.getElementById('order-cust');
+  var custs = {};
+  batches.forEach(function(b){ custs[b.customer] = true; });
+  var sorted = Object.keys(custs).sort();
+  custSel.innerHTML = '<option value="">All customers</option>' + sorted.map(function(c){ return '<option>' + c + '</option>'; }).join('');
+
+  var monSel = document.getElementById('order-month');
+  var months = {};
+  batches.forEach(function(b){
+    var k = dateKey(b.date);
+    if(k) months[k] = true;
+  });
+  var monthsList = Object.keys(months).sort().reverse();
+  monSel.innerHTML = '<option value="">All months</option>' + monthsList.map(function(m){
+    var d = new Date(m + '-01');
+    return '<option value="' + m + '"' + (m === currentMonth() ? ' selected' : '') + '>' + d.toLocaleDateString('en-US',{month:'long',year:'numeric'}) + '</option>';
+  }).join('');
+}
+
+function renderOrders(){
+  var batches = getBatches();
+  var custFilter = document.getElementById('order-cust').value;
+  var stFilter = document.getElementById('order-status').value;
+  var monthFilter = document.getElementById('order-month').value || currentMonth();
+  var rows = batches.filter(function(b){
+    if(monthFilter && dateKey(b.date) !== monthFilter) return false;
+    if(custFilter && b.customer !== custFilter) return false;
+    if(stFilter){
+      var st = String(b.status || '').toUpperCase();
+      if(stFilter === 'NOT STARTED') return st === 'NOT STARTED' || (st !== 'COMPLETED' && st !== 'RUNNING');
+      if(stFilter === 'RUNNING') return st === 'RUNNING';
+      if(stFilter === 'COMPLETED') return st === 'COMPLETED';
+    }
+    return true;
+  });
+  document.getElementById('orders-summary').textContent = rows.length + ' order' + (rows.length === 1 ? '' : 's') + ' shown';
+  if(!rows.length){
+    document.getElementById('orders-table').innerHTML = '<tbody><tr><td><div class="empty-state" style="padding:30px"><div class="empty-icon">🔍</div><div class="empty-title">No orders match the filter</div></div></td></tr></tbody>';
+    return;
+  }
+  rows.sort(function(a,b){
+    var da = String(a.date || ''), db = String(b.date || '');
+    return da.localeCompare(db);
+  });
+  var h = '<thead><tr><th>Date</th><th>Customer</th><th>Batch</th><th>Item</th><th>Line</th><th style="text-align:right">Cases Planned</th><th style="text-align:right">Cases Made</th><th>Status</th></tr></thead><tbody>';
+  rows.slice(0,200).forEach(function(b){
+    var st = String(b.status || 'NOT STARTED').toUpperCase();
+    var pillClass = 'p-neutral';
+    if(st === 'COMPLETED') pillClass = 'p-good';
+    if(st === 'RUNNING') pillClass = 'p-info';
+    if(st.indexOf('HOLD') >= 0 || st.indexOf('OVERDUE') >= 0) pillClass = 'p-risk';
+    h += '<tr onclick="showCustomerDetail(\'' + b.customer.replace(/'/g, "\\'") + '\')">';
+    h += '<td>' + fD(b.date) + '</td>';
+    h += '<td><strong>' + b.customer + '</strong></td>';
+    h += '<td>' + (b.batch || '—') + '</td>';
+    h += '<td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (b.descr || b.description || b.item || '—') + '</td>';
+    h += '<td>L' + (b.line || '—') + '</td>';
+    h += '<td style="text-align:right">' + N(b.origqty || 0) + '</td>';
+    h += '<td style="text-align:right">' + N(b.actqty || 0) + '</td>';
+    h += '<td><span class="pill ' + pillClass + '">' + st + '</span></td></tr>';
+  });
+  h += '</tbody>';
+  if(rows.length > 200) h += '<tfoot><tr class="no-hover"><td colspan="8" style="text-align:center;color:var(--text3);padding:10px">Showing first 200 of ' + rows.length + ' orders — use filters to narrow</td></tr></tfoot>';
+  document.getElementById('orders-table').innerHTML = h;
+}
+
+function filterCustomer(name){
+  document.getElementById('order-cust').value = name;
+  P('orders');
+  renderOrders();
+}
+
+// ═══════════════════════════════════════════════════════════
+// RISKS PAGE
+// ═══════════════════════════════════════════════════════════
+function renderRisks(){
+  var batches = getBatches();
+  var month = currentMonth();
+  var risks = batches.filter(function(b){
+    if(dateKey(b.date) !== month) return false;
+    var st = String(b.status || '').toUpperCase();
+    return st.indexOf('OVERDUE') >= 0 || st.indexOf('CRITICAL') >= 0 || st.indexOf('HOLD') >= 0 || st === 'NOT STARTED';
+  });
+  // Categorize
+  var cats = {};
+  risks.forEach(function(b){
+    var st = String(b.status || '').toUpperCase();
+    var cat = 'Not Started';
+    if(st.indexOf('OVERDUE') >= 0) cat = 'Compound Overdue';
+    else if(st.indexOf('CRITICAL') >= 0) cat = 'Compound Critical';
+    else if(st.indexOf('HOLD') >= 0) cat = 'QC Hold';
+    if(!cats[cat]) cats[cat] = 0;
+    cats[cat]++;
+  });
+  var catH = '';
+  Object.keys(cats).forEach(function(c){
+    var color = '#9CA3AF';
+    if(c.indexOf('Overdue') >= 0) color = '#EF4444';
+    if(c.indexOf('Critical') >= 0) color = '#F59E0B';
+    if(c.indexOf('Hold') >= 0) color = '#FBBF24';
+    catH += '<div style="display:inline-block;margin-right:14px;margin-bottom:8px"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + color + ';vertical-align:middle;margin-right:6px"></span>';
+    catH += '<strong>' + c + ':</strong> <span style="color:var(--text2)">' + cats[c] + ' batch' + (cats[c] === 1 ? '' : 'es') + '</span></div>';
+  });
+  document.getElementById('risk-categories').innerHTML = catH || '<div style="color:var(--text3)">No risk categories</div>';
+
+  if(!risks.length){
+    document.getElementById('risks-table').innerHTML = '<tbody><tr><td><div class="empty-state" style="padding:30px"><div style="font-size:36px;margin-bottom:8px">✓</div><div class="empty-title" style="color:#34D399">All orders on track</div><div class="empty-sub">No at-risk orders this month</div></div></td></tr></tbody>';
+    return;
+  }
+  // Sort: overdue first, then by date
+  risks.sort(function(a,b){
+    var ap = (String(a.status || '').toUpperCase().indexOf('OVERDUE') >= 0 ? 0 : 1);
+    var bp = (String(b.status || '').toUpperCase().indexOf('OVERDUE') >= 0 ? 0 : 1);
+    if(ap !== bp) return ap - bp;
+    return String(a.date || '').localeCompare(String(b.date || ''));
+  });
+  var h = '<thead><tr><th>Customer</th><th>Batch</th><th>Item</th><th>Date</th><th>Status</th><th style="text-align:right">Cases</th><th>What To Tell Customer</th></tr></thead><tbody>';
+  risks.slice(0,50).forEach(function(b){
+    var st = String(b.status || '').toUpperCase();
+    var pillClass = 'p-risk';
+    if(st === 'NOT STARTED') pillClass = 'p-warn';
+    var tellCust = '';
+    if(st.indexOf('OVERDUE') >= 0) tellCust = 'Production delayed; new ETA pending';
+    else if(st.indexOf('CRITICAL') >= 0) tellCust = 'On critical path; risk to ship date';
+    else if(st.indexOf('HOLD') >= 0) tellCust = 'Quality review in progress';
+    else if(st === 'NOT STARTED') tellCust = 'Scheduled but not yet started';
+    h += '<tr onclick="showCustomerDetail(\'' + b.customer.replace(/'/g, "\\'") + '\')">';
+    h += '<td><strong>' + b.customer + '</strong></td>';
+    h += '<td>' + (b.batch || '—') + '</td>';
+    h += '<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (b.descr || b.description || b.item || '—') + '</td>';
+    h += '<td>' + fD(b.date) + '</td>';
+    h += '<td><span class="pill ' + pillClass + '">' + st + '</span></td>';
+    h += '<td style="text-align:right">' + N(b.origqty || 0) + '</td>';
+    h += '<td style="color:var(--text2);font-style:italic">' + tellCust + '</td></tr>';
+  });
+  h += '</tbody>';
+  document.getElementById('risks-table').innerHTML = h;
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAGE NAV
+// ═══════════════════════════════════════════════════════════
+function P(p){
+  document.querySelectorAll('.page').forEach(function(el){ el.classList.remove('active'); });
+  document.querySelectorAll('.nb').forEach(function(el){ el.classList.remove('active'); });
+  document.getElementById('page-' + p).classList.add('active');
+  var idx = ['dash','customers','orders','risks'].indexOf(p);
+  document.querySelectorAll('.nb')[idx].classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ═══════════════════════════════════════════════════════════
+// AUTO-UPDATE HEADER DATE + POLL
+// ═══════════════════════════════════════════════════════════
+(function(){
+  var today = new Date().toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'});
+  document.querySelectorAll('.js-today-date').forEach(function(el){ el.textContent = today; });
+})();
+
+loadAll();
+setInterval(loadAll, 15000);
+
+// Quick start button
+document.body.insertAdjacentHTML('beforeend', '<button onclick="window.location.href=\'HOC_Onboarding.html#role-sales\'" title="Need help?" style="position:fixed;bottom:24px;right:24px;width:44px;height:44px;border-radius:50%;background:#EC4899;color:white;border:none;font-size:20px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(236,72,153,.4);z-index:998">?</button>');
+</script>
+</body></html>

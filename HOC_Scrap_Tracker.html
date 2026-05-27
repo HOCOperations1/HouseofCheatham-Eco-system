@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scrap Tracker · HOC-OES</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B0E17">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root{
+  --bg:#0B0E17;--bg2:#111520;--bg3:#161C28;
+  --border:#1E293B;--text:#DDE4F0;--text2:#8899AA;--text3:#4A5570;
+  --green:#22C55E;--red:#EF4444;--amber:#F59E0B;--blue:#3B82F6;--purple:#8B5CF6;--cyan:#22D3EE;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:ui-monospace,monospace;background:var(--bg);color:var(--text);font-size:11px;min-height:100vh}
+.topbar{display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;flex-wrap:wrap}
+.back{padding:3px 8px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text2);font-size:9px;font-weight:700;text-decoration:none;cursor:pointer}
+.brand-name{font-size:13px;font-weight:700;color:var(--text)}
+.brand-sub{font-size:9px;color:var(--text3)}
+.logo{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;background:linear-gradient(135deg,#EF4444,#B91C1C)}
+.spacer{flex:1}
+.nav{display:flex;gap:4px;padding:0 16px;background:var(--bg2);border-bottom:1px solid var(--border)}
+.nb{padding:6px 12px;border-radius:6px 6px 0 0;font:inherit;font-size:10px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--text2);border-bottom:2px solid transparent;white-space:nowrap}
+.nb:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.nb.active{color:var(--red);border-bottom-color:var(--red)}
+.content{padding:12px 16px;max-width:1500px;margin:0 auto}
+.sync-bar{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 12px;margin-bottom:10px;font-size:9px;color:var(--text3);display:flex;align-items:center;gap:8px}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.card-title{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:10px}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.kl{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.kv{font-size:22px;font-weight:700;color:var(--text);line-height:1.1}
+.ks{font-size:9px;color:var(--text3);margin-top:2px}
+.kpi.red .kv{color:var(--red)}
+.kpi.amber .kv{color:var(--amber)}
+.kpi.green .kv{color:var(--green)}
+.kpi.blue .kv{color:var(--blue)}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.field label{display:block;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+input,select,textarea{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font:inherit;font-size:11px;padding:6px 8px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue)}
+.btn{padding:6px 12px;border-radius:6px;font:inherit;font-size:10px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text)}
+.btn:hover{background:var(--border)}
+.btn-primary{background:var(--red);color:#fff;border-color:var(--red)}
+.btn-primary:hover{background:#B91C1C}
+.btn-ghost{background:transparent}
+.btn-danger{background:var(--red);color:#fff;border-color:var(--red)}
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+@media (max-width:900px){.charts-grid{grid-template-columns:1fr}}
+.chart-wrap{height:240px;position:relative}
+.tbl-wrap{overflow-x:auto;max-height:480px}
+table{width:100%;border-collapse:collapse;font-size:10px}
+th{text-align:left;padding:6px 8px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;background:var(--bg2);position:sticky;top:0}
+td{padding:6px 8px;border-bottom:1px solid var(--border);font-size:10px}
+tr:hover td{background:rgba(255,255,255,.02)}
+.del-btn{background:transparent;color:var(--red);border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700;cursor:pointer}
+.del-btn:hover{background:rgba(239,68,68,.1)}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--bg3);border:1px solid var(--green);color:var(--text);padding:8px 16px;border-radius:8px;font-size:11px;font-weight:700;z-index:999;opacity:0;transition:all .3s}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.toast.error{border-color:var(--red);color:var(--red)}
+.filter-bar{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.filter-bar input,.filter-bar select{flex:1;min-width:140px;max-width:240px}
+.empty-state{padding:32px;text-align:center;color:var(--text3);font-size:11px}
+.pill{display:inline-block;font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;letter-spacing:.05em}
+.pill-red{background:rgba(239,68,68,.12);color:var(--red);border:1px solid rgba(239,68,68,.25)}
+.pill-amber{background:rgba(245,158,11,.12);color:var(--amber);border:1px solid rgba(245,158,11,.25)}
+.pill-blue{background:rgba(59,130,246,.12);color:var(--blue);border:1px solid rgba(59,130,246,.25)}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="index.html" class="back">← Home</a>
+  <div class="logo">SC</div>
+  <div>
+    <div class="brand-name">Scrap Tracker</div>
+    <div class="brand-sub">Production scrap logging · per batch / part / shift / reason</div>
+  </div>
+  <div class="spacer"></div>
+  <button class="btn btn-ghost" onclick="exportCSV()" style="font-size:10px">↓ Export CSV</button>
+  <button class="btn btn-danger" onclick="clearAll()" style="font-size:10px">Clear All</button>
+</div>
+
+<div class="nav">
+  <button class="nb active" id="tab-log" onclick="P('log')">Log Entry</button>
+  <button class="nb" id="tab-analysis" onclick="P('analysis')">Analysis</button>
+  <button class="nb" id="tab-history" onclick="P('history')">History</button>
+</div>
+
+<div class="content">
+
+  <div class="sync-bar"><span class="sync-dot"></span>Scrap data · LOCAL + Supabase sync · <span id="sync-ts">—</span> · <span id="sync-count">0 entries</span></div>
+
+  <!-- KPI ROW -->
+  <div class="kpi-grid">
+    <div class="kpi red">
+      <div class="kl">Total Scrap (Lifetime)</div>
+      <div class="kv" id="kpi-total">0</div>
+      <div class="ks" id="kpi-total-sub">No entries yet</div>
+    </div>
+    <div class="kpi amber">
+      <div class="kl">This Week</div>
+      <div class="kv" id="kpi-week">0</div>
+      <div class="ks">Last 7 days</div>
+    </div>
+    <div class="kpi blue">
+      <div class="kl">Top Reason</div>
+      <div class="kv" id="kpi-reason" style="font-size:14px">—</div>
+      <div class="ks" id="kpi-reason-sub">No data</div>
+    </div>
+    <div class="kpi green">
+      <div class="kl">Entries Logged</div>
+      <div class="kv" id="kpi-count">0</div>
+      <div class="ks">Records in db</div>
+    </div>
+  </div>
+
+  <!-- ============ LOG ENTRY PAGE ============ -->
+  <div class="page" id="page-log">
+    <div class="card">
+      <div class="card-title">Log New Scrap Entry</div>
+      <form id="scrap-form">
+        <div class="form-grid">
+          <div class="field">
+            <label>Date</label>
+            <input type="date" id="f-date" required>
+          </div>
+          <div class="field">
+            <label>Batch (optional)</label>
+            <input type="text" id="f-batch" list="batch-list" placeholder="e.g. MAIN063264">
+            <datalist id="batch-list"></datalist>
+          </div>
+          <div class="field">
+            <label>Part # / Item</label>
+            <input type="text" id="f-part" placeholder="e.g. 1-552-12-1200" required>
+          </div>
+          <div class="field">
+            <label>Quantity (lbs / units)</label>
+            <input type="number" id="f-qty" min="1" step="0.01" placeholder="0" required>
+          </div>
+          <div class="field">
+            <label>Reason</label>
+            <select id="f-reason" required>
+              <option value="">— Select —</option>
+              <option>Machine Error</option>
+              <option>Operator Error</option>
+              <option>Material Defect</option>
+              <option>Tooling Issue</option>
+              <option>Setup / Calibration</option>
+              <option>Quality Check Fail</option>
+              <option>Compound Off-Spec</option>
+              <option>Fill Spillage</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Line</label>
+            <select id="f-line">
+              <option value="">—</option>
+              <option value="1">Line 1</option><option value="2">Line 2</option>
+              <option value="3">Line 3</option><option value="4">Line 4</option>
+              <option value="5">Line 5</option><option value="6">Line 6</option>
+              <option value="7">Line 7</option><option value="8">Line 8</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Shift</label>
+            <select id="f-shift" required>
+              <option value="">—</option>
+              <option value="1">1st Shift</option>
+              <option value="2">2nd Shift</option>
+              <option value="3">3rd Shift</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Operator</label>
+            <input type="text" id="f-operator" placeholder="Name or ID" required>
+          </div>
+          <div class="field" style="grid-column:1/-1">
+            <label>Notes (optional)</label>
+            <input type="text" id="f-notes" placeholder="Additional context (e.g. shift change, batch #, root cause hypothesis)">
+          </div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px">
+          <button type="submit" class="btn btn-primary">+ Add Entry</button>
+          <button type="reset" class="btn btn-ghost">Reset</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Today's Entries</div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Time</th><th>Batch</th><th>Part #</th><th>Qty</th><th>Reason</th><th>Line</th><th>Shift</th><th>Op</th><th></th></tr></thead>
+          <tbody id="today-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ANALYSIS PAGE ============ -->
+  <div class="page" id="page-analysis" style="display:none">
+    <div class="charts-grid">
+      <div class="card">
+        <div class="card-title">Daily Scrap Trend</div>
+        <div class="chart-wrap"><canvas id="chart-trend"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">By Reason</div>
+        <div class="chart-wrap"><canvas id="chart-reason"></canvas></div>
+      </div>
+    </div>
+    <div class="charts-grid">
+      <div class="card">
+        <div class="card-title">Top Parts by Scrap Quantity</div>
+        <div class="chart-wrap"><canvas id="chart-parts"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">By Shift</div>
+        <div class="chart-wrap"><canvas id="chart-shift"></canvas></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">By Line</div>
+      <div class="chart-wrap"><canvas id="chart-line"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ============ HISTORY PAGE ============ -->
+  <div class="page" id="page-history" style="display:none">
+    <div class="card">
+      <div class="card-title">Scrap Log — Full History</div>
+      <div class="filter-bar">
+        <input type="text" id="filter-search" placeholder="Search part #, batch, or operator…">
+        <select id="filter-reason"><option value="">All Reasons</option></select>
+        <select id="filter-shift">
+          <option value="">All Shifts</option>
+          <option value="1">1st Shift</option><option value="2">2nd Shift</option><option value="3">3rd Shift</option>
+        </select>
+        <select id="filter-line"><option value="">All Lines</option></select>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Batch</th><th>Part #</th><th>Qty</th><th>Reason</th><th>Line</th><th>Shift</th><th>Operator</th><th>Notes</th><th></th></tr></thead>
+          <tbody id="data-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// HOC Scrap Tracker — v6.34c
+//
+// Storage: localStorage hoc_scrap_v1 (canonical) + Supabase hoc_scrap_v1
+//          table for cross-tablet sync. Same dual-write pattern as
+//          Production Supervisor (best-effort cloud, localStorage canonical).
+//
+// No event-bus firing per design decision — scrap is internal tracking.
+// ═══════════════════════════════════════════════════════════════════
+
+const STORAGE_KEY = 'hoc_scrap_v1';
+const UPLOAD_KEY = 'hoc_upload_v1';
+const SUPA_URL = 'https://yemtpvrumqvbzrzpwnyy.supabase.co';
+const SUPA_KEY = 'sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl';
+const HDR = function(){ return {apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY}; };
+const HDRJ = function(){ return {apikey:SUPA_KEY, Authorization:'Bearer '+SUPA_KEY, 'Content-Type':'application/json', Prefer:'return=minimal'}; };
+
+let entries = [];
+let charts = {};
+let _lastSync = null;
+
+function load(){
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    entries = raw ? JSON.parse(raw) : [];
+    if(!Array.isArray(entries)) entries = [];
+  } catch(e){ entries = []; }
+}
+function saveLocal(){
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); } catch(e){}
+}
+
+function showToast(msg, isError){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.toggle('error', !!isError);
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 2500);
+}
+
+// ── Page nav ───────────────────────────────────────────────────────
+function P(p){
+  document.querySelectorAll('[id^="page-"]').forEach(function(el){ el.style.display = 'none'; });
+  document.querySelectorAll('.nb').forEach(function(el){ el.classList.remove('active'); });
+  var pg = document.getElementById('page-'+p);
+  var tb = document.getElementById('tab-'+p);
+  if(pg) pg.style.display = 'block';
+  if(tb) tb.classList.add('active');
+  if(p === 'analysis') renderCharts();
+  if(p === 'history')  renderTable();
+}
+
+// ── Batch autocomplete from existing upload ────────────────────────
+function populateBatchList(){
+  try {
+    var upload = JSON.parse(localStorage.getItem(UPLOAD_KEY) || '{}');
+    var batches = (upload.batches || []).slice(0, 200);
+    var dl = document.getElementById('batch-list');
+    if(!dl) return;
+    dl.innerHTML = batches.map(function(b){
+      return '<option value="'+(b.main||b.batch||'')+'">'+(b.item||'')+' — L'+(b.line||'?')+'</option>';
+    }).join('');
+  } catch(e){}
+}
+
+// ── Today's date default ──────────────────────────────────────────
+document.getElementById('f-date').valueAsDate = new Date();
+
+// ── Form submit ───────────────────────────────────────────────────
+document.getElementById('scrap-form').addEventListener('submit', function(e){
+  e.preventDefault();
+  var entry = {
+    id: Date.now()+'-'+Math.random().toString(36).slice(2,7),
+    date: document.getElementById('f-date').value,
+    batch: document.getElementById('f-batch').value.trim().toUpperCase(),
+    part: document.getElementById('f-part').value.trim().toUpperCase(),
+    qty: parseFloat(document.getElementById('f-qty').value) || 0,
+    reason: document.getElementById('f-reason').value,
+    line: document.getElementById('f-line').value,
+    shift: document.getElementById('f-shift').value,
+    operator: document.getElementById('f-operator').value.trim(),
+    notes: document.getElementById('f-notes').value.trim(),
+    ts: new Date().toISOString()
+  };
+  entries.push(entry);
+  saveLocal();
+  pushOneToSupabase(entry);
+  e.target.reset();
+  document.getElementById('f-date').valueAsDate = new Date();
+  render();
+  showToast('✓ Logged: '+entry.part+' ('+entry.qty+' units)');
+});
+
+function deleteEntry(id){
+  if(!confirm('Delete this entry?')) return;
+  entries = entries.filter(function(e){ return e.id !== id; });
+  saveLocal();
+  deleteFromSupabase(id);
+  render();
+  showToast('Entry deleted');
+}
+
+function clearAll(){
+  if(!confirm('Delete ALL scrap entries from this tablet? Cloud entries remain.')) return;
+  entries = [];
+  saveLocal();
+  render();
+  showToast('Local entries cleared');
+}
+
+function exportCSV(){
+  if(!entries.length){ showToast('No data to export', true); return; }
+  var headers = ['Date','Batch','Part','Qty','Reason','Line','Shift','Operator','Notes','Logged_TS'];
+  var rows = entries.map(function(e){
+    return [e.date, e.batch||'', e.part, e.qty, e.reason, e.line||'', e.shift, e.operator, e.notes||'', e.ts||''];
+  });
+  var csv = [headers].concat(rows).map(function(r){
+    return r.map(function(c){ return '"'+String(c).replace(/"/g,'""')+'"'; }).join(',');
+  }).join('\n');
+  var blob = new Blob([csv], {type:'text/csv'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'hoc_scrap_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  showToast('CSV exported · '+entries.length+' entries');
+}
+
+// ── Filter bindings ──────────────────────────────────────────────
+['filter-search','filter-reason','filter-shift','filter-line'].forEach(function(id){
+  var el = document.getElementById(id);
+  if(el) el.addEventListener('input', renderTable);
+});
+
+function getFiltered(){
+  var q = (document.getElementById('filter-search')||{}).value || '';
+  q = q.toLowerCase();
+  var r = (document.getElementById('filter-reason')||{}).value || '';
+  var s = (document.getElementById('filter-shift')||{}).value || '';
+  var ln = (document.getElementById('filter-line')||{}).value || '';
+  return entries.filter(function(e){
+    if(q){
+      var hay = (e.part+' '+(e.batch||'')+' '+e.operator).toLowerCase();
+      if(hay.indexOf(q) < 0) return false;
+    }
+    if(r && e.reason !== r) return false;
+    if(s && e.shift !== s) return false;
+    if(ln && e.line !== ln) return false;
+    return true;
+  });
+}
+
+function escapeHtml(s){
+  return String(s||'').replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+// ── Render functions ──────────────────────────────────────────────
+function renderTable(){
+  var tbody = document.getElementById('data-body');
+  if(!tbody) return;
+  var rows = getFiltered().sort(function(a,b){
+    return (b.date+' '+(b.ts||'')).localeCompare(a.date+' '+(a.ts||''));
+  });
+  if(!rows.length){
+    tbody.innerHTML = '<tr><td colspan="10" class="empty-state">No entries match filter</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(function(e){
+    return '<tr>'+
+      '<td>'+escapeHtml(e.date)+'</td>'+
+      '<td style="font-family:monospace;font-size:9px">'+escapeHtml(e.batch||'')+'</td>'+
+      '<td style="font-family:monospace">'+escapeHtml(e.part)+'</td>'+
+      '<td style="text-align:right;font-weight:700;color:var(--red)">'+e.qty+'</td>'+
+      '<td>'+escapeHtml(e.reason)+'</td>'+
+      '<td>'+(e.line?'L'+e.line:'')+'</td>'+
+      '<td>'+(e.shift?e.shift+'st':'')+'</td>'+
+      '<td>'+escapeHtml(e.operator)+'</td>'+
+      '<td style="font-size:9px;color:var(--text3);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escapeHtml(e.notes||'')+'</td>'+
+      '<td><button class="del-btn" onclick="deleteEntry(\''+e.id+'\')">Delete</button></td>'+
+    '</tr>';
+  }).join('');
+}
+
+function renderToday(){
+  var tbody = document.getElementById('today-body');
+  if(!tbody) return;
+  var today = new Date().toISOString().slice(0,10);
+  var rows = entries.filter(function(e){ return e.date === today; })
+    .sort(function(a,b){ return (b.ts||'').localeCompare(a.ts||''); });
+  if(!rows.length){
+    tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No scrap logged today</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(function(e){
+    var time = e.ts ? new Date(e.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '';
+    return '<tr>'+
+      '<td style="font-family:monospace">'+time+'</td>'+
+      '<td style="font-family:monospace;font-size:9px">'+escapeHtml(e.batch||'')+'</td>'+
+      '<td style="font-family:monospace">'+escapeHtml(e.part)+'</td>'+
+      '<td style="text-align:right;font-weight:700;color:var(--red)">'+e.qty+'</td>'+
+      '<td>'+escapeHtml(e.reason)+'</td>'+
+      '<td>'+(e.line?'L'+e.line:'')+'</td>'+
+      '<td>'+(e.shift||'')+'</td>'+
+      '<td>'+escapeHtml(e.operator)+'</td>'+
+      '<td><button class="del-btn" onclick="deleteEntry(\''+e.id+'\')">Delete</button></td>'+
+    '</tr>';
+  }).join('');
+}
+
+function renderKPIs(){
+  var total = entries.reduce(function(s,e){ return s + (Number(e.qty)||0); }, 0);
+  var weekAgo = new Date(Date.now() - 7*24*60*60*1000).toISOString().slice(0,10);
+  var weekTotal = entries.filter(function(e){ return e.date >= weekAgo; }).reduce(function(s,e){ return s + (Number(e.qty)||0); }, 0);
+  var reasonTotals = {};
+  entries.forEach(function(e){
+    reasonTotals[e.reason] = (reasonTotals[e.reason]||0) + (Number(e.qty)||0);
+  });
+  var topReason = '—', topQty = 0;
+  Object.keys(reasonTotals).forEach(function(r){
+    if(reasonTotals[r] > topQty){ topReason = r; topQty = reasonTotals[r]; }
+  });
+  document.getElementById('kpi-total').textContent = total.toLocaleString();
+  document.getElementById('kpi-total-sub').textContent = entries.length ? entries.length+' entries' : 'No entries yet';
+  document.getElementById('kpi-week').textContent = weekTotal.toLocaleString();
+  document.getElementById('kpi-reason').textContent = topReason;
+  document.getElementById('kpi-reason-sub').textContent = topQty ? topQty.toLocaleString()+' units' : 'No data';
+  document.getElementById('kpi-count').textContent = entries.length;
+  document.getElementById('sync-count').textContent = entries.length+' entries';
+}
+
+function renderReasonFilter(){
+  var sel = document.getElementById('filter-reason');
+  if(!sel) return;
+  var reasons = {}; entries.forEach(function(e){ reasons[e.reason] = 1; });
+  var current = sel.value;
+  sel.innerHTML = '<option value="">All Reasons</option>' +
+    Object.keys(reasons).sort().map(function(r){ return '<option>'+escapeHtml(r)+'</option>'; }).join('');
+  sel.value = current;
+
+  var lineSel = document.getElementById('filter-line');
+  if(lineSel){
+    var lines = {}; entries.forEach(function(e){ if(e.line) lines[e.line] = 1; });
+    var curLine = lineSel.value;
+    lineSel.innerHTML = '<option value="">All Lines</option>' +
+      Object.keys(lines).sort().map(function(l){ return '<option value="'+l+'">Line '+l+'</option>'; }).join('');
+    lineSel.value = curLine;
+  }
+}
+
+function renderCharts(){
+  if(typeof Chart === 'undefined') return;
+  // Daily trend (last 30 days)
+  var byDate = {};
+  entries.forEach(function(e){ byDate[e.date] = (byDate[e.date]||0) + (Number(e.qty)||0); });
+  var dates = Object.keys(byDate).sort().slice(-30);
+  upsertChart('chart-trend', {
+    type: 'line',
+    data: { labels: dates, datasets: [{ label:'Scrap', data: dates.map(function(d){return byDate[d];}), borderColor:'#EF4444', backgroundColor:'rgba(239,68,68,.15)', tension:.3, fill:true }] },
+    options: chartOpts()
+  });
+  // By reason
+  var byReason = {};
+  entries.forEach(function(e){ byReason[e.reason] = (byReason[e.reason]||0) + (Number(e.qty)||0); });
+  upsertChart('chart-reason', {
+    type: 'doughnut',
+    data: { labels: Object.keys(byReason), datasets: [{ data: Object.values(byReason), backgroundColor: ['#EF4444','#F59E0B','#3B82F6','#22C55E','#8B5CF6','#22D3EE','#F97316','#EC4899','#94A3B8'] }] },
+    options: chartOpts(true)
+  });
+  // Top parts
+  var byPart = {};
+  entries.forEach(function(e){ byPart[e.part] = (byPart[e.part]||0) + (Number(e.qty)||0); });
+  var topParts = Object.entries(byPart).sort(function(a,b){ return b[1]-a[1]; }).slice(0,10);
+  upsertChart('chart-parts', {
+    type: 'bar',
+    data: { labels: topParts.map(function(x){return x[0];}), datasets: [{ label:'Scrap', data: topParts.map(function(x){return x[1];}), backgroundColor:'#F59E0B' }] },
+    options: chartOpts()
+  });
+  // By shift
+  var byShift = {1:0,2:0,3:0};
+  entries.forEach(function(e){ if(e.shift) byShift[e.shift] = (byShift[e.shift]||0) + (Number(e.qty)||0); });
+  upsertChart('chart-shift', {
+    type: 'bar',
+    data: { labels: ['1st Shift','2nd Shift','3rd Shift'], datasets: [{ label:'Scrap', data: [byShift[1],byShift[2],byShift[3]], backgroundColor:['#3B82F6','#8B5CF6','#EC4899'] }] },
+    options: chartOpts()
+  });
+  // By line
+  var byLine = {};
+  entries.forEach(function(e){ if(e.line) byLine[e.line] = (byLine[e.line]||0) + (Number(e.qty)||0); });
+  var lineKeys = Object.keys(byLine).sort(function(a,b){ return parseInt(a)-parseInt(b); });
+  upsertChart('chart-line', {
+    type: 'bar',
+    data: { labels: lineKeys.map(function(l){return 'L'+l;}), datasets: [{ label:'Scrap', data: lineKeys.map(function(l){return byLine[l];}), backgroundColor:'#22C55E' }] },
+    options: chartOpts()
+  });
+}
+
+function chartOpts(isPie){
+  var base = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { color:'#DDE4F0', font: {size: 10, family:'ui-monospace'} } },
+      tooltip: { backgroundColor:'#111520', titleColor:'#DDE4F0', bodyColor:'#DDE4F0', borderColor:'#1E293B', borderWidth:1 }
+    }
+  };
+  if(!isPie){
+    base.scales = {
+      x: { ticks: {color:'#8899AA', font:{size:9, family:'ui-monospace'}}, grid: {color:'rgba(255,255,255,.04)'} },
+      y: { ticks: {color:'#8899AA', font:{size:9, family:'ui-monospace'}}, grid: {color:'rgba(255,255,255,.04)'}, beginAtZero:true }
+    };
+  }
+  return base;
+}
+
+function upsertChart(id, config){
+  var canvas = document.getElementById(id);
+  if(!canvas) return;
+  if(charts[id]){ charts[id].destroy(); }
+  charts[id] = new Chart(canvas, config);
+}
+
+function render(){
+  renderKPIs();
+  renderToday();
+  renderReasonFilter();
+  renderTable();
+  if(document.getElementById('page-analysis').style.display !== 'none') renderCharts();
+  document.getElementById('sync-ts').textContent = _lastSync ? 'last sync '+new Date(_lastSync).toLocaleTimeString() : 'local only';
+}
+
+// ── Supabase sync (best-effort, non-blocking) ────────────────────
+async function pushOneToSupabase(entry){
+  try {
+    await fetch(SUPA_URL+'/rest/v1/hoc_scrap_v1', {
+      method: 'POST',
+      headers: HDRJ(),
+      body: JSON.stringify(entry)
+    });
+    _lastSync = new Date().toISOString();
+  } catch(e){ /* offline: localStorage canonical */ }
+}
+
+async function deleteFromSupabase(id){
+  try {
+    await fetch(SUPA_URL+'/rest/v1/hoc_scrap_v1?id=eq.'+encodeURIComponent(id), {
+      method: 'DELETE', headers: HDR()
+    });
+  } catch(e){}
+}
+
+async function pullFromSupabase(){
+  try {
+    var r = await fetch(SUPA_URL+'/rest/v1/hoc_scrap_v1?select=*&order=ts.desc&limit=2000', { headers: HDR() });
+    if(!r.ok) return;
+    var rows = await r.json();
+    if(!Array.isArray(rows)) return;
+    // Merge: cloud rows + any local-only (not yet uploaded)
+    var byId = {};
+    rows.forEach(function(r){ byId[r.id] = r; });
+    entries.forEach(function(e){ if(!byId[e.id]) byId[e.id] = e; });
+    entries = Object.values(byId);
+    saveLocal();
+    _lastSync = new Date().toISOString();
+    render();
+  } catch(e){}
+}
+
+// ── Cross-tab sync ────────────────────────────────────────────────
+window.addEventListener('storage', function(e){
+  if(e.key === STORAGE_KEY){ load(); render(); }
+});
+
+// ── Init ───────────────────────────────────────────────────────────
+window.addEventListener('load', function(){
+  load();
+  populateBatchList();
+  render();
+  pullFromSupabase();
+  setInterval(pullFromSupabase, 60000);
+});
+</script>
+</body>
+</html>

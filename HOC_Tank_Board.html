@@ -1,0 +1,890 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HOC OES — Compound Tank Board</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0B0E17">
+<style>
+:root{
+  --bg:#0B0E17; --bg2:#121826; --bg3:#1a2233; --border:#1f2937;
+  --text:#E5E7EB; --text2:#9CA3AF; --text3:#6B7280;
+  --blue:#3B82F6; --green:#10B981; --amber:#F59E0B; --red:#EF4444;
+  --purple:#8B5CF6; --pink:#EC4899; --teal:#14B8A6; --orange:#F97316;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font:11px ui-monospace,SFMono-Regular,Menlo,monospace;min-height:100vh}
+.topbar{display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.brand-name{font-size:13px;font-weight:700;color:var(--text)}
+.brand-sub{font-size:9px;color:var(--text3)}
+.logo{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#14B8A6,#0E7C7B);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.nav{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}
+.nb{padding:5px 12px;border-radius:6px;font:inherit;font-size:10px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2);transition:all .1s}
+.nb:hover{background:var(--bg2);color:var(--text)}
+.nb.active{background:rgba(20,184,166,.12);border-color:rgba(20,184,166,.4);color:#5EEAD4}
+
+.content{padding:14px 16px;max-width:1500px;margin:0 auto}
+.sync-bar{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 12px;margin-bottom:10px;font-size:9px;color:var(--text3);display:flex;align-items:center;gap:8px}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.page{display:none}
+.page.active{display:block}
+
+/* KPI strip */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:14px}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent,#14B8A6)}
+.kpi.green::before{background:var(--green)}
+.kpi.amber::before{background:var(--amber)}
+.kpi.red::before{background:var(--red)}
+.kpi.blue::before{background:var(--blue)}
+.kpi.purple::before{background:var(--purple)}
+.kl{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.kv{font-size:22px;font-weight:700;line-height:1;margin-bottom:2px}
+.ks{font-size:9px;color:var(--text3)}
+
+/* Tank grid */
+.tank-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:14px}
+.tank{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;cursor:pointer;transition:all .12s;position:relative;overflow:hidden}
+.tank:hover{transform:translateY(-1px);border-color:rgba(20,184,166,.5)}
+.tank::before{content:"";position:absolute;top:0;left:0;bottom:0;width:4px;background:var(--accent,#6B7280)}
+.tank.available::before{background:var(--green)}
+.tank.filling::before{background:#3B82F6}
+.tank.full::before{background:#A78BFA}
+.tank.draining::before{background:#F59E0B}
+.tank.cleaning::before{background:#FB923C}
+.tank.offline::before{background:#6B7280}
+.tank-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+.tank-id{font-size:14px;font-weight:700;color:var(--text)}
+.tank-cap{font-size:9px;color:var(--text3)}
+.tank-status{font-size:8px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:2px 6px;border-radius:8px}
+.s-available{background:rgba(16,185,129,.15);color:#34D399;border:1px solid rgba(16,185,129,.3)}
+.s-filling  {background:rgba(59,130,246,.15);color:#60A5FA;border:1px solid rgba(59,130,246,.3)}
+.s-full     {background:rgba(139,92,246,.15);color:#A78BFA;border:1px solid rgba(139,92,246,.3)}
+.s-draining {background:rgba(245,158,11,.15);color:#FBBF24;border:1px solid rgba(245,158,11,.3)}
+.s-cleaning {background:rgba(251,146,60,.15);color:#FDBA74;border:1px solid rgba(251,146,60,.3)}
+.s-offline  {background:rgba(107,114,128,.15);color:#9CA3AF;border:1px solid rgba(107,114,128,.3)}
+
+.tank-caps{display:flex;flex-wrap:wrap;gap:3px;margin:4px 0 6px}
+.cap-pill{font-size:8px;background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--text2);padding:1px 5px;border-radius:6px;letter-spacing:.04em}
+.cap-pill.cat{background:rgba(20,184,166,.1);border-color:rgba(20,184,166,.3);color:#5EEAD4}
+
+.tank-contents{margin-top:6px;padding-top:6px;border-top:1px solid var(--border)}
+.tank-batch{font-size:10px;color:var(--text);font-weight:700}
+.tank-formula{font-size:9px;color:var(--text2);margin-top:1px}
+.tank-time{font-size:8px;color:var(--text3);margin-top:3px}
+.tank-time.aging{color:#FBBF24}
+.tank-time.stale{color:#F87171}
+.tank-empty-msg{font-size:9px;color:var(--text3);font-style:italic;padding:4px 0}
+
+/* Sections */
+.section{background:var(--bg2);border:1px solid var(--border);border-radius:8px;margin-bottom:12px;overflow:hidden}
+.section-head{padding:10px 14px;border-bottom:1px solid var(--border);background:#0F1623;display:flex;justify-content:space-between;align-items:center}
+.section-title{font-size:11px;font-weight:700;color:var(--text);letter-spacing:.04em}
+.section-title .ic{margin-right:6px}
+.section-sub{font-size:9px;color:var(--text3)}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;font-size:10px}
+th{text-align:left;padding:7px 12px;font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:7px 12px;border-bottom:1px solid rgba(30,41,59,.5);vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02);cursor:pointer}
+tr.no-hover:hover td{background:transparent;cursor:default}
+
+/* Pills */
+.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.p-good{background:rgba(16,185,129,.12);color:#34D399;border:1px solid rgba(16,185,129,.3)}
+.p-warn{background:rgba(245,158,11,.12);color:#FBBF24;border:1px solid rgba(245,158,11,.3)}
+.p-risk{background:rgba(239,68,68,.12);color:#F87171;border:1px solid rgba(239,68,68,.3)}
+.p-neutral{background:rgba(156,163,175,.12);color:#9CA3AF;border:1px solid rgba(156,163,175,.3)}
+.p-info{background:rgba(59,130,246,.12);color:#60A5FA;border:1px solid rgba(59,130,246,.3)}
+
+/* Modal */
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:center;justify-content:center;padding:20px}
+.modal.open{display:flex}
+.modal-box{background:var(--bg2);border:1px solid var(--border);border-radius:10px;width:100%;max-width:680px;max-height:88vh;overflow-y:auto}
+.modal-head{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:#0F1623;position:sticky;top:0;z-index:10}
+.modal-title{font-size:13px;font-weight:700;color:var(--text)}
+.modal-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:20px;padding:0 6px}
+.modal-body{padding:16px 20px}
+
+.form-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.form-row label{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;min-width:120px}
+.form-row select,.form-row input{font:inherit;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:5px 10px;outline:none;flex:1}
+.form-row select:focus,.form-row input:focus{border-color:var(--teal)}
+
+.btn{padding:6px 14px;border-radius:6px;font:inherit;font-size:10px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2);transition:all .12s}
+.btn:hover{background:var(--bg2);color:var(--text)}
+.btn-teal{background:rgba(20,184,166,.1);border-color:rgba(20,184,166,.3);color:#5EEAD4}
+.btn-teal:hover{background:rgba(20,184,166,.2)}
+.btn-red{background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:#F87171}
+.btn-blue{background:rgba(59,130,246,.1);border-color:rgba(59,130,246,.3);color:#60A5FA}
+.btn-amber{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);color:#FBBF24}
+
+.cap-edit{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.cap-toggle{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:10px;color:var(--text2);display:flex;justify-content:space-between;align-items:center}
+.cap-toggle.on{background:rgba(20,184,166,.1);border-color:rgba(20,184,166,.3);color:#5EEAD4}
+
+.empty-state{text-align:center;padding:30px 20px;color:var(--text3)}
+.empty-icon{font-size:30px;margin-bottom:6px}
+.empty-title{font-size:13px;font-weight:700;color:var(--text2);margin-bottom:4px}
+.empty-sub{font-size:10px}
+
+a{color:var(--blue)}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <a href="index.html" style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text2);text-decoration:none;font-size:9px;font-weight:700;flex-shrink:0">← HOC-OES</a>
+    <div class="logo">TB</div>
+    <div>
+      <div class="brand-name">Compound Tank Board</div>
+      <div class="brand-sub">Compound Manager · tank status · batch-to-tank assignment · <span class="js-today-date">May 18, 2026</span></div>
+    </div>
+  </div>
+  <nav class="nav">
+    <button class="nb active" onclick="P('board')">Tank Board</button>
+    <button class="nb" onclick="P('assign')">Assign Batches</button>
+    <button class="nb" onclick="P('history')">Recent Activity</button>
+    <button class="nb" onclick="P('config')">Tank Config</button>
+  </nav>
+</div>
+
+<div class="content">
+
+  <!-- ════════════════════ TANK BOARD ════════════════════ -->
+  <div class="page active" id="page-board">
+    <div class="sync-bar"><span class="sync-dot"></span>LIVE · cross-device sync: 15s · <span id="data-ts">tank state loaded</span></div>
+
+    <!-- KPI strip -->
+    <div class="kpis" id="kpis"></div>
+
+    <!-- Tank grid -->
+    <div class="section">
+      <div class="section-head">
+        <div>
+          <div class="section-title"><span class="ic">🏭</span>All Tanks</div>
+          <div class="section-sub">Click any tank to update its status, contents, or assign a batch</div>
+        </div>
+      </div>
+      <div style="padding:12px 14px">
+        <div class="tank-grid" id="tank-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════ ASSIGN BATCHES ════════════════════ -->
+  <div class="page" id="page-assign">
+    <div class="section">
+      <div class="section-head">
+        <div>
+          <div class="section-title"><span class="ic">🔗</span>Batches Awaiting Tank Assignment</div>
+          <div class="section-sub">Verified by compound coordinator · ready for tank assignment</div>
+        </div>
+      </div>
+      <div style="overflow-x:auto"><table id="assign-table"></table></div>
+    </div>
+    <div class="callout-info" style="padding:10px 14px;font-size:10px;color:var(--text2);line-height:1.6;background:rgba(59,130,246,.04);border:1px solid rgba(59,130,246,.15);border-radius:8px;margin-top:10px">
+      <strong style="color:#60A5FA;font-size:9px;letter-spacing:.06em;display:block;margin-bottom:4px">HOW THIS LIST IS BUILT</strong>
+      Shows compound-due batches that have either: (a) been verified by Compound Coordinator (VERIFIED — PROCEED), or (b) are due within 7 days and haven't yet been assigned to a tank. Once a batch is assigned to a tank, it moves to the tank card on the Tank Board.
+    </div>
+  </div>
+
+  <!-- ════════════════════ HISTORY ════════════════════ -->
+  <div class="page" id="page-history">
+    <div class="section">
+      <div class="section-head">
+        <div>
+          <div class="section-title"><span class="ic">📋</span>Recent Assignment Activity</div>
+          <div class="section-sub">Last 50 assignment + status changes</div>
+        </div>
+      </div>
+      <div style="overflow-x:auto"><table id="history-table"></table></div>
+    </div>
+  </div>
+
+  <!-- ════════════════════ CONFIG ════════════════════ -->
+  <div class="page" id="page-config">
+    <div class="section">
+      <div class="section-head">
+        <div>
+          <div class="section-title"><span class="ic">⚙️</span>Tank Configuration</div>
+          <div class="section-sub">Set each tank's category and notes. Capabilities (heated, sweep, homogenizer) loaded from master.</div>
+        </div>
+        <button class="btn btn-amber" onclick="if(confirm('Reset all tanks to defaults? Erases category + notes overrides.'))resetConfig()">Reset to Defaults</button>
+      </div>
+      <div style="overflow-x:auto"><table id="config-table"></table></div>
+    </div>
+    <div class="callout-info" style="padding:10px 14px;font-size:10px;color:var(--text2);line-height:1.6;background:rgba(245,158,11,.04);border:1px solid rgba(245,158,11,.15);border-radius:8px;margin-top:10px">
+      <strong style="color:#FBBF24;font-size:9px;letter-spacing:.06em;display:block;margin-bottom:4px">SOURCE OF MASTER DATA</strong>
+      Tank capacities and physical capabilities (heated, double-motion sweep) are loaded from Copy_of_Mixing_Tank_Capacity.xlsx. Categories (Base / Cold Thinner / Oil &amp; Thin / Gel / All-Purpose) are HOC-specific assignments — set them here once and they apply across all dashboards.
+    </div>
+  </div>
+
+</div>
+
+<!-- ════════════════════ TANK UPDATE MODAL ════════════════════ -->
+<div class="modal" id="tank-modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-title" id="modal-title">Tank Update</div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// CONFIG + STATE
+// ═══════════════════════════════════════════════════════════
+const SB_URL = 'https://yemtpvrumqvbzrzpwnyy.supabase.co';
+const SB_KEY = 'sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl';
+const TANK_STORAGE_KEY = 'hoc_tank_state_v1';
+const TANK_CONFIG_KEY  = 'hoc_tank_config_v1';
+
+// MASTER TANK DATA from Copy_of_Mixing_Tank_Capacity.xlsx — the single
+// source of truth for physical tank properties. Configurable fields
+// (category, notes, current contents/status) live separately in
+// localStorage so this never gets edited inadvertently.
+const TANK_MASTER = [
+  {id:'MT-1',  capacity:3600, heated:false, double_sweep:false},
+  {id:'MT-2',  capacity:3600, heated:false, double_sweep:false},
+  {id:'MT-3',  capacity:3000, heated:true,  double_sweep:false},
+  {id:'MT-4',  capacity:5400, heated:true,  double_sweep:false},
+  {id:'MT-5',  capacity:1500, heated:true,  double_sweep:true},
+  {id:'MT-6',  capacity:1500, heated:true,  double_sweep:true},
+  {id:'MT-7',  capacity:1500, heated:true,  double_sweep:true},
+  {id:'MT-8',  capacity:1500, heated:true,  double_sweep:true},
+  {id:'MT-9',  capacity:800,  heated:true,  double_sweep:false},
+  {id:'MT-10', capacity:1000, heated:true,  double_sweep:true},
+  {id:'MT-11', capacity:750,  heated:true,  double_sweep:true},
+  {id:'MT-12', capacity:750,  heated:true,  double_sweep:true},
+  {id:'MT-13', capacity:750,  heated:true,  double_sweep:true},
+  {id:'MT-18', capacity:2000, heated:true,  double_sweep:true, homogenizer:true},
+];
+const CATEGORIES = ['All-Purpose','Base','Cold Thinner','Oil & Thin','Gel','Other'];
+const STATUSES = ['available','filling','full','draining','cleaning','offline'];
+
+let UPLOAD = null;
+let BATCHES_REMOTE = {};
+let SHARED_SYNC = {};
+
+function loadTankState(){
+  try { return JSON.parse(localStorage.getItem(TANK_STORAGE_KEY) || '{}'); }
+  catch(e){ return {}; }
+}
+function saveTankState(s){
+  try { localStorage.setItem(TANK_STORAGE_KEY, JSON.stringify(s)); }
+  catch(e){}
+  // Mirror to shared sync so other dashboards can see tank status
+  try {
+    var shared = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+    shared.__tanks = {state: s, ts: new Date().toISOString()};
+    localStorage.setItem('hoc_sync_v1', JSON.stringify(shared));
+  } catch(e){}
+  // Push to Supabase sync_bus so other tablets pick up tank changes.
+  // hoc_sync_bus is the single row that all dashboards poll for cross-device sync.
+  // Merge-write: pull current payload, merge our __tanks key, write back.
+  try {
+    fetch(SB_URL + '/rest/v1/hoc_sync_bus?id=eq.1&select=payload', {
+      headers: {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
+    })
+    .then(function(r){ return r.ok ? r.json() : []; })
+    .then(function(rows){
+      var existing = (rows[0] && rows[0].payload) || {};
+      existing.__tanks = {state: s, ts: new Date().toISOString()};
+      return fetch(SB_URL + '/rest/v1/hoc_sync_bus?id=eq.1', {
+        method:'PATCH',
+        headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+        body: JSON.stringify({updated_at:new Date().toISOString(), payload:existing})
+      });
+    })
+    .catch(function(){});
+  } catch(e){}
+}
+function loadTankConfig(){
+  try { return JSON.parse(localStorage.getItem(TANK_CONFIG_KEY) || '{}'); }
+  catch(e){ return {}; }
+}
+function saveTankConfig(c){
+  try { localStorage.setItem(TANK_CONFIG_KEY, JSON.stringify(c)); }
+  catch(e){}
+}
+function resetConfig(){
+  try { localStorage.removeItem(TANK_CONFIG_KEY); } catch(e){}
+  renderAll();
+}
+
+function N(n){ return (Number(n)||0).toLocaleString(); }
+
+function fmtDwell(ms){
+  if(ms === null || ms === undefined) return '—';
+  var h = Math.floor(ms/3600000);
+  if(h < 1) return Math.floor(ms/60000) + ' min';
+  if(h < 24) return h + ' hr';
+  var d = Math.floor(h/24);
+  var rh = h % 24;
+  return d + 'd ' + rh + 'h';
+}
+
+function getTankInfo(tankId){
+  var master = TANK_MASTER.find(function(t){ return t.id === tankId; }) || {};
+  var config = loadTankConfig()[tankId] || {};
+  var state  = loadTankState()[tankId]  || {};
+  return Object.assign({}, master, config, state, {id:tankId});
+}
+
+// ═══════════════════════════════════════════════════════════
+// DATA LOAD
+// ═══════════════════════════════════════════════════════════
+async function loadAll(){
+  try {
+    var r1 = await fetch(SB_URL + '/rest/v1/hoc_schedule?select=blob,uploaded_at&order=uploaded_at.desc&limit=1', {
+      headers: {apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY}
+    });
+    if(r1.ok){
+      var rows = await r1.json();
+      if(rows.length && rows[0].blob){
+        UPLOAD = rows[0].blob;
+        UPLOAD._uploaded_at = rows[0].uploaded_at;
+      }
+    }
+    if(!UPLOAD){
+      try {
+        var ls = localStorage.getItem('hoc_upload_v1');
+        if(ls) UPLOAD = JSON.parse(ls);
+      } catch(e){}
+    }
+    var r2 = await fetch(SB_URL + '/rest/v1/hoc_batches?select=*', {
+      headers: {apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY}
+    });
+    if(r2.ok){
+      var bs = await r2.json();
+      bs.forEach(function(b){
+        if(b.batch_id) BATCHES_REMOTE[b.batch_id] = b.data || {};
+      });
+    }
+    try { SHARED_SYNC = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}'); } catch(e){}
+  } catch(e){
+    console.warn('Load error:', e);
+  }
+  renderAll();
+}
+
+function getBatches(){
+  if(!UPLOAD || !UPLOAD.batches) return [];
+  return UPLOAD.batches.map(function(b){
+    var floor = BATCHES_REMOTE[b.batch] || {};
+    var shared = SHARED_SYNC[b.batch] || {};
+    return Object.assign({}, b, {
+      status:    floor.status || (shared.cc && shared.cc.status) || b.status || 'NOT STARTED',
+      actqty:    floor.actqty != null ? floor.actqty : b.actqty,
+      cc_status: (shared.cc && shared.cc.status) || '',
+      pw_status: (shared.pw && shared.pw.pw_status) || '',
+      tank:      (shared.tank && shared.tank.id) || null
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// RENDER — KPIs + Tank Board
+// ═══════════════════════════════════════════════════════════
+function renderAll(){
+  renderKPIs();
+  renderTankBoard();
+  renderAssignTable();
+  renderHistory();
+  renderConfig();
+
+  if(UPLOAD && UPLOAD._uploaded_at){
+    var ts = new Date(UPLOAD._uploaded_at);
+    document.getElementById('data-ts').textContent = 'Last schedule upload: ' + ts.toLocaleDateString('en-US',{month:'short',day:'numeric'}) + ' ' + ts.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+  }
+}
+
+function renderKPIs(){
+  var state = loadTankState();
+  var avail = 0, inUse = 0, cleaning = 0, offline = 0;
+  TANK_MASTER.forEach(function(t){
+    var s = (state[t.id] && state[t.id].status) || 'available';
+    if(s === 'available') avail++;
+    else if(s === 'cleaning') cleaning++;
+    else if(s === 'offline') offline++;
+    else inUse++;
+  });
+  var totalCap = TANK_MASTER.reduce(function(s,t){ return s + t.capacity; }, 0);
+  var totalTanks = TANK_MASTER.length;
+
+  var pendingAssign = getPendingAssignments().length;
+
+  var kpis = [
+    {l:'Total Tanks',     v:totalTanks,  s:'in master list',          c:''},
+    {l:'Available',       v:avail,       s:'ready for next batch',    c:'green'},
+    {l:'In Use',          v:inUse,       s:'filling / full / draining', c:'blue'},
+    {l:'Cleaning',        v:cleaning,    s:'CIP in progress',         c:'amber'},
+    {l:'Offline',         v:offline,     s:'unavailable',             c: offline > 0 ? 'red' : ''},
+    {l:'Pending Assign',  v:pendingAssign, s:'verified, need tank',   c: pendingAssign > 0 ? 'amber' : 'green'},
+    {l:'Total Capacity',  v:N(totalCap), s:'gallons across all tanks',c:'purple'},
+  ];
+  document.getElementById('kpis').innerHTML = kpis.map(function(k){
+    return '<div class="kpi ' + k.c + '"><div class="kl">' + k.l + '</div><div class="kv">' + k.v + '</div><div class="ks">' + k.s + '</div></div>';
+  }).join('');
+}
+
+function renderTankBoard(){
+  var state = loadTankState();
+  var config = loadTankConfig();
+  var nowMs = Date.now();
+
+  var grid = document.getElementById('tank-grid');
+  grid.innerHTML = TANK_MASTER.map(function(t){
+    var st = state[t.id] || {};
+    var cfg = config[t.id] || {};
+    var status = st.status || 'available';
+    var category = cfg.category || 'All-Purpose';
+
+    var caps = [];
+    caps.push('<span class="cap-pill cat">' + category + '</span>');
+    caps.push('<span class="cap-pill">' + N(t.capacity) + ' gal</span>');
+    if(t.heated) caps.push('<span class="cap-pill">Heated</span>');
+    if(t.double_sweep) caps.push('<span class="cap-pill">Sweep</span>');
+    if(t.homogenizer) caps.push('<span class="cap-pill">Homogenizer</span>');
+
+    var contentsHTML = '';
+    if(status === 'available' || status === 'offline'){
+      contentsHTML = '<div class="tank-empty-msg">' + (status === 'offline' ? 'Out of service' : 'Empty — ready') + '</div>';
+    } else {
+      var fillMs = st.filled_at ? (nowMs - new Date(st.filled_at).getTime()) : null;
+      var ageClass = '';
+      if(fillMs !== null){
+        if(fillMs > 72*3600*1000) ageClass = 'stale';
+        else if(fillMs > 24*3600*1000) ageClass = 'aging';
+      }
+      contentsHTML =
+        '<div class="tank-batch">' + (st.batch_id || '—') + '</div>' +
+        (st.formula ? '<div class="tank-formula">F.' + st.formula + (st.descr ? ' · ' + String(st.descr).slice(0,30) : '') + '</div>' : '') +
+        (fillMs !== null ? '<div class="tank-time ' + ageClass + '">In tank: ' + fmtDwell(fillMs) + '</div>' : '');
+    }
+
+    return '<div class="tank ' + status + '" onclick="openTankModal(\'' + t.id + '\')">' +
+      '<div class="tank-head">' +
+        '<div><div class="tank-id">' + t.id + '</div></div>' +
+        '<span class="tank-status s-' + status + '">' + status + '</span>' +
+      '</div>' +
+      '<div class="tank-caps">' + caps.join('') + '</div>' +
+      '<div class="tank-contents">' + contentsHTML + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// PENDING ASSIGNMENTS
+// ═══════════════════════════════════════════════════════════
+function getPendingAssignments(){
+  var batches = getBatches();
+  var now = new Date(); now.setHours(0,0,0,0);
+  var inSevenDays = new Date(now); inSevenDays.setDate(inSevenDays.getDate() + 7);
+  return batches.filter(function(b){
+    if(b.tank) return false;                                 // already assigned
+    if(b.status === 'COMPLETED') return false;
+    // verified by CC → definitely pending
+    if(b.cc_status && b.cc_status.indexOf('VERIFIED') >= 0 && b.cc_status.indexOf('HOLD') < 0) return true;
+    // OR due within 7 days
+    if(b.cmpddue){
+      try {
+        var d = new Date(b.cmpddue + 'T12:00:00');
+        if(!isNaN(d.getTime()) && d <= inSevenDays) return true;
+      } catch(e){}
+    }
+    return false;
+  });
+}
+
+function renderAssignTable(){
+  var rows = getPendingAssignments();
+  var t = document.getElementById('assign-table');
+  if(!rows.length){
+    t.innerHTML = '<tbody><tr><td><div class="empty-state"><div class="empty-icon">✓</div><div class="empty-title" style="color:#34D399">No batches awaiting tank assignment</div><div class="empty-sub">All current batches are either assigned, completed, or not yet ready</div></div></td></tr></tbody>';
+    return;
+  }
+  rows.sort(function(a,b){
+    return String(a.cmpddue || '9999').localeCompare(String(b.cmpddue || '9999'));
+  });
+  var h = '<thead><tr><th>Batch</th><th>Formula</th><th>Description</th><th>Line</th><th>Lbs</th><th>Cmpd Due</th><th>Verified?</th><th></th></tr></thead><tbody>';
+  rows.forEach(function(b){
+    var formula = parseInt(String(b.formula||b.item||'').replace(/[^0-9]/g,'').slice(0,4)) || 0;
+    var verified = b.cc_status && b.cc_status.indexOf('VERIFIED') >= 0;
+    h += '<tr class="no-hover">' +
+      '<td><strong>' + b.batch + '</strong></td>' +
+      '<td>F.' + formula + '</td>' +
+      '<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (b.desc || b.descr || b.description || '—') + '</td>' +
+      '<td>L' + (b.line || '—') + '</td>' +
+      '<td>' + N(b.lbs || b.origqty || 0) + '</td>' +
+      '<td>' + (b.cmpddue || '—') + '</td>' +
+      '<td>' + (verified ? '<span class="pill p-good">✓ Verified</span>' : '<span class="pill p-warn">Pending</span>') + '</td>' +
+      '<td><button class="btn btn-teal" onclick="openAssignModal(\'' + b.batch + '\')">Assign tank →</button></td>' +
+    '</tr>';
+  });
+  h += '</tbody>';
+  t.innerHTML = h;
+}
+
+// ═══════════════════════════════════════════════════════════
+// HISTORY
+// ═══════════════════════════════════════════════════════════
+function getHistory(){
+  try { return JSON.parse(localStorage.getItem('hoc_tank_history_v1') || '[]'); }
+  catch(e){ return []; }
+}
+function pushHistory(entry){
+  try {
+    var hist = getHistory();
+    hist.unshift(Object.assign({ts: new Date().toISOString()}, entry));
+    if(hist.length > 100) hist = hist.slice(0,100);
+    localStorage.setItem('hoc_tank_history_v1', JSON.stringify(hist));
+  } catch(e){}
+}
+function renderHistory(){
+  var hist = getHistory();
+  var t = document.getElementById('history-table');
+  if(!hist.length){
+    t.innerHTML = '<tbody><tr><td><div class="empty-state"><div class="empty-icon">📋</div><div class="empty-title">No activity yet</div><div class="empty-sub">Status changes and assignments will appear here</div></div></td></tr></tbody>';
+    return;
+  }
+  var h = '<thead><tr><th>When</th><th>Tank</th><th>Action</th><th>Detail</th><th>By</th></tr></thead><tbody>';
+  hist.slice(0,50).forEach(function(e){
+    var when = e.ts ? new Date(e.ts).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : '—';
+    h += '<tr class="no-hover"><td>' + when + '</td>' +
+      '<td><strong>' + (e.tank || '—') + '</strong></td>' +
+      '<td>' + (e.action || '—') + '</td>' +
+      '<td style="color:var(--text2)">' + (e.detail || '') + '</td>' +
+      '<td style="color:var(--text2)">' + (e.by || '—') + '</td></tr>';
+  });
+  h += '</tbody>';
+  t.innerHTML = h;
+}
+
+// ═══════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════
+function renderConfig(){
+  var config = loadTankConfig();
+  var t = document.getElementById('config-table');
+  var h = '<thead><tr><th>Tank</th><th>Capacity</th><th>Capabilities</th><th>Category</th><th>Notes</th></tr></thead><tbody>';
+  TANK_MASTER.forEach(function(tk){
+    var cfg = config[tk.id] || {};
+    var caps = [];
+    if(tk.heated) caps.push('Heated');
+    if(tk.double_sweep) caps.push('Double Sweep');
+    if(tk.homogenizer) caps.push('Homogenizer');
+    if(!caps.length) caps.push('Standard');
+
+    h += '<tr class="no-hover">' +
+      '<td><strong>' + tk.id + '</strong></td>' +
+      '<td>' + N(tk.capacity) + ' gal</td>' +
+      '<td>' + caps.join(' · ') + '</td>' +
+      '<td><select onchange="updateCategory(\'' + tk.id + '\', this.value)" style="font:inherit;font-size:10px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:3px 8px;border-radius:5px">' +
+        CATEGORIES.map(function(c){
+          return '<option value="' + c + '"' + ((cfg.category || 'All-Purpose') === c ? ' selected' : '') + '>' + c + '</option>';
+        }).join('') +
+      '</select></td>' +
+      '<td><input type="text" value="' + (cfg.notes || '').replace(/"/g,'&quot;') + '" placeholder="optional" onchange="updateNotes(\'' + tk.id + '\', this.value)" style="font:inherit;font-size:10px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:3px 8px;border-radius:5px;width:100%"></td>' +
+    '</tr>';
+  });
+  h += '</tbody>';
+  t.innerHTML = h;
+}
+
+function updateCategory(tankId, value){
+  var cfg = loadTankConfig();
+  if(!cfg[tankId]) cfg[tankId] = {};
+  cfg[tankId].category = value;
+  saveTankConfig(cfg);
+  pushHistory({tank:tankId, action:'Category changed', detail:'Set to ' + value, by:'compound_manager'});
+  renderAll();
+}
+function updateNotes(tankId, value){
+  var cfg = loadTankConfig();
+  if(!cfg[tankId]) cfg[tankId] = {};
+  cfg[tankId].notes = value;
+  saveTankConfig(cfg);
+}
+
+// ═══════════════════════════════════════════════════════════
+// TANK UPDATE MODAL
+// ═══════════════════════════════════════════════════════════
+function openTankModal(tankId){
+  var info = getTankInfo(tankId);
+  var state = loadTankState()[tankId] || {};
+  var caps = [N(info.capacity) + ' gal'];
+  if(info.heated) caps.push('Heated');
+  if(info.double_sweep) caps.push('Double Sweep');
+  if(info.homogenizer) caps.push('Homogenizer');
+
+  document.getElementById('modal-title').textContent = info.id + ' · ' + caps.join(' · ');
+
+  var h =
+    '<div class="form-row"><label>Status</label><select id="m-status">' +
+      STATUSES.map(function(s){ return '<option value="' + s + '"' + ((state.status || 'available') === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
+    '</select></div>' +
+    '<div class="form-row"><label>Batch ID</label><input id="m-batch" type="text" value="' + (state.batch_id || '').replace(/"/g,'&quot;') + '" placeholder="e.g. MAIN063462"></div>' +
+    '<div class="form-row"><label>Formula</label><input id="m-formula" type="text" value="' + (state.formula || '').replace(/"/g,'&quot;') + '" placeholder="e.g. 698"></div>' +
+    '<div class="form-row"><label>Description</label><input id="m-descr" type="text" value="' + (state.descr || '').replace(/"/g,'&quot;') + '" placeholder="optional"></div>' +
+    '<div class="form-row"><label>Filled At</label><input id="m-filled" type="datetime-local" value="' + (state.filled_at ? new Date(state.filled_at).toISOString().slice(0,16) : new Date().toISOString().slice(0,16)) + '"></div>' +
+    '<div class="form-row"><label>Operator</label><input id="m-by" type="text" placeholder="Your name"></div>' +
+    '<div class="form-row"><label>Notes</label><input id="m-notes" type="text" value="' + (state.notes || '').replace(/"/g,'&quot;') + '" placeholder="optional"></div>' +
+    '<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">' +
+      '<button class="btn btn-teal" onclick="saveTankUpdate(\'' + tankId + '\')">Save</button>' +
+      '<button class="btn btn-blue" onclick="markComplete(\'' + tankId + '\')">Mark Complete (clear)</button>' +
+      '<button class="btn btn-amber" onclick="markCleaning(\'' + tankId + '\')">Start Cleaning</button>' +
+      '<button class="btn" onclick="closeModal()">Cancel</button>' +
+    '</div>';
+
+  document.getElementById('modal-body').innerHTML = h;
+  document.getElementById('tank-modal').classList.add('open');
+}
+
+function saveTankUpdate(tankId){
+  var state = loadTankState();
+  var prev = state[tankId] || {};
+  var status = document.getElementById('m-status').value;
+  var batchId = document.getElementById('m-batch').value.trim();
+  var formula = document.getElementById('m-formula').value.trim();
+  var descr   = document.getElementById('m-descr').value.trim();
+  var filledRaw = document.getElementById('m-filled').value;
+  var by      = document.getElementById('m-by').value.trim();
+  var notes   = document.getElementById('m-notes').value.trim();
+
+  state[tankId] = {
+    status: status,
+    batch_id: batchId,
+    formula: formula,
+    descr: descr,
+    filled_at: filledRaw ? new Date(filledRaw).toISOString() : null,
+    notes: notes,
+    last_update_by: by || 'unknown',
+    last_update_at: new Date().toISOString()
+  };
+  saveTankState(state);
+
+  pushHistory({
+    tank: tankId,
+    action: 'Updated',
+    detail: 'Status: ' + status + (batchId ? ' · Batch: ' + batchId : ''),
+    by: by || 'unknown'
+  });
+
+  // If batch was assigned, mirror to shared sync for cross-dashboard visibility
+  if(batchId){
+    try {
+      var shared = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+      if(!shared[batchId]) shared[batchId] = {};
+      shared[batchId].tank = {id: tankId, ts: new Date().toISOString()};
+      localStorage.setItem('hoc_sync_v1', JSON.stringify(shared));
+    } catch(e){}
+  }
+
+  closeModal();
+  renderAll();
+}
+
+function markComplete(tankId){
+  if(!confirm('Mark tank ' + tankId + ' as empty? This clears the contents and sets status to Available.')) return;
+  var state = loadTankState();
+  state[tankId] = {status:'available', batch_id:'', formula:'', descr:'', filled_at:null, notes:'', last_update_at: new Date().toISOString()};
+  saveTankState(state);
+  pushHistory({tank:tankId, action:'Cleared', detail:'Tank emptied + marked available', by:'compound_manager'});
+  closeModal();
+  renderAll();
+}
+function markCleaning(tankId){
+  var state = loadTankState();
+  if(!state[tankId]) state[tankId] = {};
+  state[tankId].status = 'cleaning';
+  state[tankId].last_update_at = new Date().toISOString();
+  saveTankState(state);
+  pushHistory({tank:tankId, action:'Cleaning started', detail:'CIP in progress', by:'compound_manager'});
+  closeModal();
+  renderAll();
+}
+
+// ═══════════════════════════════════════════════════════════
+// ASSIGN MODAL
+// ═══════════════════════════════════════════════════════════
+function openAssignModal(batchId){
+  var batches = getBatches();
+  var b = batches.find(function(x){ return x.batch === batchId; });
+  if(!b){ alert('Batch not found in current schedule.'); return; }
+  var state = loadTankState();
+  var config = loadTankConfig();
+  var lbs = Number(b.lbs || b.origqty || 0);
+  // Rough conversion: 1 gallon ≈ 8 lbs (water-equivalent). Used for capacity check.
+  var gallons = lbs > 0 ? lbs / 8 : 0;
+
+  // Compatible tanks: available + capacity fits
+  var compatible = TANK_MASTER
+    .filter(function(t){
+      var s = (state[t.id] && state[t.id].status) || 'available';
+      if(s !== 'available') return false;
+      return t.capacity >= gallons;
+    })
+    .map(function(t){
+      var cfg = config[t.id] || {};
+      return {tank:t, category: cfg.category || 'All-Purpose'};
+    })
+    .sort(function(a,b){ return a.tank.capacity - b.tank.capacity; });
+
+  document.getElementById('modal-title').textContent = 'Assign batch ' + batchId + ' to tank';
+
+  var batchInfoHTML =
+    '<div style="background:#0F1623;border:1px solid var(--border);border-radius:6px;padding:10px 14px;margin-bottom:12px">' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:10px">' +
+        '<div><span style="color:var(--text3)">Batch:</span> <strong>' + batchId + '</strong></div>' +
+        '<div><span style="color:var(--text3)">Formula:</span> F.' + (parseInt(String(b.formula||b.item||'').replace(/[^0-9]/g,'').slice(0,4)) || 0) + '</div>' +
+        '<div><span style="color:var(--text3)">Line:</span> L' + (b.line || '—') + '</div>' +
+        '<div><span style="color:var(--text3)">Lbs:</span> ' + N(lbs) + '</div>' +
+        '<div><span style="color:var(--text3)">Approx gal:</span> ' + N(Math.round(gallons)) + '</div>' +
+        '<div><span style="color:var(--text3)">Cmpd Due:</span> ' + (b.cmpddue || '—') + '</div>' +
+      '</div>' +
+      (b.desc || b.descr || b.description ? '<div style="margin-top:6px;color:var(--text2);font-size:10px">' + (b.desc || b.descr || b.description) + '</div>' : '') +
+    '</div>';
+
+  var tanksHTML = '';
+  if(!compatible.length){
+    tanksHTML = '<div class="empty-state" style="padding:20px"><div class="empty-icon">⚠️</div><div class="empty-title">No compatible tanks available</div><div class="empty-sub">All tanks are either in use, too small, or offline. Check Tank Board for status.</div></div>';
+  } else {
+    tanksHTML = '<div style="font-size:10px;color:var(--text3);margin-bottom:8px;letter-spacing:.05em;text-transform:uppercase;font-weight:700">Compatible available tanks (sorted smallest fit first)</div>';
+    tanksHTML += compatible.map(function(c){
+      var t = c.tank;
+      var caps = [];
+      if(t.heated) caps.push('Heated');
+      if(t.double_sweep) caps.push('Sweep');
+      if(t.homogenizer) caps.push('Homogenizer');
+      var capsStr = caps.length ? ' · ' + caps.join(' · ') : '';
+      return '<div onclick="confirmAssign(\'' + batchId + '\', \'' + t.id + '\')" style="cursor:pointer;border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:6px;background:#0F1623;transition:all .12s" onmouseover="this.style.borderColor=\'#5EEAD4\';this.style.background=\'rgba(20,184,166,.05)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.background=\'#0F1623\'">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center">' +
+          '<div>' +
+            '<div style="font-weight:700;font-size:12px">' + t.id + '</div>' +
+            '<div style="font-size:9px;color:var(--text2);margin-top:2px">' + N(t.capacity) + ' gal · ' + c.category + capsStr + '</div>' +
+          '</div>' +
+          '<button class="btn btn-teal" style="flex-shrink:0">Assign →</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  document.getElementById('modal-body').innerHTML = batchInfoHTML + tanksHTML +
+    '<div style="margin-top:10px"><button class="btn" onclick="closeModal()">Cancel</button></div>';
+  document.getElementById('tank-modal').classList.add('open');
+}
+
+function confirmAssign(batchId, tankId){
+  var batches = getBatches();
+  var b = batches.find(function(x){ return x.batch === batchId; }) || {};
+  var formula = parseInt(String(b.formula||b.item||'').replace(/[^0-9]/g,'').slice(0,4)) || '';
+
+  var state = loadTankState();
+  state[tankId] = {
+    status: 'filling',
+    batch_id: batchId,
+    formula: String(formula),
+    descr: b.desc || b.descr || b.description || '',
+    filled_at: new Date().toISOString(),
+    notes: '',
+    last_update_by: 'compound_manager',
+    last_update_at: new Date().toISOString()
+  };
+  saveTankState(state);
+
+  pushHistory({
+    tank: tankId,
+    action: 'Batch assigned',
+    detail: batchId + ' (F.' + formula + ')',
+    by: 'compound_manager'
+  });
+
+  // Mirror to shared sync layer
+  try {
+    var shared = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+    if(!shared[batchId]) shared[batchId] = {};
+    shared[batchId].tank = {id: tankId, ts: new Date().toISOString()};
+    localStorage.setItem('hoc_sync_v1', JSON.stringify(shared));
+  } catch(e){}
+
+  closeModal();
+  renderAll();
+}
+
+function closeModal(){
+  document.getElementById('tank-modal').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════════════
+// PAGE NAV
+// ═══════════════════════════════════════════════════════════
+function P(p){
+  document.querySelectorAll('.page').forEach(function(el){ el.classList.remove('active'); });
+  document.querySelectorAll('.nb').forEach(function(el){ el.classList.remove('active'); });
+  document.getElementById('page-' + p).classList.add('active');
+  var idx = ['board','assign','history','config'].indexOf(p);
+  if(idx >= 0) document.querySelectorAll('.nb')[idx].classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ═══════════════════════════════════════════════════════════
+// AUTO-UPDATE + POLL
+// ═══════════════════════════════════════════════════════════
+(function(){
+  var today = new Date().toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'});
+  document.querySelectorAll('.js-today-date').forEach(function(el){ el.textContent = today; });
+})();
+
+loadAll();
+setInterval(loadAll, 15000);
+
+// ── CROSS-DEVICE TANK SYNC ──────────────────────────────────────────
+// Poll hoc_sync_bus for tank state updates from other tablets. If another
+// compound manager updates a tank on her tablet, this tablet picks it up
+// within ~15 seconds.
+let _tankLastSyncAt = null;
+async function pollTanksFromSync(){
+  try {
+    const r = await fetch(SB_URL + '/rest/v1/hoc_sync_bus?id=eq.1&select=updated_at,payload', {
+      headers: {'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}
+    });
+    if(!r.ok) return;
+    const rows = await r.json();
+    if(!rows.length) return;
+    const row = rows[0];
+    if(_tankLastSyncAt && row.updated_at <= _tankLastSyncAt) return;
+    _tankLastSyncAt = row.updated_at;
+    const payload = row.payload || {};
+    if(!payload.__tanks || !payload.__tanks.state) return;
+    // Don't overwrite if our local state is newer
+    const localTs = (loadTankState().__ts || 0);
+    const remoteTs = new Date(payload.__tanks.ts || 0).getTime();
+    if(remoteTs > localTs){
+      // Merge remote state into local
+      const remoteState = payload.__tanks.state;
+      try {
+        localStorage.setItem(TANK_STORAGE_KEY, JSON.stringify(remoteState));
+        // Re-render so the change is visible
+        if(typeof renderTanks === 'function') renderTanks();
+        if(typeof renderAll === 'function') renderAll();
+        if(typeof loadAll === 'function') loadAll();
+      } catch(e){}
+    }
+  } catch(e){}
+}
+pollTanksFromSync();
+setInterval(pollTanksFromSync, 15000);
+
+// Help button
+document.body.insertAdjacentHTML('beforeend',
+  '<button onclick="window.location.href=\'HOC_Onboarding.html\'" title="Onboarding & operations guide" style="position:fixed;bottom:24px;right:24px;width:44px;height:44px;border-radius:50%;background:#14B8A6;color:white;border:none;font-size:20px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(20,184,166,.4);z-index:998">?</button>');
+</script>
+<script src="hoc_events.js"></script>
+</body></html>

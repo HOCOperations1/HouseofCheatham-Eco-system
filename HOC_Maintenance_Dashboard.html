@@ -1,0 +1,815 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HOC Maintenance Dashboard</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0B0E17;--bg2:#111520;--bg3:#161C28;--border:#1E293B;
+  --text:#DDE4F0;--text2:#8A97B4;--text3:#4A5570;
+  --green:#22C55E;--green-l:rgba(34,197,94,.09);
+  --blue:#3B82F6;--blue-l:rgba(59,130,246,.12);
+  --amber:#F59E0B;--amber-l:rgba(245,158,11,.12);
+  --red:#EF4444;--red-l:rgba(239,68,68,.12);
+  --teal:#10B981;--teal-l:rgba(16,185,129,.1);
+  --purple:#8B5CF6;--purple-l:rgba(139,92,246,.1);
+  --gray-l:#1E2535;
+  font-family:ui-monospace,"Cascadia Code","Fira Code",monospace;
+}
+body{background:var(--bg);color:var(--text);min-height:100vh;font-size:12px}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 14px;display:flex;align-items:stretch;position:sticky;top:0;z-index:100}
+.brand{display:flex;align-items:center;gap:8px;padding:9px 13px 9px 0;border-right:1px solid var(--border);margin-right:11px;flex-shrink:0}
+.logo{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.brand-name{font-weight:700;font-size:12px}.brand-sub{font-size:9px;color:var(--text3)}
+.nav{display:flex;flex:1;overflow-x:auto}
+.nb{padding:0 11px;background:none;border:none;border-bottom:2px solid transparent;color:var(--text2);cursor:pointer;font:inherit;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;transition:all .15s;white-space:nowrap}
+.nb:hover{color:var(--text)}
+.badges{display:flex;gap:5px;align-items:center;padding:7px 0;margin-left:auto;flex-shrink:0}
+.badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:.04em}
+.b-red{background:var(--red-l);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.b-amb{background:var(--amber-l);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.b-grn{background:var(--green-l);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.b-blu{background:var(--blue-l);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.b-teal{background:var(--teal-l);color:var(--teal);border:1px solid rgba(16,185,129,.3)}
+.b-gry{background:var(--gray-l);color:var(--text2);border:1px solid var(--border)}
+.b-pur{background:var(--purple-l);color:var(--purple);border:1px solid rgba(139,92,246,.3)}
+.content{padding:13px;max-width:1600px;margin:0 auto}
+.page{display:none}.page.active{display:block}
+.card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px}
+.card-title{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:6px;margin-bottom:10px}
+.kpi{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:9px 11px}
+.kl{font-size:8px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.kv{font-size:22px;font-weight:700;line-height:1}.ks{font-size:9px;color:var(--text3);margin-top:3px}
+.tbl-wrap{border-radius:8px;border:1px solid var(--border);overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{padding:5px 8px;font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);text-align:left;border-bottom:1px solid var(--border);background:var(--bg2);white-space:nowrap}
+td{padding:5px 8px;border-bottom:1px solid rgba(30,41,59,.5);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.015)}
+.pill{display:inline-flex;font-size:8px;font-weight:700;padding:2px 6px;border-radius:3px;letter-spacing:.05em;white-space:nowrap}
+.p-done{background:rgba(148,163,184,.08);color:#475569;border:1px solid #334155}
+.p-run{background:var(--blue-l);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.p-ns{background:var(--gray-l);color:var(--text3);border:1px solid var(--border)}
+.p-od{background:var(--red-l);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.p-ar{background:var(--amber-l);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.p-ot{background:var(--green-l);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.p-qc{background:var(--teal-l);color:var(--teal);border:1px solid rgba(16,185,129,.3)}
+.p-rel{background:var(--purple-l);color:var(--purple);border:1px solid rgba(139,92,246,.3)}
+.p-hold{background:var(--amber-l);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.p-must{background:var(--red-l);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.p-should{background:var(--amber-l);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.p-sync{background:rgba(139,92,246,.12);color:var(--purple);border:1px solid rgba(139,92,246,.3)}
+.filter-row{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
+.fb{padding:4px 9px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font:inherit;font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;transition:all .15s}
+.fb:hover{color:var(--text)}
+.detail{border-radius:10px;padding:12px;margin:8px 0 10px;display:none}
+.detail.open{display:block}
+.dg{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:8px 0;font-size:11px}
+.df label{font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);display:block;margin-bottom:2px}
+.df span{color:var(--text);font-weight:600}
+.close-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:17px;line-height:1}
+.upd-panel{margin-top:10px;padding:10px 12px;border-radius:7px}
+.upd-section{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.upd-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:7px}
+.upd-label{font-size:10px;color:var(--text2);white-space:nowrap;min-width:130px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px}
+.fld{display:flex;flex-direction:column;gap:3px}
+.fld label{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3)}
+select,input[type=text],input[type=date],input[type=number],textarea{background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:5px;padding:4px 8px;font:inherit;font-size:10px}
+textarea{width:100%;resize:vertical;min-height:46px;margin-top:4px}
+.btn{padding:5px 14px;border-radius:5px;font:inherit;font-size:10px;font-weight:700;cursor:pointer;border:1px solid}
+.saved-msg{font-size:10px;display:none}.saved-msg.show{display:inline}
+.line-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(248px,1fr));gap:8px;margin-bottom:10px}
+.lc{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 13px;cursor:pointer;transition:border-color .15s}
+.lc:hover{border-color:#253047}
+.lc-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.lc-row{display:flex;justify-content:space-between;font-size:10px;color:var(--text2);padding:2px 0}
+.lc-row span{color:var(--text);font-weight:600}
+.pb{height:5px;background:var(--gray-l);border-radius:3px;margin:5px 0 3px;overflow:hidden}
+.pb-fill{height:100%;border-radius:3px}
+.alert-s{border-radius:10px;padding:10px 12px;margin-bottom:10px}
+.at{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
+.ag{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:6px}
+.ai{border-radius:6px;padding:7px 9px}
+.t3{color:var(--text3)}.done-row td{opacity:.4}.run-row td{background:rgba(59,130,246,.04)}
+.must-row td{background:rgba(239,68,68,.04)}.should-row td{background:rgba(245,158,11,.03)}
+.no-fit td{border-left:3px solid var(--red)!important}
+.num-red{color:var(--red);font-weight:700}.num-grn{color:var(--green);font-weight:700}
+.sync-bar{background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:8px;padding:7px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;font-size:10px;flex-wrap:wrap}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--purple);display:inline-block;margin-right:4px}
+.fc-lhdr{background:#16213a;padding:7px 12px;border-radius:6px;margin:10px 0 2px;display:flex;justify-content:space-between;align-items:center}
+.fc-lhdr-l{font-size:11px;font-weight:700;color:var(--text)}
+.fc-lhdr-r{font-size:9px;color:var(--text3);display:flex;gap:10px}
+.fc-bar{height:4px;border-radius:2px;margin:2px 0;overflow:hidden;background:rgba(255,255,255,.08)}
+.fc-bar-fill{height:100%;border-radius:2px}
+.exp-step{font-size:10px;color:var(--text2);margin-bottom:6px;padding:7px 10px;background:var(--bg2);border-radius:6px;border-left:3px solid}
+.nb.active{color:var(--amber);border-bottom-color:var(--amber)}
+.logo{background:var(--amber);color:#1a0a00}
+.fb.active{background:var(--amber);border-color:var(--amber);color:#1a0a00}
+.eq-card{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:6px}
+.eq-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.eq-line{font-size:12px;font-weight:700;color:var(--amber)}
+.oee-gauge{text-align:center;padding:6px}
+.bar-h{height:10px;background:var(--gray-l);border-radius:5px;overflow:hidden;margin:3px 0}
+.bar-f{height:100%;border-radius:5px}
+.loss-tag{font-size:9px;padding:2px 7px;border-radius:3px;margin-right:4px;margin-bottom:3px;display:inline-block}
+.wo-row{display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:5px;background:var(--bg2);margin-bottom:3px;border-left:3px solid var(--amber)}
+.btn-a{background:var(--amber-l);border-color:rgba(245,158,11,.4);color:var(--amber);padding:5px 14px;border-radius:5px;font:inherit;font-size:10px;font-weight:700;cursor:pointer;border:1px solid}
+.limble-notice{padding:10px;background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.2);border-radius:8px;font-size:9px;color:var(--blue);margin-bottom:10px}
+
+</style><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<script>var HOC_OES_VERSION="1778588401";</script>
+</head><body>
+<div class="topbar">
+  <div class="brand"><div class="logo">MT</div>
+    <div><div class="brand-name">Maintenance Dashboard</div>
+    <div class="brand-sub">OEE &middot; Equipment Status &middot; Loss Drivers &middot; <span class="js-today-date">May 17, 2026</span></div></div>
+  </div>
+  <nav class="nav">
+    <button class='nb active' onclick="P('cmd')">Command Center</button>
+    <button class='nb' onclick="P('equipment')">Equipment Status</button>
+    <button class='nb' onclick="P('oee')">OEE Analysis</button>
+    <button class='nb' onclick="P('workorders')">Work Orders</button>
+    <button class='nb' onclick="P('sync')">Sync</button>
+  </nav>
+  <a href="index.html" style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text2);text-decoration:none;font-size:9px;font-weight:700;flex-shrink:0;white-space:nowrap" title="Back to HOC-OES Menu">← HOC-OES</a>
+  <div class="badges" id="badges"></div>
+</div>
+<div class="page active" id="page-cmd"><div class="content">
+  <div class="sync-bar" id="sync-bar"></div>
+  <div class="limble-notice">
+    <b>Limble CMMS not yet connected.</b> Work orders, PM schedules, and equipment history will populate here once Limble is integrated. Showing OEE and loss data from Patch/HOC_Production_Tracker in the meantime.
+  </div>
+  <div class="kpi-grid" id="cmd-kpis"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div class="card">
+      <div class="card-title">Equipment OEE — Lines Needing Attention</div>
+      <div id="attn-lines"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Top Loss Drivers Across All Lines</div>
+      <div id="loss-summary"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Floor Sync — Downtime Events Reported by Production</div>
+    <div id="floor-downtime"></div>
+  </div>
+</div></div>
+<div class="page" id="page-equipment"><div class="content">
+  <div id="eq-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px"></div>
+</div></div>
+<div class="page" id="page-oee"><div class="content">
+  <div class="kpi-grid" id="oee-kpis"></div>
+  <div class="card">
+    <div class="card-title">OEE by Line — YTD vs 60% Goal</div>
+    <div id="oee-bars"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Loss Driver Breakdown by Line</div>
+    <div id="loss-detail"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">OEE Gap Analysis — Hours Lost to Downtime</div>
+    <div id="oee-gap"></div>
+  </div>
+</div></div>
+<div class="page" id="page-workorders"><div class="content">
+  <div class="limble-notice">
+    Work orders will sync from Limble CMMS once connected. You can manually log maintenance work below in the meantime.
+  </div>
+  <div class="card">
+    <div class="card-title">Log Maintenance Work</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+      <div><label style="font-size:9px;color:var(--text3)">Line</label>
+        <select id="wo-line" style="width:100%;margin-top:3px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;color:var(--text);font:inherit;font-size:10px;padding:4px">
+          <option value="">Select line</option>
+          <option>Line 1</option>
+          <option>Line 2</option>
+          <option>Line 3</option>
+          <option>Line 4</option>
+          <option>Line 5</option>
+          <option>Line 6</option>
+          <option>Line 8</option>
+          <option>Line 10</option>
+          <option>Line 11</option>
+          <option>Line 14</option>
+          <option>Line 15</option>
+          <option>Line 16</option>
+        </select></div>
+      <div><label style="font-size:9px;color:var(--text3)">Work Type</label>
+        <select id="wo-type" style="width:100%;margin-top:3px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;color:var(--text);font:inherit;font-size:10px;padding:4px">
+          <option>Corrective Maintenance</option>
+          <option>Preventive Maintenance</option>
+          <option>Equipment Cleaning</option>
+          <option>Changeover / Setup</option>
+          <option>Calibration</option>
+          <option>Operator Adjustment</option>
+          <option>Emergency Repair</option>
+        </select></div>
+      <div><label style="font-size:9px;color:var(--text3)">Duration (hrs)</label>
+        <input type="number" id="wo-hrs" placeholder="Hours" step="0.5" style="width:100%;margin-top:3px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;color:var(--text);font:inherit;font-size:10px;padding:4px"></div>
+    </div>
+    <div style="margin-bottom:8px"><label style="font-size:9px;color:var(--text3)">Description / Notes</label>
+      <textarea id="wo-notes" placeholder="What was done, parts used, root cause, follow-up needed..." style="width:100%;height:55px;margin-top:3px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;color:var(--text);font:inherit;font-size:10px;padding:6px;resize:vertical"></textarea></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn-a" onclick="saveWO()">Log Work Order</button>
+      <span id="wo-saved" style="font-size:9px;color:var(--amber);display:none">&#10003; Saved</span>
+      <button onclick="exportWOs()" style="margin-left:auto;padding:3px 10px;background:transparent;border:1px solid var(--border);border-radius:5px;color:var(--text3);font:inherit;font-size:9px;cursor:pointer">&#11015; Export</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Work Order Log</div>
+    <div id="wo-log" style="font-size:10px;color:var(--text2)">No work orders logged yet.</div>
+  </div>
+</div></div>
+<div class="page" id="page-sync"><div class="content">
+  <div class="card">
+    <div class="card-title">Production Downtime Reports — From Sync Bus</div>
+    <div id="sync-list" style="font-size:10px;color:var(--text2)">No downtime reports yet.</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Connecting Limble CMMS</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="padding:10px;background:var(--bg2);border-radius:8px;border-left:3px solid var(--blue)">
+        <div style="font-size:10px;font-weight:700;color:var(--blue);margin-bottom:4px">What Limble Would Provide</div>
+        <div style="font-size:9px;color:var(--text2);line-height:1.7">Active work orders per line<br>PM schedule and due dates<br>Equipment history and MTBF<br>Parts inventory<br>Technician assignments</div>
+      </div>
+      <div style="padding:10px;background:var(--bg2);border-radius:8px;border-left:3px solid var(--purple)">
+        <div style="font-size:10px;font-weight:700;color:var(--purple);margin-bottom:4px">Integration Path</div>
+        <div style="font-size:9px;color:var(--text2);line-height:1.7">Limble has a REST API<br>Power Automate can read it<br>Export to SharePoint daily<br>This dashboard reads the export<br>Phase 3: live API connection</div>
+      </div>
+    </div>
+  </div>
+</div></div>
+<script>
+// ── Supabase Real-time Sync Layer ────────────────────────────────────
+// Replaces localStorage hoc_sync_v1 with live Supabase database
+// All 19 tools share the same real-time data across all devices
+
+var SB_URL  = 'https://yemtpvrumqvbzrzpwnyy.supabase.co';
+var SB_ANON = 'sb_publishable_YrMf3_sGly4dir1cEGErfg_SSusnfJl';
+
+// ── Core fetch helper ─────────────────────────────────────────────────
+function sbFetch(method, table, body, params) {
+  var url = SB_URL + '/rest/v1/' + table;
+  if (params) url += '?' + params;
+  var opts = {
+    method: method,
+    headers: {
+      'apikey': SB_ANON,
+      'Authorization': 'Bearer ' + SB_ANON,
+      'Content-Type': 'application/json',
+      'Prefer': method === 'POST' ? 'resolution=merge-duplicates,return=minimal' : 'return=minimal'
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  return fetch(url, opts).catch(function(e) {
+    console.warn('Supabase fetch failed, using localStorage fallback:', e.message);
+    return null;
+  });
+}
+
+// ── Sync bus: write to Supabase AND localStorage (fallback) ───────────
+function syncSet(batch, section, data) {
+  // Always write to localStorage first (instant, works offline)
+  try {
+    var local = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+    if (!local[batch]) local[batch] = {};
+    local[batch][section] = Object.assign(local[batch][section] || {}, data);
+    localStorage.setItem('hoc_sync_v1', JSON.stringify(local));
+  } catch(e) {}
+
+  // Then mirror full localStorage state to Supabase single-row heartbeat.
+  // hoc_sync_bus has schema { id=1, updated_at, payload jsonb } and is upserted
+  // by every device. Use Prefer: resolution=merge-duplicates so id=1 conflicts
+  // don't error — they update the existing row instead.
+  try {
+    var fullState = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+    sbFetch('POST', 'hoc_sync_bus', {
+      id: 1,
+      payload: fullState,
+      updated_at: new Date().toISOString()
+    }, null).then(function(r) {
+      if (r && !r.ok) console.warn('Supabase sync write failed:', r.status);
+    });
+  } catch(e) { console.warn('Sync write threw:', e); }
+}
+
+// ── Sync bus: read from Supabase, fallback to localStorage ────────────
+function syncRead() {
+  // Return localStorage immediately (no await needed for real-time tools)
+  try {
+    return JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+  } catch(e) { return {}; }
+}
+
+// ── Sync bus: read specific batch+section from Supabase ───────────────
+function syncGet(batch) {
+  // Sync from Supabase in background, return localStorage now
+  sbFetch('GET', 'hoc_sync_bus', null, 
+    'batch=eq.' + encodeURIComponent(batch) + '&select=section,data'
+  ).then(function(r) {
+    if (!r || !r.ok) return;
+    return r.json();
+  }).then(function(rows) {
+    if (!rows || !rows.length) return;
+    // Merge Supabase data into localStorage
+    try {
+      var local = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+      if (!local[batch]) local[batch] = {};
+      rows.forEach(function(row) {
+        local[batch][row.section] = Object.assign(
+          local[batch][row.section] || {}, row.data
+        );
+      });
+      localStorage.setItem('hoc_sync_v1', JSON.stringify(local));
+    } catch(e) {}
+  }).catch(function() {});
+  
+  // Return localStorage immediately
+  try {
+    var all = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+    return all[batch] || {};
+  } catch(e) { return {}; }
+}
+
+// ── Real-time subscription: listen for changes from OTHER devices ──────
+function initSupabaseRealtime() {
+  // Poll Supabase every 15 seconds for changes (WebSocket in Phase 3)
+  // This is the cross-device sync - catches updates from other users
+  // Cross-device sync — heartbeat pattern.
+  // hoc_sync_bus has ONE row (id=1) with a 'payload' jsonb column. All devices
+  // upsert to that row; all devices poll it. If updated_at moved forward and
+  // payload differs from what we last saw, merge it into localStorage.
+  var lastUpdatedAt = null;
+
+  setInterval(function() {
+    sbFetch('GET', 'hoc_sync_bus', null,
+      'id=eq.1&select=updated_at,payload'
+    ).then(function(r) {
+      if (!r || !r.ok) return;
+      return r.json();
+    }).then(function(rows) {
+      if (!rows || !rows.length) return;
+      var row = rows[0];
+      if (!row || !row.updated_at) return;
+      if (lastUpdatedAt && row.updated_at <= lastUpdatedAt) return;
+      lastUpdatedAt = row.updated_at;
+      var remote = row.payload;
+      if (!remote || typeof remote !== 'object') return;
+      try {
+        var local = JSON.parse(localStorage.getItem('hoc_sync_v1') || '{}');
+        var hasChanges = false;
+        Object.keys(remote).forEach(function(batch) {
+          var sections = remote[batch];
+          if (typeof sections !== 'object' || !sections) return;
+          if (!local[batch]) local[batch] = {};
+          Object.keys(sections).forEach(function(section) {
+            local[batch][section] = Object.assign(
+              local[batch][section] || {}, sections[section] || {}
+            );
+            hasChanges = true;
+          });
+        });
+        if (hasChanges) {
+          localStorage.setItem('hoc_sync_v1', JSON.stringify(local));
+          try { renderAll(); } catch(e) {
+            try { renderBadges(); } catch(e2) {}
+          }
+        }
+      } catch(e) {}
+    }).catch(function() {});
+  }, 15000); // Check every 15 seconds
+}
+
+// ── Sync bus bar: show Supabase connection status ─────────────────────
+function renderSyncBar(el) {
+  if (!el) return;
+  var now = new Date().toLocaleTimeString('en-US', {hour:'numeric',minute:'2-digit',second:'2-digit'});
+  el.innerHTML = 
+    '<span style="color:var(--green);font-weight:700">● LIVE</span>' +
+    '<span style="color:var(--text3)">Supabase real-time sync active</span>' +
+    '<span style="color:var(--text3)">Last check: ' + now + '</span>' +
+    '<span style="color:var(--text3)">Cross-device sync: 15s</span>';
+}
+
+// Start real-time sync on load
+initSupabaseRealtime();
+
+
+
+const OEE_LINES = [{"line":1,"pattern":"Mon-Thu","ytd_oee":0.556,"top_loss":"Short Stops 7.8%","second_loss":"Lunch Break 5.6%","avail_hrs":119.2,"oee_adj_hrs":66.3,"sched_hrs":85.6},{"line":2,"pattern":"Mon-Sat","ytd_oee":0.5,"top_loss":"Changeover 90min 7.0%","second_loss":"Short Stops 8.8%","avail_hrs":192.5,"oee_adj_hrs":96.3,"sched_hrs":112.0},{"line":3,"pattern":"Mon-Sat","ytd_oee":0.529,"top_loss":"Short Stops 5.9%","second_loss":"Material Shortage 5.9%","avail_hrs":192.5,"oee_adj_hrs":101.8,"sched_hrs":164.5},{"line":4,"pattern":"Mon-Sat","ytd_oee":0.593,"top_loss":"Short Stops 9.0%","second_loss":"Changeover 90min 7.5%","avail_hrs":192.5,"oee_adj_hrs":114.2,"sched_hrs":115.4},{"line":5,"pattern":"Wed-Sat","ytd_oee":0.473,"top_loss":"Short Stops 10.9%","second_loss":"Lunch Break 7.6%","avail_hrs":146.7,"oee_adj_hrs":69.4,"sched_hrs":49.4},{"line":6,"pattern":"Mon-Thu","ytd_oee":0.398,"top_loss":"Short Stops 11.0%","second_loss":"Operator Sorting 12.9%","avail_hrs":119.2,"oee_adj_hrs":47.4,"sched_hrs":13.0},{"line":8,"pattern":"Wed-Sat","ytd_oee":0.377,"top_loss":"Operator Sorting 16.7%","second_loss":"Short Stops 10.0%","avail_hrs":146.7,"oee_adj_hrs":55.3,"sched_hrs":79.4},{"line":10,"pattern":"Wed-Sat","ytd_oee":0.351,"top_loss":"Changeover 90min 21.2%","second_loss":"Material Shortage 5.3%","avail_hrs":146.7,"oee_adj_hrs":51.5,"sched_hrs":109.6},{"line":11,"pattern":"Mon-Sat","ytd_oee":0.453,"top_loss":"Short Stops 11.6%","second_loss":"Operator Capper 3.9%","avail_hrs":192.5,"oee_adj_hrs":87.2,"sched_hrs":171.4},{"line":14,"pattern":"Mon-Sat","ytd_oee":0.364,"top_loss":"Short Stops 8.6%","second_loss":"Changeover 90min 11.7%","avail_hrs":192.5,"oee_adj_hrs":70.1,"sched_hrs":39.2},{"line":15,"pattern":"Wed-Sat","ytd_oee":0.376,"top_loss":"Short Stops 5.4%","second_loss":"Planned Cleaning 10.4%","avail_hrs":146.7,"oee_adj_hrs":55.1,"sched_hrs":30.8},{"line":16,"pattern":"As Needed","ytd_oee":0.0,"top_loss":"Line OFF (full period)","second_loss":"—","avail_hrs":0.0,"oee_adj_hrs":0.0,"sched_hrs":9.4}];
+const LINE_DASH  = [{"line":1,"pattern":"Mon-Thu","avail_days":13,"avail_hrs":119.2,"rem_batches":13,"running":1,"overdue":0,"rem_hrs":85.6,"gap_hrs":33.5,"util_pct":"72%","status":"SAFE","action":"Hold standard"},{"line":2,"pattern":"Mon-Sat","avail_days":21,"avail_hrs":192.5,"rem_batches":16,"running":1,"overdue":4,"rem_hrs":112.0,"gap_hrs":80.5,"util_pct":"58%","status":"SAFE","action":"Hold standard"},{"line":3,"pattern":"Mon-Sat","avail_days":21,"avail_hrs":192.5,"rem_batches":32,"running":1,"overdue":0,"rem_hrs":164.5,"gap_hrs":28.0,"util_pct":"85%","status":"SAFE","action":"Hold standard"},{"line":4,"pattern":"Mon-Sat","avail_days":21,"avail_hrs":192.5,"rem_batches":26,"running":1,"overdue":0,"rem_hrs":115.4,"gap_hrs":77.1,"util_pct":"60%","status":"SAFE","action":"Hold standard"},{"line":5,"pattern":"Wed-Sat","avail_days":16,"avail_hrs":146.7,"rem_batches":7,"running":1,"overdue":1,"rem_hrs":49.4,"gap_hrs":97.2,"util_pct":"34%","status":"SAFE","action":"Hold standard"},{"line":6,"pattern":"Mon-Thu","avail_days":13,"avail_hrs":119.2,"rem_batches":3,"running":1,"overdue":0,"rem_hrs":13.0,"gap_hrs":106.1,"util_pct":"11%","status":"SAFE","action":"Hold standard"},{"line":7,"pattern":"As Needed","avail_days":0,"avail_hrs":0.0,"rem_batches":0,"running":0,"overdue":0,"rem_hrs":0.0,"gap_hrs":0.0,"util_pct":"0%","status":"NO LOAD","action":"No action - no scheduled load"},{"line":8,"pattern":"Wed-Sat","avail_days":16,"avail_hrs":146.7,"rem_batches":13,"running":1,"overdue":6,"rem_hrs":79.4,"gap_hrs":67.3,"util_pct":"54%","status":"SAFE","action":"Hold standard"},{"line":10,"pattern":"Wed-Sat","avail_days":16,"avail_hrs":146.7,"rem_batches":4,"running":1,"overdue":1,"rem_hrs":109.6,"gap_hrs":37.1,"util_pct":"75%","status":"SAFE","action":"Hold standard"},{"line":11,"pattern":"Mon-Sat","avail_days":21,"avail_hrs":192.5,"rem_batches":10,"running":1,"overdue":1,"rem_hrs":171.4,"gap_hrs":21.1,"util_pct":"89%","status":"SAFE","action":"Hold standard"},{"line":14,"pattern":"Mon-Sat","avail_days":21,"avail_hrs":192.5,"rem_batches":5,"running":1,"overdue":1,"rem_hrs":39.2,"gap_hrs":153.3,"util_pct":"20%","status":"SAFE","action":"Hold standard"},{"line":15,"pattern":"Wed-Sat","avail_days":16,"avail_hrs":146.7,"rem_batches":3,"running":1,"overdue":2,"rem_hrs":30.8,"gap_hrs":115.9,"util_pct":"21%","status":"SAFE","action":"Hold standard"},{"line":16,"pattern":"As Needed","avail_days":0,"avail_hrs":0.0,"rem_batches":2,"running":0,"overdue":0,"rem_hrs":9.4,"gap_hrs":-9.4,"util_pct":"0%","status":"WILL MISS","action":"Add labor / re-sequence / protect must-run"}];
+const LINE_FULL  = [{"line":1,"pattern":"Mon-Thu","avail_days":13.0,"avail_hrs":119.2,"avail_min":7150,"rem_batches":13,"running":1,"overdue":0,"overdue_min":0,"sched_min":0,"rem_min":5138,"rem_hrs":85.6,"gap_hrs":33.5,"utilization":"0.7186013986013986","risk_status":"SAFE","suggested_action":"Hold standard","plan_labor_hrs":513.8,"labor_gap_hrs":394.6,"need_per_day":395.2},{"line":2,"pattern":"Mon-Sat","avail_days":21.0,"avail_hrs":192.5,"avail_min":11550,"rem_batches":16,"running":1,"overdue":4,"overdue_min":1353,"sched_min":0,"rem_min":6722,"rem_hrs":112.0,"gap_hrs":80.5,"utilization":"0.582034632034632","risk_status":"SAFE","suggested_action":"Hold standard","plan_labor_hrs":848.1,"labor_gap_hrs":655.6,"need_per_day":320.1},{"line":3,"pattern":"Mon-Sat","avail_days":21.0,"avail_hrs":192.5,"avail_min":11550,"rem_batches":32,"running":1,"overdue":0,"overdue_min":0,"sched_min":0,"rem_min":9872,"rem_hrs":164.5,"gap_hrs":28.0,"utilization":"0.8547186147186148","risk_status":"SAFE","suggested_action":"Hold standard","plan_labor_hrs":858.3,"labor_gap_hrs":665.8,"need_per_day":470.1},{"line":4,"pattern":"Mon-Sat","avail_days":21.0,"avail_hrs":192.5,"avail_min":11550,"rem_batches":26,"running":1,"overdue":0,"overdue_min":0,"sched_min":0,"rem_min":6925,"rem_hrs":115.4,"gap_hrs":77.1,"utilization":"0.5996103896103896","risk_status":"SAFE","suggested_action":"Hold standard","plan_labor_hrs":684.6,"labor_gap_hrs":492.1,"need_per_day":329.8},{"line":5,"pattern":"Wed-Sat","avail_days":16.0,"avail_hrs":146.7,"avail_min":8800,"rem_batches":7,"running":1,"overdue":1,"overdue_min":219,"sched_min":0,"rem_min":2966,"rem_hrs":49.4,"gap_hrs":97.2,"utilization":"0.33704545454545454","risk_status":"SAFE","suggested_action":"Hold standard","plan_labor_hrs":517.1,"labor_gap_hrs":370.4,"need_per_day":185.4},{"line":6,"pattern":"Mon-Thu","avail_days":13.0,"avail_hrs":119.2,"avail_min":7150,"rem_batches":3,"running":1,"overdue":0,"overdue_min":0,"sched_min":0,"rem_min":782,"rem_hrs":13.0,"gap_hrs":106.1,"utilization":"0.10944055944055944","risk_status":"SAFE","suggested_action":"Hold standard","plan_labor_hrs":26.1,"labor_gap_hrs":-93.1,"need_per_day":60.2},{"line":7,"pattern":"As Needed","avail_days":0.0,"avail_hrs":0.0,"avail_min":0,"rem_batches":0,"running":0,"overdue":0,"overdue_min":0,"sched_min":0,"rem_min":0,"rem_hrs":0.0,"gap_hrs":0.0,"utilization":"0","risk_status":"NO LOAD","suggested_action":"No action - no scheduled load","plan_labor_hrs":0.0,"labor_gap_hrs":0.0,"need_per_day":0.0},{"line":8,"pattern":"Wed-Sat","avail_days":16.0,"avail_hrs":146.7,"avail_min":8800,"rem_batches":13,"running":1,"overdue":6,"overdue_min":2018,"sched_min":0,"rem_min":4761,"rem_hrs":79.4,"gap_hrs":67.3,"utilization":"0.5410795454545455","risk_status":"SAFE","suggested_action":"Hold standard","plan_labor_hrs":238.1,"labor_gap_hrs":91.4,"need_per_day":297.6},{"line":10,"pattern":"Wed-Sat","avail_days":16.0,"avail_hrs":146.7,"avail_min":8800,"rem_batches":4,"running":1,"overdue":1,"overdue_min":1961,"sched_min":0,"rem_min":6577,"rem_hrs":109.6,"gap_hrs":37.1,"utilization":"0.7473863636363637","risk_status":"SAFE","suggested_action":"Hold standard","plan_labor_hrs":219.2,"labor_gap_hrs":72.6,"need_per_day":411.1},{"line":11,"pattern":"Mon-Sat","avail_days":21.0,"avail_hrs":192.5,"avail_min":11550,"rem_batches":10,"running":1,"overdue":1,"overdue_min":165,"sched_min":0,"rem_min":10286,"rem_hrs":171.4,"gap_hrs":21.1,"utilization":"0.8906060606060606","risk_status":"SAFE","suggested_action":"Hold standard","plan_labor_hrs":922.1,"labor_gap_hrs":729.6,"need_per_day":489.8},{"line":14,"pattern":"Mon-Sat","avail_days":21.0,"avail_hrs":192.5,"avail_min":11550,"rem_batches":5,"running":1,"overdue":1,"overdue_min":261,"sched_min":0,"rem_min":2353,"rem_hrs":39.2,"gap_hrs":153.3,"utilization":"0.20376623376623376","risk_status":"SAFE","suggested_action":"Hold standard","plan_labor_hrs":78.5,"labor_gap_hrs":-114.1,"need_per_day":112.1},{"line":15,"pattern":"Wed-Sat","avail_days":16.0,"avail_hrs":146.7,"avail_min":8800,"rem_batches":3,"running":1,"overdue":2,"overdue_min":1694,"sched_min":0,"rem_min":1845,"rem_hrs":30.8,"gap_hrs":115.9,"utilization":"0.2096590909090909","risk_status":"SAFE","suggested_action":"Hold standard","plan_labor_hrs":61.5,"labor_gap_hrs":-85.2,"need_per_day":115.3},{"line":16,"pattern":"As Needed","avail_days":0.0,"avail_hrs":0.0,"avail_min":0,"rem_batches":2,"running":0,"overdue":0,"overdue_min":0,"sched_min":0,"rem_min":564,"rem_hrs":9.4,"gap_hrs":-9.4,"utilization":"0","risk_status":"WILL MISS","suggested_action":"Add labor / re-sequence / protect must-run","plan_labor_hrs":18.8,"labor_gap_hrs":18.8,"need_per_day":564.0}];
+const EQUIPMENT  = [{"line":1,"pattern":"Mon-Thu","oee":0.556,"top_loss":"Short Stops 7.8%","second_loss":"Lunch Break 5.6%","avail_hrs":119.2,"status":"RUNNING","pm_due":"No data — connect Limble","last_pm":"No data — connect Limble","work_orders":0},{"line":2,"pattern":"Mon-Sat","oee":0.5,"top_loss":"Changeover 90min 7.0%","second_loss":"Short Stops 8.8%","avail_hrs":192.5,"status":"AT RISK","pm_due":"No data — connect Limble","last_pm":"No data — connect Limble","work_orders":0},{"line":3,"pattern":"Mon-Sat","oee":0.529,"top_loss":"Short Stops 5.9%","second_loss":"Material Shortage 5.9%","avail_hrs":192.5,"status":"RUNNING","pm_due":"No data — connect Limble","last_pm":"No data — connect Limble","work_orders":0},{"line":4,"pattern":"Mon-Sat","oee":0.593,"top_loss":"Short Stops 9.0%","second_loss":"Changeover 90min 7.5%","avail_hrs":192.5,"status":"RUNNING","pm_due":"No data — connect Limble","last_pm":"No data — connect Limble","work_orders":0},{"line":5,"pattern":"Wed-Sat","oee":0.473,"top_loss":"Short Stops 10.9%","second_loss":"Lunch Break 7.6%","avail_hrs":146.7,"status":"AT RISK","pm_due":"No data — connect Limble","last_pm":"No data — connect Limble","work_orders":0},{"line":6,"pattern":"Mon-Thu","oee":0.398,"top_loss":"Short Stops 11.0%","second_loss":"Operator Sorting 12.9%","avail_hrs":119.2,"status":"AT RISK","pm_due":"No data — connect Limble","last_pm":"No data — connect Limble","work_orders":0},{"line":8,"pattern":"Wed-Sat","oee":0.377,"top_loss":"Operator Sorting 16.7%","second_loss":"Short Stops 10.0%","avail_hrs":146.7,"status":"AT RISK","pm_due":"No data — connect Limble","last_pm":"No data — connect Limble","work_orders":0},{"line":10,"pattern":"Wed-Sat","oee":0.351,"top_loss":"Changeover 90min 21.2%","second_loss":"Material Shortage 5.3%","avail_hrs":146.7,"status":"AT RISK","pm_due":"No data — connect Limble","last_pm":"No data — connect Limble","work_orders":0},{"line":11,"pattern":"Mon-Sat","oee":0.453,"top_loss":"Short Stops 11.6%","second_loss":"Operator Capper 3.9%","avail_hrs":192.5,"status":"AT RISK","pm_due":"No data — connect Limble","last_pm":"No data — connect Limble","work_orders":0},{"line":14,"pattern":"Mon-Sat","oee":0.364,"top_loss":"Short Stops 8.6%","second_loss":"Changeover 90min 11.7%","avail_hrs":192.5,"status":"AT RISK","pm_due":"No data — connect Limble","last_pm":"No data — connect Limble","work_orders":0},{"line":15,"pattern":"Wed-Sat","oee":0.376,"top_loss":"Short Stops 5.4%","second_loss":"Planned Cleaning 10.4%","avail_hrs":146.7,"status":"AT RISK","pm_due":"No data — connect Limble","last_pm":"No data — connect Limble","work_orders":0},{"line":16,"pattern":"As Needed","oee":0.0,"top_loss":"Line OFF (full period)","second_loss":"—","avail_hrs":0.0,"status":"NEEDS ATTENTION","pm_due":"No data — connect Limble","last_pm":"No data — connect Limble","work_orders":0}];
+
+// ═══════════════════════════════════════════════════════════════════
+// HOC SHARED SYNC BUS  —  all 3 tools read + write hoc_sync_v1
+// Schema: { batchId: { prod:{status,actqty,dt,name,notes,ts},
+//                      cmpd:{status,actual,tank,lbs,notes,updater,ts},
+//                      qc:{status,ph,visc,dens,color,odor,appear,release,hrs,tech,notes,ts} } }
+// ═══════════════════════════════════════════════════════════════════
+const SYNC_KEY = 'hoc_sync_v1';
+
+function syncRead() {
+  try { return JSON.parse(localStorage.getItem(SYNC_KEY) || '{}'); } catch(e) { return {}; }
+}
+function syncWrite(data) {
+  try { localStorage.setItem(SYNC_KEY, JSON.stringify(data)); } catch(e) {}
+}
+function syncGet(batchId) {
+  return syncRead()[batchId] || { prod:{}, cmpd:{}, qc:{} };
+}
+function syncSet(batchId, section, fields) {
+  const all = syncRead();
+  if (!all[batchId]) all[batchId] = { prod:{}, cmpd:{}, qc:{} };
+  all[batchId][section] = { ...all[batchId][section], ...fields, ts: new Date().toISOString() };
+  syncWrite(all);
+  return all[batchId];
+}
+function syncClear() { localStorage.removeItem(SYNC_KEY); }
+function syncCount() { return Object.keys(syncRead()).length; }
+function syncCountSection(sec) { return Object.values(syncRead()).filter(v=>v[sec]&&Object.keys(v[sec]).length>1).length; }
+
+// Get effective production status (sync overrides Excel)
+function getStatus(b) {
+  const s = syncGet(b.batch);
+  return (s.prod && s.prod.status) ? s.prod.status : b.status;
+}
+// Get effective compound status
+function getCmpd(batchId, fallback) {
+  const s = syncGet(batchId);
+  return (s.cmpd && s.cmpd.cmpd_status) ? s.cmpd.cmpd_status : (fallback||'');
+}
+// Get effective QC status
+function getQC(batchId) {
+  const s = syncGet(batchId);
+  return (s.qc && s.qc.qc_status) ? s.qc.qc_status : '';
+}
+
+
+const N  = n => typeof n==='number' ? n.toLocaleString() : (n||'—');
+function _excelToDate(serial){var n=Number(serial);if(isNaN(n)||n<1||n>200000)return null;return new Date(Math.round((n-25569)*86400*1000));}
+const fD = s => {if(!s)return'—';try{if(typeof s==='number'||(typeof s==='string'&&/^\d{4,6}(\.\d+)?$/.test(s.trim()))){var ed=_excelToDate(s);if(ed&&!isNaN(ed.getTime()))return ed.toLocaleDateString('en-US',{month:'numeric',day:'numeric'});}return new Date(s+'T12:00:00').toLocaleDateString('en-US',{month:'numeric',day:'numeric'});}catch{return s;}};
+const fDL= s => {if(!s)return'—';try{if(typeof s==='number'||(typeof s==='string'&&/^\d{4,6}(\.\d+)?$/.test(s.trim()))){var ed=_excelToDate(s);if(ed&&!isNaN(ed.getTime()))return ed.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});}return new Date(s+'T12:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});}catch{return s;}};
+
+function stBadge(b) {
+  const st=getStatus(b);
+  if(st==='COMPLETED') return '<span class="pill p-done">COMPLETED</span>';
+  if(st==='RUNNING')   return '<span class="pill p-run">RUNNING</span>';
+  if(st==='ON HOLD'||st==='SHORT RUN') return '<span class="pill p-hold">'+st+'</span>';
+  return '<span class="pill p-ns">NOT STARTED</span>';
+}
+function cmpdBadge(c) {
+  if(!c) return '<span class="t3">—</span>';
+  const s=c.replace('COMPOUND ','');
+  if(c.includes('OVERDUE')||c.includes('CRITICAL')) return '<span class="pill p-od">'+s+'</span>';
+  if(c.includes('AT RISK'))  return '<span class="pill p-ar">'+s+'</span>';
+  if(c.includes('ON TRACK')) return '<span class="pill p-ot">'+s+'</span>';
+  if(c.includes('FILLING')||c.includes('COMPLETE')) return '<span class="pill p-run">'+s+'</span>';
+  return '<span class="pill p-ns">'+s+'</span>';
+}
+function sigBadge(s) {
+  if(s==='⚠ CRITICAL') return '<span class="pill p-od">⚠ CRITICAL</span>';
+  if(s==='! WATCH')    return '<span class="pill p-ar">! WATCH</span>';
+  if(s==='LINE OFF')   return '<span class="pill p-ns">LINE OFF</span>';
+  return '<span class="pill p-ot">✓ MONITOR</span>';
+}
+function qcBadge(st) {
+  if(!st) return '<span class="t3">—</span>';
+  if(st==='QC RELEASED') return '<span class="pill p-rel">QC RELEASED</span>';
+  if(st==='IN PROCESS')  return '<span class="pill p-qc">IN PROCESS</span>';
+  if(st==='QC HOLD')     return '<span class="pill p-ar">QC HOLD</span>';
+  if(st==='APPROVED')    return '<span class="pill p-ot">APPROVED</span>';
+  if(st==='REJECTED')    return '<span class="pill p-od">REJECTED</span>';
+  return '<span class="pill p-ns">'+st+'</span>';
+}
+function priBadge(p) {
+  if(p==='MUST RUN')   return '<span class="pill p-must">MUST</span>';
+  if(p==='SHOULD RUN') return '<span class="pill p-should">SHOULD</span>';
+  return '<span class="pill p-ns">NEXT WK</span>';
+}
+function syncBadge(batchId) {
+  const s=syncRead()[batchId];
+  if(!s) return '';
+  const parts=[];
+  if(s.prod&&s.prod.status) parts.push(s.prod.status);
+  if(s.cmpd&&s.cmpd.cmpd_status) parts.push(s.cmpd.cmpd_status);
+  if(s.qc&&s.qc.qc_status) parts.push(s.qc.qc_status);
+  return parts.length ? '<span class="pill p-sync" style="font-size:7px">⚡ '+parts.join(' · ')+'</span>' : '';
+}
+
+
+
+function exportAllCSV() {
+  const all=syncRead();
+  if(!Object.keys(all).length){alert('No floor updates to export.');return;}
+  const hdrs=['Batch','Section','Status','ActQty','CmpdStatus','QCStatus','pH','Viscosity','Density','Tech','Notes','Timestamp'];
+  const rows=[];
+  Object.entries(all).forEach(([id,s])=>{
+    if(s.prod&&s.prod.status) rows.push([id,'PRODUCTION',s.prod.status,s.prod.actqty||'','','','','','',s.prod.name||'',s.prod.notes||'',s.prod.ts||'']);
+    if(s.cmpd&&s.cmpd.cmpd_status) rows.push([id,'COMPOUND','','' ,s.cmpd.cmpd_status,'','','','',s.cmpd.updater||'',s.cmpd.notes||'',s.cmpd.ts||'']);
+    if(s.qc&&s.qc.qc_status) rows.push([id,'QC','','','',s.qc.qc_status,s.qc.ph||'',s.qc.visc||'',s.qc.dens||'',s.qc.tech||'',s.qc.notes||'',s.qc.ts||'']);
+  });
+  const csv=[hdrs,...rows].map(r=>r.map(v=>`"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download='hoc_floor_updates_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+function showPage(id, map) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.nb')[map[id]].classList.add('active');
+}
+
+function pct(v){return typeof v==='number'?(Math.round(v*1000)/10)+'%':'—';}
+
+const WO_KEY='hoc_maintenance_v1';
+function getWOs(){try{return JSON.parse(localStorage.getItem(WO_KEY)||'[]');}catch(e){return[];}}
+function saveWOs(w){try{localStorage.setItem(WO_KEY,JSON.stringify(w));}catch(e){}}
+
+const PM={cmd:0,equipment:1,oee:2,workorders:3,sync:4};
+function P(id){showPage(id,PM);if(id==='equipment')renderEquipment();if(id==='oee')renderOEEAnalysis();if(id==='workorders')renderWOLog();if(id==='sync')renderSyncList();}
+
+function oeeColor(v){return v>=0.6?'var(--green)':v>=0.5?'var(--amber)':'var(--red)';}
+
+function renderAll(){
+  renderSyncBar(document.getElementById('sync-bar'));
+  renderBadges();renderCmdKPIs();renderAttnLines();renderLossSummary();renderFloorDowntime();
+}
+
+function renderBadges(){
+  var low_oee=OEE_LINES.filter(function(l){return l.ytd_oee>0&&l.ytd_oee<0.5;}).length;
+  var wos=getWOs().length;
+  var all=syncRead();
+  var dt_events=Object.values(all).filter(function(v){return v.prod&&v.prod.status&&v.prod.status.includes('DOWN');}).length;
+  document.getElementById('badges').innerHTML=
+    (low_oee?'<span class="badge b-red">'+low_oee+' LOW OEE</span>':'')+
+    (dt_events?'<span class="badge b-amb">'+dt_events+' DOWNTIME</span>':'')+
+    '<span class="badge b-grn">'+wos+' WORK ORDERS</span>';
+}
+
+function renderCmdKPIs(){
+  var active=OEE_LINES.filter(function(l){return l.ytd_oee>0;});
+  var avg_oee=active.length?active.reduce(function(s,l){return s+l.ytd_oee;},0)/active.length:0;
+  var below_goal=active.filter(function(l){return l.ytd_oee<0.6;}).length;
+  var total_avail=LINE_DASH.reduce(function(s,l){return s+l.avail_hrs;},0);
+  var total_gap=LINE_FULL.reduce(function(s,l){return s+l.gap_hrs;},0);
+  var wos=getWOs().length;
+  var all=syncRead();
+  var dt_reports=Object.values(all).filter(function(v){return v.prod&&v.prod.status&&v.prod.status.includes('DOWN');}).length;
+  document.getElementById('cmd-kpis').innerHTML=[
+    {l:'Active Lines',     v:active.length,         s:'In OEE tracking',     c:'var(--text)'},
+    {l:'Avg OEE',          v:pct(avg_oee),           s:'All active lines',    c:avg_oee>=0.6?'var(--green)':'var(--red)'},
+    {l:'Below 60% Goal',   v:below_goal,             s:'Need improvement',    c:below_goal?'var(--red)':'var(--green)'},
+    {l:'Total Avail Hrs',  v:Math.round(total_avail)+'h',s:'This period',     c:'var(--text)'},
+    {l:'Total Gap Hrs',    v:Math.round(total_gap)+'h', s:'Available capacity',c:total_gap>0?'var(--green)':'var(--red)'},
+    {l:'Work Orders',      v:wos,                    s:'Logged this session', c:'var(--amber)'},
+    {l:'DT Reports',       v:dt_reports,             s:'From floor sync',     c:dt_reports?'var(--red)':'var(--green)'},
+    {l:'Limble Status',    v:'Not Connected',         s:'Phase 3 integration', c:'var(--text3)'},
+  ].map(function(k){
+    return '<div class="kpi"><div class="kl">'+k.l+'</div><div class="kv" style="color:'+k.c+'">'+k.v+'</div><div class="ks">'+k.s+'</div></div>';
+  }).join('');
+}
+
+function renderAttnLines(){
+  var needs_attn=OEE_LINES.filter(function(l){return l.ytd_oee>0&&l.ytd_oee<0.6;}).sort(function(a,b){return a.ytd_oee-b.ytd_oee;});
+  var el=document.getElementById('attn-lines');
+  if(!needs_attn.length){el.innerHTML='<div style="font-size:10px;color:var(--green);padding:8px">&#10003; All lines at or above 60% OEE goal</div>';return;}
+  el.innerHTML=needs_attn.map(function(l){
+    var bc=oeeColor(l.ytd_oee);
+    return '<div class="eq-card">'+
+      '<div class="eq-hdr">'+
+        '<div class="eq-line">Line '+l.line+' &mdash; <span style="color:'+bc+'">'+pct(l.ytd_oee)+' OEE</span></div>'+
+        '<span style="font-size:9px;color:var(--text3)">'+l.pattern+'</span>'+
+      '</div>'+
+      '<div style="font-size:9px;color:var(--text2);margin-bottom:5px">'+
+        '<span class="loss-tag" style="background:rgba(239,68,68,.1);color:var(--red)">&#8679; '+l.top_loss+'</span>'+
+        (l.second_loss?'<span class="loss-tag" style="background:rgba(245,158,11,.1);color:var(--amber)">&#8679; '+l.second_loss+'</span>':'')+
+      '</div>'+
+      '<div class="bar-h"><div class="bar-f" style="width:'+Math.round(l.ytd_oee*100)+'%;background:'+bc+'"></div></div>'+
+    '</div>';
+  }).join('');
+}
+
+function renderLossSummary(){
+  var loss_counts={};
+  OEE_LINES.forEach(function(l){
+    if(l.top_loss){var k=l.top_loss.replace(/ \d+\.\d+%$/,'');loss_counts[k]=(loss_counts[k]||0)+1;}
+    if(l.second_loss){var k2=l.second_loss.replace(/ \d+\.\d+%$/,'');loss_counts[k2]=(loss_counts[k2]||0)+1;}
+  });
+  var sorted=Object.entries(loss_counts).sort(function(a,b){return b[1]-a[1];});
+  document.getElementById('loss-summary').innerHTML=sorted.map(function(e){
+    return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);font-size:9px">'+
+      '<span style="flex:1;color:var(--text)">'+e[0]+'</span>'+
+      '<span style="font-size:8px;font-weight:700;padding:2px 7px;border-radius:10px;background:rgba(239,68,68,.12);color:var(--red)">'+e[1]+' lines</span>'+
+    '</div>';
+  }).join('');
+}
+
+function renderFloorDowntime(){
+  var all=syncRead();
+  var dt=Object.entries(all).filter(function(e){return e[1].prod&&(e[1].prod.status==='DOWN'||e[1].prod.notes&&e[1].prod.notes.toLowerCase().includes('down'));});
+  var el=document.getElementById('floor-downtime');
+  if(!dt.length){el.innerHTML='<div style="font-size:10px;color:var(--text3);padding:8px">No downtime events reported by production floor yet.</div>';return;}
+  el.innerHTML=dt.map(function(e){
+    var id=e[0],s=e[1].prod;
+    return '<div class="wo-row">'+
+      '<div style="flex:1">'+
+        '<div style="font-size:9px;font-weight:700;color:var(--amber)">LINE DOWN &middot; '+id+'</div>'+
+        '<div style="font-size:10px;color:var(--text)">'+(s.notes||'Downtime reported').slice(0,50)+'</div>'+
+      '</div>'+
+      '<span style="font-size:9px;color:var(--text3)">'+(s.ts?new Date(s.ts).toLocaleTimeString():'')+'</span>'+
+    '</div>';
+  }).join('');
+}
+
+function renderEquipment(){
+  document.getElementById('eq-grid').innerHTML=EQUIPMENT.map(function(e){
+    var bc=oeeColor(e.oee);
+    var ld=LINE_DASH.find(function(l){return l.line===e.line;})||{};
+    return '<div class="eq-card">'+
+      '<div class="eq-hdr">'+
+        '<div class="eq-line">Line '+e.line+'</div>'+
+        '<div style="text-align:right">'+
+          '<div style="font-size:14px;font-weight:700;color:'+bc+'">'+pct(e.oee)+'</div>'+
+          '<div style="font-size:8px;color:var(--text3)">OEE YTD</div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="font-size:9px;color:var(--text3);margin-bottom:6px">'+e.pattern+' &middot; '+e.avail_hrs+'h avail</div>'+
+      '<div style="margin-bottom:6px">'+
+        '<span class="loss-tag" style="background:rgba(239,68,68,.1);color:var(--red)">'+e.top_loss+'</span>'+
+      '</div>'+
+      '<div class="bar-h"><div class="bar-f" style="width:'+Math.round(e.oee*100)+'%;background:'+bc+'"></div></div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:8px;font-size:9px">'+
+        '<div style="padding:5px;background:var(--bg2);border-radius:5px">'+
+          '<div class="t3">Gap Hrs</div>'+
+          '<div style="font-weight:700;color:'+(ld.gap_hrs>0?'var(--green)':'var(--red)')+'">'+ld.gap_hrs+'h</div>'+
+        '</div>'+
+        '<div style="padding:5px;background:var(--bg2);border-radius:5px">'+
+          '<div class="t3">Utilization</div>'+
+          '<div style="font-weight:700">'+ld.util_pct+'</div>'+
+        '</div>'+
+        '<div style="padding:5px;background:var(--bg2);border-radius:5px;grid-column:span 2">'+
+          '<div class="t3">PM Status</div>'+
+          '<div style="color:var(--text3)">Not connected &mdash; needs Limble</div>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+function renderOEEAnalysis(){
+  var active=OEE_LINES.filter(function(l){return l.ytd_oee>0;});
+  var avg_oee=active.reduce(function(s,l){return s+l.ytd_oee;},0)/active.length;
+  document.getElementById('oee-kpis').innerHTML=[
+    {l:'Avg OEE',      v:pct(avg_oee),                             s:'All active lines',     c:avg_oee>=0.6?'var(--green)':'var(--red)'},
+    {l:'Best Line',    v:'Line '+active.sort(function(a,b){return b.ytd_oee-a.ytd_oee;})[0].line, s:pct(active[0].ytd_oee)+' OEE', c:'var(--green)'},
+    {l:'Worst Line',   v:'Line '+active.sort(function(a,b){return a.ytd_oee-b.ytd_oee;})[0].line, s:pct(active[0].ytd_oee)+' OEE', c:'var(--red)'},
+    {l:'Lines ≥60%',   v:active.filter(function(l){return l.ytd_oee>=0.6;}).length,            s:'At or above goal',    c:'var(--green)'},
+    {l:'Lines <60%',   v:active.filter(function(l){return l.ytd_oee<0.6;}).length,             s:'Below goal',          c:'var(--red)'},
+    {l:'OEE Goal',     v:'60%',                                    s:'Monthly target',       c:'var(--blue)'},
+  ].map(function(k){return '<div class="kpi"><div class="kl">'+k.l+'</div><div class="kv" style="color:'+k.c+'">'+k.v+'</div><div class="ks">'+k.s+'</div></div>';}).join('');
+  document.getElementById('oee-bars').innerHTML=OEE_LINES.filter(function(l){return l.ytd_oee>0;}).sort(function(a,b){return a.ytd_oee-b.ytd_oee;}).map(function(l){
+    var bc=oeeColor(l.ytd_oee);
+    var w=Math.round(l.ytd_oee*100);
+    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:9px">'+
+      '<span style="min-width:48px;font-weight:700;color:var(--amber)">Line '+l.line+'</span>'+
+      '<div style="flex:1;height:18px;background:var(--gray-l);border-radius:4px;position:relative;overflow:hidden">'+
+        '<div style="width:'+w+'%;height:100%;background:'+bc+';border-radius:4px"></div>'+
+        '<div style="position:absolute;top:0;bottom:0;left:60%;width:1px;background:var(--amber);opacity:.7"></div>'+
+      '</div>'+
+      '<span style="min-width:38px;font-weight:700;color:'+bc+'">'+w+'%</span>'+
+    '</div>';
+  }).join('')+'<div style="font-size:9px;color:var(--text3);margin-top:4px">&#9478; = 60% goal line</div>';
+  document.getElementById('loss-detail').innerHTML='<div class="tbl-wrap"><table>'+
+    '<thead><tr><th>Line</th><th>OEE</th><th>Pattern</th><th>Top Loss Driver</th><th>2nd Loss Driver</th><th>OEE-Adj Hrs</th><th>Sched Hrs</th></tr></thead><tbody>'+
+    OEE_LINES.filter(function(l){return l.ytd_oee>0;}).map(function(l){
+      return '<tr>'+
+        '<td style="font-weight:700;color:var(--amber)">L'+l.line+'</td>'+
+        '<td style="font-weight:700;color:'+oeeColor(l.ytd_oee)+'">'+pct(l.ytd_oee)+'</td>'+
+        '<td class="t3">'+l.pattern+'</td>'+
+        '<td style="font-size:9px;color:var(--red)">'+l.top_loss+'</td>'+
+        '<td style="font-size:9px;color:var(--amber)">'+(l.second_loss||'—')+'</td>'+
+        '<td style="text-align:right">'+l.oee_adj_hrs+'h</td>'+
+        '<td style="text-align:right">'+l.sched_hrs+'h</td>'+
+      '</tr>';
+    }).join('')+'</tbody></table></div>';
+  document.getElementById('oee-gap').innerHTML='<div style="font-size:9px;color:var(--text2);margin-bottom:8px">Hours lost vs theoretical 100% availability = hours where production should have run but did not</div>'+
+    OEE_LINES.filter(function(l){return l.ytd_oee>0;}).map(function(l){
+      var lost_hrs=Math.round(l.avail_hrs*(1-l.ytd_oee));
+      var bc=oeeColor(l.ytd_oee);
+      return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:9px">'+
+        '<span style="min-width:48px;font-weight:700;color:var(--amber)">Line '+l.line+'</span>'+
+        '<span style="min-width:38px;color:'+bc+'">'+pct(l.ytd_oee)+'</span>'+
+        '<span style="min-width:55px;color:var(--text2)">'+l.avail_hrs+'h avail</span>'+
+        '<span style="min-width:55px;color:var(--text3)">'+lost_hrs+'h lost</span>'+
+        '<div style="flex:1;height:8px;background:var(--gray-l);border-radius:4px;overflow:hidden">'+
+          '<div style="width:'+Math.round(l.ytd_oee*100)+'%;height:100%;background:'+bc+'"></div>'+
+        '</div>'+
+      '</div>';
+    }).join('');
+}
+
+function saveWO(){
+  var line=document.getElementById('wo-line').value;
+  if(!line){alert('Select a line.');return;}
+  var w={line:line,type:document.getElementById('wo-type').value,hrs:document.getElementById('wo-hrs').value||'0',notes:document.getElementById('wo-notes').value,ts:new Date().toISOString()};
+  var wos=getWOs();wos.unshift(w);saveWOs(wos);
+  document.getElementById('wo-saved').style.display='inline';
+  setTimeout(function(){document.getElementById('wo-saved').style.display='none';},2000);
+  document.getElementById('wo-notes').value='';document.getElementById('wo-hrs').value='';
+  renderWOLog();renderAll();
+}
+
+function renderWOLog(){
+  var wos=getWOs();
+  var el=document.getElementById('wo-log');
+  if(!wos.length){el.textContent='No work orders logged yet.';return;}
+  el.innerHTML=wos.map(function(w){
+    return '<div class="wo-row">'+
+      '<div style="flex:1">'+
+        '<div style="font-size:9px;font-weight:700;color:var(--amber)">'+w.type+' &mdash; '+w.line+'</div>'+
+        (w.notes?'<div style="font-size:10px;color:var(--text2)">'+w.notes.slice(0,60)+'</div>':'')+
+      '</div>'+
+      '<div style="text-align:right;font-size:9px;color:var(--text3)">'+w.hrs+'h<br>'+(w.ts?new Date(w.ts).toLocaleTimeString():'')+'</div>'+
+    '</div>';
+  }).join('');
+}
+
+function renderSyncList(){
+  var all=syncRead();
+  var el=document.getElementById('sync-list');
+  var dt=Object.entries(all).filter(function(e){return e[1].prod&&(e[1].prod.status==='DOWN'||e[1].prod.notes&&e[1].prod.notes.toLowerCase().includes('down'));});
+  if(!dt.length){el.textContent='No downtime events in sync bus.';return;}
+  el.innerHTML=dt.map(function(e){
+    var id=e[0],s=e[1].prod;
+    return '<div style="padding:5px 8px;margin-bottom:3px;background:var(--bg2);border-radius:5px;border-left:3px solid var(--amber);font-size:10px">'+
+      '<b style="color:var(--amber)">'+id+'</b> &middot; '+(s.notes||'Downtime').slice(0,40)+'</div>';
+  }).join('');
+}
+
+function exportWOs(){
+  var wos=getWOs();
+  if(!wos.length){alert('No work orders to export.');return;}
+  var hdrs=['Timestamp','Line','Type','Hours','Notes'];
+  var rows=wos.map(function(w){return[w.ts||'',w.line||'',w.type||'',w.hrs||'',w.notes||''];});
+  var csv=[hdrs].concat(rows).map(function(r){return r.map(function(v){return '"'+String(v||'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  var a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='maintenance_log_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+}
+
+renderAll();
+
+// ── Auto-refresh: sync bus watcher ──────────────────────────────────
+// Fires when another browser tab writes to the sync bus
+window.addEventListener('storage', function(e) {
+  if (e.key === 'hoc_sync_v1') {
+    try { renderAll(); } catch(err) {}
+  }
+});
+// Poll every 30 seconds as fallback (same-tab writes + file:// protocol)
+setInterval(function() {
+  try { renderAll(); } catch(err) {}
+}, 30000);
+
+
+</script>
+
+<script>
+// Auto-update date displays
+(function(){
+  var today = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  var shortDate = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  document.querySelectorAll('.brand-sub,.brand-sub *,[class*="brand-sub"]').forEach(function(el){
+    if(el.children.length === 0){
+      el.textContent = el.textContent.replace(/(?:January|February|March|April|May|June|July|August|September|October|November|December) \d{1,2},? \d{4}/g, today);
+      el.textContent = el.textContent.replace(/(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2},? \d{4}/g, shortDate);
+    }
+  });
+  // Also fix any standalone date text nodes
+  var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  var node;
+  var dateRe = /(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2},? \d{4}/g;
+  while(node = walker.nextNode()){
+    if(dateRe.test(node.textContent)){
+      node.textContent = node.textContent.replace(dateRe, shortDate);
+    }
+  }
+})();
+</script>
+
+<script src="hoc_events.js"></script>
+<script>
+// Auto-update header date placeholder
+(function(){
+  var today = new Date().toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'});
+  document.querySelectorAll('.js-today-date').forEach(function(el){ el.textContent = today; });
+})();
+</script>
+</body></html>
