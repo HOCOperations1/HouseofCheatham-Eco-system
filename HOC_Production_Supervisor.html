@@ -141,7 +141,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--green)}
   <div id="alert-area"></div>
   <div class="kpi-grid" id="cmd-kpis"></div>
   <div class="card">
-    <div class="card-title">Line Status — May 2026 <span class="t3" style="font-size:9px;font-weight:400;letter-spacing:0">Click row → line detail</span></div>
+    <div class="card-title">Line Status — <span id="line-status-month">May 2026</span> <span class="t3" style="font-size:9px;font-weight:400;letter-spacing:0">Click row → line detail</span></div>
     <div class="tbl-wrap"><table>
       <thead><tr><th>Line</th><th>Pattern</th><th>Total</th><th>Done</th><th>Running</th><th>Pending</th><th>Rem Min</th><th>Avail Hrs</th><th>Gap Hrs</th><th>OEE</th><th>Top Loss</th><th>Signal</th><th>Act HC</th><th>Adj Speed</th><th>ETA</th></tr></thead>
       <tbody id="line-tbody"></tbody>
@@ -323,6 +323,24 @@ select:focus,input:focus,textarea:focus{border-color:var(--green)}
 </div></div>
 
 <script>
+// v6.34h: Dynamic month label helper used by KPI tiles + Line Status card
+function _monthLabel634h(){
+  var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var d = new Date();
+  return months[d.getMonth()];
+}
+function _monthYearLabel634h(){
+  return _monthLabel634h() + ' ' + new Date().getFullYear();
+}
+// Apply to the Line Status card title on load
+(function(){
+  function apply(){
+    var el = document.getElementById('line-status-month');
+    if(el) el.textContent = _monthYearLabel634h();
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply);
+  else apply();
+})();
 // ── Supabase Real-time Sync Layer ────────────────────────────────────
 // Replaces localStorage hoc_sync_v1 with live Supabase database
 // All 19 tools share the same real-time data across all devices
@@ -1108,7 +1126,7 @@ function renderKPIs(){
   var attColor = liveAttainment == null ? 'var(--text3)' : liveAttainment>=attainGoal ? 'var(--green)' : 'var(--red)';
 
   document.getElementById('cmd-kpis').innerHTML=[
-    {l:'May Cases',     v:N(Math.round(monthCompletedCases)), s:caseSource, c:'var(--green)'},
+    {l:_monthLabel634h()+' Cases',     v:N(Math.round(monthCompletedCases)), s:caseSource, c:'var(--green)'},
     {l:'Case Balance',  v:(caseBalance>=0?'+':'')+N(Math.round(caseBalance)), s:'vs goal', c:caseBalance>=0?'var(--green)':'var(--red)'},
     {l:'Open Batches',  v:ns,  s:'Not started · May',  c:'var(--text)'},
     {l:'Running Now',   v:run, s:'Active on floor',    c:'var(--blue)'},

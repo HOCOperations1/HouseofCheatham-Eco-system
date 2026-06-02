@@ -1,6 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- v6.34h dynamic month -->
+<script>
+// v6.34h: dynamic month label in the topbar status bar — picks up current month/year
+(function(){
+  var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var d = new Date();
+  var label = months[d.getMonth()] + ' ' + d.getFullYear();
+  function applyLabel(){
+    var bs = document.getElementById('brand-sub');
+    if(bs) bs.textContent = label;
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyLabel);
+  else applyLabel();
+})();
+</script>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Demand & Planning Hub</title>

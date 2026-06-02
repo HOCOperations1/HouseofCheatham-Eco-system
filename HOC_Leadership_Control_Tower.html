@@ -384,6 +384,11 @@ var HOC_OES_VERSION="1778588401";</script>
 </div></div>
 
 <script>
+// v6.34h: Dynamic month label helper used by KPI tiles
+function _monthLabel634h(){
+  var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return months[new Date().getMonth()];
+}
 // ── Supabase Real-time Sync Layer ────────────────────────────────────
 // Replaces localStorage hoc_sync_v1 with live Supabase database
 // All 19 tools share the same real-time data across all devices
@@ -1048,7 +1053,7 @@ function renderCTKPIs(){
   const overdue=CAP_DATA.filter(b=>b.status==='OVERDUE').length;
 
   const kpis=[
-    {l:'May Cases',v:N(g['Overall May Cases']||0),s:'vs '+N(g['Need @ 90%']||0)+' goal',c:(g['Case Balance']||0)<0?'var(--red)':'var(--green)',dot:(g['Case Balance']||0)<0?'var(--red)':'var(--green)',href:'HOC_Production_Schedule.html'},
+    {l:_monthLabel634h()+' Cases',v:N(g['Overall May Cases']||0),s:'vs '+N(g['Need @ 90%']||0)+' goal',c:(g['Case Balance']||0)<0?'var(--red)':'var(--green)',dot:(g['Case Balance']||0)<0?'var(--red)':'var(--green)',href:'HOC_Production_Schedule.html'},
     {l:'Case Balance',v:N(g['Case Balance']||0),s:'At 90% attainment',c:(g['Case Balance']||0)<0?'var(--red)':'var(--green)',dot:(g['Case Balance']||0)<0?'var(--red)':'var(--green)',href:'HOC_Schedule_Reforecast.html'},
     {l:'OEE '+oee_latest.month,v:Math.round((oee_latest.actual||0)*100)+'%',s:'Goal 60%',c:(oee_latest.actual||0)>=0.6?'var(--green)':'var(--red)',dot:(oee_latest.actual||0)>=0.6?'var(--green)':'var(--red)',href:'HOC_Production_Supervisor.html'},
     {l:'Attainment '+att_latest.month,v:Math.round((att_latest.actual||0)*100)+'%',s:'Goal 90%',c:(att_latest.actual||0)>=0.9?'var(--green)':'var(--amber)',dot:(att_latest.actual||0)>=0.9?'var(--green)':'var(--amber)',href:'HOC_Production_Supervisor.html'},
@@ -1238,7 +1243,7 @@ function renderKPIs(){
   } catch(e){}
 
   document.getElementById('kpi-grid').innerHTML=[
-    {l:'May Cases',v:N(g['Overall May Cases']||0),s:'Act vs '+N(g['Need @ 90%']||0),c:(g['Case Balance']||0)<0?'var(--red)':'var(--green)',dot:(g['Case Balance']||0)<0?'var(--red)':'var(--green)',href:'HOC_Production_Schedule.html'},
+    {l:_monthLabel634h()+' Cases',v:N(g['Overall May Cases']||0),s:'Act vs '+N(g['Need @ 90%']||0),c:(g['Case Balance']||0)<0?'var(--red)':'var(--green)',dot:(g['Case Balance']||0)<0?'var(--red)':'var(--green)',href:'HOC_Production_Schedule.html'},
     {l:'Case Balance',v:N(g['Case Balance']||0),s:g['Case Recovery Signal']||'—',c:(g['Case Balance']||0)<0?'var(--red)':'var(--green)',dot:'',href:'HOC_Schedule_Reforecast.html'},
     {l:'OEE '+oee_l.month,v:Math.round((oee_l.actual||0)*100)+'%',s:'Goal 60%',c:(oee_l.actual||0)>=0.6?'var(--green)':'var(--red)',dot:'',href:'HOC_Production_Supervisor.html'},
     {l:'Attainment '+att_l.month,v:Math.round((att_l.actual||0)*100)+'%',s:'Goal 90%',c:(att_l.actual||0)>=0.9?'var(--green)':'var(--amber)',dot:'',href:'HOC_Production_Supervisor.html'},
