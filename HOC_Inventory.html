@@ -368,7 +368,11 @@ const HJ = function(){ return {apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,
 // ── Master tank list (bulk raw material tanks, separate from mixing tanks) ──
 // Mixing tanks live in Tank Board. THIS is the upstream raw-material tank farm —
 // bulk chemicals/oils/water tanks that feed pre-batch operations.
-const RAW_TANKS = [
+//
+// v6.34j: Tank list is now driven by the Data Upload Hub's parse of the
+// "Tank Farm Counts" tab in the planner's spreadsheet. Calling getRawTanks()
+// returns either the parsed tanks (preferred) or this fallback list.
+const RAW_TANKS_FALLBACK = [
   {id:'RM-T01', material:'Deionized Water',         capacity_gal:8000, unit_pref:'gal'},
   {id:'RM-T02', material:'Deionized Water',         capacity_gal:8000, unit_pref:'gal'},
   {id:'RM-T03', material:'Mineral Oil USP',         capacity_gal:5000, unit_pref:'lbs'},
@@ -379,6 +383,23 @@ const RAW_TANKS = [
   {id:'RM-T08', material:'Propylene Glycol',        capacity_gal:2500, unit_pref:'lbs'},
   {id:'RM-T09', material:'Caprylic/Capric Triglyc', capacity_gal:2000, unit_pref:'lbs'},
 ];
+
+// v6.34j: Use a getter so the dashboard always picks up the latest parsed tanks
+// from the planner's spreadsheet. Falls back if the planner hasn't uploaded yet.
+function getRawTanks(){
+  try {
+    var parsed = JSON.parse(localStorage.getItem('hoc_inventory_raw_tanks_v1') || 'null');
+    if(Array.isArray(parsed) && parsed.length){
+      return parsed;
+    }
+  } catch(e){}
+  return RAW_TANKS_FALLBACK;
+}
+// Backwards-compat: RAW_TANKS as a live property that reads through getRawTanks()
+// (preserves existing code that uses `RAW_TANKS.forEach`, `RAW_TANKS.map`, etc.)
+Object.defineProperty(window, 'RAW_TANKS', {
+  get: function(){ return getRawTanks(); }
+});
 
 const LS_TANKS     = 'hoc_inventory_tanks_v1';
 const LS_MUS       = 'hoc_inventory_mus_v1';
@@ -548,7 +569,7 @@ function renderTanks(){
       <div class="tank-level-bar"><div class="tank-level-fill" style="width:${Math.min(pctFull,100)}%;background:${barColor}"></div></div>
       <div class="tank-meta">
         <span>${levelStr}</span>
-        <span>cap: ${t.capacity_gal.toLocaleString()} gal</span>
+        <span>cap: ${t.capacity_gal.toLocaleString()} ${t.unit_pref==='lbs'?'lbs':'gal'}</span>
       </div>
     </div>`;
   }).join('');
@@ -590,7 +611,7 @@ function renderTankHistory(){
 
 function openTankReading(tankId){
   const tank = tankId ? RAW_TANKS.find(t => t.id === tankId) : null;
-  const tankList = RAW_TANKS.map(t => '<option value="'+t.id+'"'+(t.id===tankId?' selected':'')+'>'+t.id+' · '+t.material+' (cap '+t.capacity_gal.toLocaleString()+' gal)</option>').join('');
+  const tankList = RAW_TANKS.map(t => '<option value="'+t.id+'"'+(t.id===tankId?' selected':'')+'>'+t.id+' · '+t.material+' (cap '+t.capacity_gal.toLocaleString()+' '+(t.unit_pref==='lbs'?'lbs':'gal')+')</option>').join('');
   const tankIdSelected = tank ? tank.id : '';
   const unitPref = tank ? tank.unit_pref : 'gal';
   const promptHtml =

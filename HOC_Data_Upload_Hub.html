@@ -1381,14 +1381,126 @@ function updateAllDashboards() {
         var pgdSheet = wb.Sheets['Production Goals Dashboard'];
         if(pgdSheet && result.goals) {
           var pgrows = XLSX.utils.sheet_to_json(pgdSheet, {header:1, defval:''});
+          // v6.34j: match current month dynamically (June in June, etc.)
+          var _curMonthShort = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][new Date().getMonth()];
+          var _curMonthFull = ['January','February','March','April','May','June','July','August','September','October','November','December'][new Date().getMonth()];
           pgrows.forEach(function(row) {
             var label = String(row[0]||'').trim();
-            if(label==='May') {
+            // Match either short or full month name (case-insensitive, prefix-tolerant)
+            var ll = label.toLowerCase();
+            var isCurrentMonth = (
+              ll === _curMonthShort.toLowerCase() || ll === _curMonthFull.toLowerCase() ||
+              ll.indexOf(_curMonthShort.toLowerCase() + ' ') === 0 ||
+              ll.indexOf(_curMonthFull.toLowerCase() + ' ') === 0
+            );
+            if(isCurrentMonth) {
               if(row[1]) result.goals.oee_act  = Math.round(parseFloat(row[1]||0)*1000)/10;
               if(row[6]) result.goals.att_act  = Math.round(parseFloat(row[6]||0)*1000)/10;
             }
             if(label==='Remaining Days' && row[7]) result.goals.remaining_days = parseInt(row[7])||17;
           });
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // v6.34j: Tank Farm Counts → hoc_inventory_tanks_v1
+        //
+        // Reads the "Tank Farm Counts" tab. Data layout (verified from
+        // the planner's actual file):
+        //
+        //   Row 2: header row
+        //   Col 21 (U): Item ID            — e.g. "8-15002"
+        //   Col 22 (V): Description        — e.g. "Betaine"
+        //   Col 23 (W): GP                 — system-of-record level (Great Plains)
+        //   Col 24 (X): In Use             — current usage
+        //   Col 25 (Y): Daily Cycle Count  — today's physical count
+        //   Col 26 (Z): Delta              — GP minus Cycle (variance)
+        //
+        // Tank rows are at every other row (R4, R6, R8...) with blank
+        // spacer rows in between. Item ID is the trigger — any row
+        // with a non-empty Item ID is a tank.
+        //
+        // The Inventory dashboard stores tank readings as an array of
+        // reading snapshots: {tank_id, material, value, unit, pct_full, ts, ...}
+        // Each upload writes one fresh reading per tank, with source='planning_data'
+        // so it doesn't clobber manual readings — newest wins per tank.
+        // ─────────────────────────────────────────────────────────────
+        var tankSheet = wb.Sheets['Tank Farm Counts'];
+        if(tankSheet) {
+          var trows = XLSX.utils.sheet_to_json(tankSheet, {header:1, defval:''});
+          var newReadings = [];
+          var parsedTanks = [];
+          // Columns are 0-indexed in sheet_to_json output, so col 21 (U) → index 20
+          for(var ti = 2; ti < trows.length; ti++){
+            var row = trows[ti];
+            if(!row) continue;
+            var itemId = String(row[20]||'').trim();
+            if(!itemId) continue;
+            if(itemId.toLowerCase() === 'item id') continue; // skip mid-sheet header
+            var desc = String(row[21]||'').trim();
+            var gp = parseFloat(row[22]) || 0;
+            var inUse = parseFloat(row[23]) || 0;
+            var cycle = parseFloat(row[24]) || 0;
+            var delta = parseFloat(row[25]) || 0;
+            // Effective on-hand = cycle count if present, else GP
+            var effective = cycle > 0 ? cycle : gp;
+            // Pct full — using GP as the "capacity reference" since the
+            // planner's spreadsheet doesn't include max-capacity. This is
+            // a reasonable proxy: GP > cycle = pct < 100% (consumed); cycle > GP = >100%.
+            var pctFull = gp > 0 ? Math.min(100, Math.round((effective / gp) * 100)) : 100;
+            // Write the master tank record (what the dashboard renders against)
+            parsedTanks.push({
+              id: itemId,
+              material: desc,
+              capacity_gal: Math.round(gp),   // GP as proxy capacity for the bar/pct fill
+              unit_pref: 'lbs'
+            });
+            // Write the reading record (what the dashboard reads for current level)
+            newReadings.push({
+              tank_id: itemId,
+              material: desc,
+              value: Math.round(effective * 100) / 100,
+              unit: 'lbs',
+              pct_full: pctFull,
+              user: 'Planning Data',
+              notes: 'GP='+gp.toFixed(0)+' · cycle='+cycle.toFixed(0)+' · delta='+delta.toFixed(0),
+              ts: ts,
+              source: 'planning_data',
+              gp: gp,
+              in_use: inUse,
+              cycle: cycle,
+              delta: delta
+            });
+          }
+          if(newReadings.length){
+            // Merge with existing manual readings — don't blow them away.
+            // Keep all manual readings; append the new planning-data readings.
+            // The dashboard finds the latest reading per tank, so the newer
+            // planning_data reading naturally takes precedence.
+            try {
+              var existing = [];
+              try { existing = JSON.parse(localStorage.getItem('hoc_inventory_tanks_v1') || '[]'); } catch(e){}
+              if(!Array.isArray(existing)) existing = [];
+              // Trim any prior planning_data readings older than 7 days — keep history compact
+              var weekAgo = Date.now() - 7*24*3600*1000;
+              existing = existing.filter(function(r){
+                if(r.source === 'planning_data'){
+                  return new Date(r.ts).getTime() > weekAgo;
+                }
+                return true; // keep all manual readings
+              });
+              var combined = existing.concat(newReadings);
+              localStorage.setItem('hoc_inventory_tanks_v1', JSON.stringify(combined));
+              // Also write the master tank list to a known key the dashboard can read
+              localStorage.setItem('hoc_inventory_raw_tanks_v1', JSON.stringify(parsedTanks));
+              progress('✓ Tank Farm: ' + newReadings.length + ' tanks loaded from planning data', 'ok');
+            } catch(e){
+              progress('⚠ Tank Farm: could not save tanks to localStorage: ' + e.message, 'warn');
+            }
+            result.tank_farm = newReadings;
+            result.tank_farm_ts = ts;
+          } else {
+            progress('⚠ Tank Farm Counts tab found but no tank rows parsed — check column layout', 'warn');
+          }
         }
 
         // 4. Dashboard sheet → capacity metrics
