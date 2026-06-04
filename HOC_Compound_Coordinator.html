@@ -151,7 +151,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--blue)}
     <div class="tbl-wrap"><table>
       <thead><tr>
         <th>Batch</th><th>Ln</th><th>Date</th><th>Description</th><th>Formula</th>
-        <th>Lbs Needed</th><th>Labor Hrs</th><th>Cmpd Status</th><th>Raw Status</th><th>Shortage</th>
+        <th>Cases Needed</th><th>Labor Hrs</th><th>Cmpd Status</th><th>Raw Status</th><th>Shortage</th>
         <th>Correction Flag</th><th>CC Verified</th><th>Proceed?</th>
       </tr></thead>
       <tbody id="cmd-tbody"></tbody>
@@ -168,7 +168,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--blue)}
   <div class="tbl-wrap"><table>
     <thead><tr>
       <th>Batch</th><th>Ln</th><th>Date</th><th>Description</th><th>Formula</th>
-      <th>Lbs</th><th>Due By</th><th>Cmpd Status</th><th>Raw Status</th><th>CC Verified</th><th>Proceed</th>
+      <th>Cases</th><th>Due By</th><th>Cmpd Status</th><th>Raw Status</th><th>CC Verified</th><th>Proceed</th>
     </tr></thead>
     <tbody id="ver-tbody"></tbody>
   </table></div>
@@ -781,7 +781,7 @@ function renderCmdTable(){
       <td>${fD(b.date)}</td>
       <td style="font-size:10px;max-width:155px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.desc}</td>
       <td style="font-weight:700;color:var(--blue)">F.${b.formula}</td>
-      <td style="text-align:right">${N(b.lbs)}</td>
+      <td style="text-align:right">${N(b.origqty)}</td>
       <td style="text-align:right;font-size:10px">${lhrsCell}</td>
       <td>${cmpdBadge(b.cmpd_status)}</td>
       <td>${rawBadge(cc||b.raw_status)}</td>
@@ -811,7 +811,7 @@ function renderVerify(){
       <td>${fD(b.date)}</td>
       <td style="font-size:10px;max-width:155px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.desc}</td>
       <td style="font-weight:700;color:var(--blue)">F.${b.formula}</td>
-      <td style="text-align:right">${N(b.lbs)}</td>
+      <td style="text-align:right">${N(b.origqty)}</td>
       <td>${fD(b.cmpd_due)}</td>
       <td>${cmpdBadge(b.cmpd_status)}</td>
       <td>${rawBadge(cc||b.raw_status)}</td>

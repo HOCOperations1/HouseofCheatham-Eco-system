@@ -1044,10 +1044,11 @@ function renderKPIs(){
       }
     }
   } else if(uploadGoals.may_actual >= 1000 || uploadGoals.may_goal >= 1000){
-    // Source 2: Goal Source Data (legacy path)
+    // Source 2: Monthly master MTD rollup (D3=plan, G3=completed) or Goal Source Data
     monthCompletedCases = Number(uploadGoals.may_actual) || 0;
     monthPlannedCases   = Number(uploadGoals.may_goal)   || 0;
-    caseSource = 'Goal Source Data';
+    var src = (_UPLOAD && _UPLOAD.goals_source) || 'goal source';
+    caseSource = (src.indexOf('monthly_master') === 0) ? 'Monthly master D3/G3' : 'Goal Source Data';
   } else {
     // Source 3: sum batches (last resort)
     monthCompletedCases = 0;

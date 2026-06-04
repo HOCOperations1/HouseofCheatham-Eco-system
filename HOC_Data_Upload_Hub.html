@@ -1257,34 +1257,35 @@ function updateAllDashboards() {
         }
 
         // ── KPI rollup from the monthly master's MTD summary rows.
-        //    v6.34i: ALWAYS run this when cleanSheet exists. Previously gated
-        //    behind !wb.Sheets['Goal Source Data'], which meant Goal Source Data
-        //    (which is often historical/stale) could override the live MTD
-        //    summary the planner actually maintains.
+        //    v6.34l: Authoritative cell positions confirmed with user (Jun 2026):
+        //      D3 (rawAll[2][3]) = Total # of Planned Cases       (e.g. 170,231)
+        //      G3 (rawAll[2][6]) = Total # of Completed Cases     (e.g. 4,372)
+        //    Both read from the SCHEDULED row (row 3 in 1-indexed Excel,
+        //    which is rawAll[2] in 0-indexed JS array).
         //
-        //    MTD summary lives in rows 3-4 (1-indexed; here 2-3) of the monthly
-        //    master with these columns:
-        //      col 3 = Total # of Planned Cases       (this month's goal)
-        //      col 6 = Total # of Completed Cases     (this month's actual)
+        //    Previous bug: code was reading sched[3] (correct, D3) for plan
+        //    but done[6] = G4 (Completed row column G) for actual, which is
+        //    the cases-completed-on-fully-completed-batches subset (3,523),
+        //    not the total-cases-completed-this-month value the planner
+        //    actually uses for KPI reporting (4,372).
         if(cleanSheet) {
           var rawAll = XLSX.utils.sheet_to_json(cleanSheet, {header:1, defval:'', range:0});
-          var sched = rawAll[2]||[];
-          var done  = rawAll[3]||[];
-          var planCases = parseFloat(sched[3])||0;
-          var doneCases = parseFloat(done[6])||0;
+          var sched = rawAll[2]||[];        // row 3 in Excel = SCHEDULED row
+          var planCases = parseFloat(sched[3])||0;   // D3 = planned cases
+          var doneCases = parseFloat(sched[6])||0;   // G3 = completed cases (running total)
           // Sanity guards: don't write nonsense.
           //   - Planned cases must be at least 1k (HOC monthly volume floor)
-          //   - Completed cases must be ≤ planned (sanity check)
+          //   - Completed cases sanity-capped against planned
           if(planCases >= 1000){
             result.goals = result.goals || {may_actual:0, may_goal:0, may_bal:0, oee_act:0, oee_goal:60, att_act:0, att_goal:90, oee_by_line:{}, att_by_line:{}};
             result.goals.may_actual = Math.round(doneCases);
             result.goals.may_goal   = Math.round(planCases);
             result.goals.may_bal    = Math.round(planCases - doneCases);
             result.goals_ts = ts;
-            result.goals_source = 'monthly_master_rollup';
-            progress('✓ KPIs (MTD rollup, authoritative): actual=' + result.goals.may_actual.toLocaleString() + ' goal=' + result.goals.may_goal.toLocaleString(), 'ok');
+            result.goals_source = 'monthly_master_rollup_D3_G3';
+            progress('✓ KPIs (D3='+planCases.toLocaleString()+' G3='+doneCases.toLocaleString()+' from Scheduled row)', 'ok');
           } else {
-            progress('⚠ MTD rollup: planCases=' + planCases + ' below 1000 — skipping (likely empty or wrong sheet)', 'warn');
+            progress('⚠ MTD rollup: D3='+planCases+' below 1000 — skipping (likely empty or wrong sheet)', 'warn');
           }
         }
 
