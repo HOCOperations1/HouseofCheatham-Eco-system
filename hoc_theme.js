@@ -164,4 +164,75 @@
     set: setTheme,
     toggle: toggleTheme
   };
+
+  // ═══════════════════════════════════════════════════════════════════
+  // v6.34m — Version-mismatch self-healer
+  //
+  // Problem this solves: a tablet's service worker can have v6.34m
+  // activated (index.html shows new pill) while individual dashboard
+  // HTMLs are still being served from older cached copies (showing
+  // hardcoded text from previous versions, wrong KPI labels, etc).
+  //
+  // How it works:
+  //   1. Each page can declare its build version in <meta name="hoc-build">
+  //   2. After load, we ask the SW what its current cache name is
+  //   3. If the page's hoc-build is OLDER than the SW cache → stale
+  //   4. Force a no-cache reload of the current URL
+  //
+  // Guarded against reload loops by storing the last reload timestamp
+  // in sessionStorage. Won't reload more than once per 5 minutes
+  // and won't reload if the page is still loading (visibility check).
+  //
+  // No-ops on dashboards without a hoc-build meta tag.
+  // ═══════════════════════════════════════════════════════════════════
+  function detectStaleAndReload(){
+    try {
+      var meta = document.querySelector('meta[name="hoc-build"]');
+      if(!meta) return; // dashboard didn't opt in
+      var pageBuild = (meta.getAttribute('content')||'').trim();
+      if(!pageBuild) return;
+
+      // Throttle: don't reload more than once every 5 min from a given tab
+      var lastReload = parseInt(sessionStorage.getItem('hoc_stale_reload_ts')||'0', 10);
+      if(Date.now() - lastReload < 5*60*1000) return;
+
+      // Ask the controlling SW for its cache name
+      if(!('serviceWorker' in navigator)) return;
+      navigator.serviceWorker.ready.then(function(reg){
+        if(!navigator.serviceWorker.controller) return;
+        // Compare via a postMessage round-trip
+        var channel = new MessageChannel();
+        var done = false;
+        channel.port1.onmessage = function(ev){
+          if(done) return; done = true;
+          var swCache = (ev.data && ev.data.cache) || '';
+          if(!swCache) return;
+          // Both formats: hoc-oes-v6.34m-20260605 — extract the v6.34X part
+          var swVer = (swCache.match(/v6\.\d+[a-z]?/)||[''])[0];
+          var pgVer = (pageBuild.match(/v6\.\d+[a-z]?/)||[''])[0];
+          if(!swVer || !pgVer) return;
+          if(swVer !== pgVer){
+            // Page is stale relative to SW. Force reload bypassing cache.
+            console.warn('[HOC-OES] Stale page detected: page='+pgVer+' SW='+swVer+' — reloading');
+            sessionStorage.setItem('hoc_stale_reload_ts', String(Date.now()));
+            // Reload with cache-bust query so even HTTP cache surrenders
+            var url = location.href.split('#')[0];
+            var sep = url.indexOf('?') >= 0 ? '&' : '?';
+            location.replace(url + sep + '_v=' + Date.now());
+          }
+        };
+        // Some old SWs may not respond — set a timeout to clean up
+        setTimeout(function(){ done = true; }, 3000);
+        try {
+          navigator.serviceWorker.controller.postMessage({type:'GET_CACHE_NAME'}, [channel.port2]);
+        } catch(e){ done = true; }
+      }).catch(function(){});
+    } catch(e){ /* never break a page over this */ }
+  }
+  // Run after page settles (avoid interrupting first paint)
+  if(document.readyState === 'complete'){
+    setTimeout(detectStaleAndReload, 1500);
+  } else {
+    window.addEventListener('load', function(){ setTimeout(detectStaleAndReload, 1500); });
+  }
 })();

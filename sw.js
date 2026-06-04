@@ -12,7 +12,7 @@
 //   nothing to stale.
 //
 // Bump CACHE on every deploy. The activate handler nukes prior caches.
-const CACHE = 'hoc-oes-v6.34l-20260605';
+const CACHE = 'hoc-oes-v6.34m-20260605';
 
 // Minimal shell — JUST what's needed to bootstrap the app. NO dashboard HTML.
 const SHELL = [
@@ -96,4 +96,9 @@ self.addEventListener('fetch', e => {
 
 self.addEventListener('message', e => {
   if (e.data === 'SKIP_WAITING') self.skipWaiting();
+  // v6.34m: respond to GET_CACHE_NAME for the version-mismatch detector.
+  // The page sends a MessageChannel port via e.ports[0]; reply with our cache name.
+  if (e.data && e.data.type === 'GET_CACHE_NAME' && e.ports && e.ports[0]) {
+    try { e.ports[0].postMessage({ cache: CACHE }); } catch (err) {}
+  }
 });

@@ -1,4 +1,6 @@
 <!DOCTYPE html><html lang="en"><head>
+<meta name="hoc-build" content="v6.34m">
+
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Production Supervisor</title>
 <style>*{box-sizing:border-box;margin:0;padding:0}
@@ -1130,12 +1132,12 @@ function renderKPIs(){
   document.getElementById('cmd-kpis').innerHTML=[
     {l:_monthLabel634h()+' Cases',     v:N(Math.round(monthCompletedCases)), s:caseSource, c:'var(--green)'},
     {l:'Case Balance',  v:(caseBalance>=0?'+':'')+N(Math.round(caseBalance)), s:'vs goal', c:caseBalance>=0?'var(--green)':'var(--red)'},
-    {l:'Open Batches',  v:ns,  s:'Not started · May',  c:'var(--text)'},
+    {l:'Open Batches',  v:ns,  s:'Not started · '+_monthLabel634h(),  c:'var(--text)'},
     {l:'Running Now',   v:run, s:'Active on floor',    c:'var(--blue)'},
     {l:'Completed',     v:done,s:'This month',         c:'var(--green)'},
     {l:'OEE',           v:oeeDisplay, s:oeeSubtitle,   c:oeeColor},
     {l:'Attainment',    v:attDisplay, s:attSubtitle,   c:attColor},
-    {l:'Case Goal',     v:N(Math.round(monthPlannedCases)), s:'May target', c:'var(--text)'},
+    {l:'Case Goal',     v:N(Math.round(monthPlannedCases)), s:_monthLabel634h()+' target', c:'var(--text)'},
   ].map(k=>`<div class="kpi"><div class="kl">${k.l}</div><div class="kv" style="color:${k.c}">${k.v}</div><div class="ks">${k.s}</div></div>`).join('');
 }
 
