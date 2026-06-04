@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34m">
+<meta name="hoc-build" content="v6.34n">
 
 <meta charset="UTF-8">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -130,7 +130,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--text)}
 
 <script>
 // v6.34h: Version stamp + badge. Bump on every deploy.
-var HOC_OES_VERSION = 'v6.34m-20260605';
+var HOC_OES_VERSION = 'v6.34n-20260605';
 var HOC_OES_BUILD_TS = '1779870500';
 if(localStorage.getItem('hoc_oes_version') !== HOC_OES_VERSION){
   localStorage.setItem('hoc_oes_version', HOC_OES_VERSION);
@@ -147,6 +147,8 @@ if(localStorage.getItem('hoc_oes_version') !== HOC_OES_VERSION){
     if(t) t.textContent = monthYear;
     var k = document.getElementById('kl-cases');
     if(k) k.textContent = monthName + ' Cases';
+    var oee = document.getElementById('kl-oee');
+    if(oee) oee.textContent = 'OEE (' + monthName + ')';
   }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply);
   else apply();
@@ -160,7 +162,7 @@ if(localStorage.getItem('hoc_oes_version') !== HOC_OES_VERSION){
   <div class="tb-logo">HC</div>
   <div>
     <div class="tb-title">HOC-OES</div>
-    <div class="tb-sub">House of Cheatham Operational Ecosystem · <span id="hoc-month-year">May 2026</span> · <span id="ver-badge" style="background:rgba(34,197,94,.15);color:#22C55E;padding:1px 6px;border-radius:4px;font-weight:700;font-family:ui-monospace;font-size:9px;letter-spacing:.05em">v6.34m</span> · <a href="reset.html" style="color:#8899AA;font-size:9px;text-decoration:underline;margin-left:6px">reset cache</a></div>
+    <div class="tb-sub">House of Cheatham Operational Ecosystem · <span id="hoc-month-year">May 2026</span> · <span id="ver-badge" style="background:rgba(34,197,94,.15);color:#22C55E;padding:1px 6px;border-radius:4px;font-weight:700;font-family:ui-monospace;font-size:9px;letter-spacing:.05em">v6.34n</span> · <a href="reset.html" style="color:#8899AA;font-size:9px;text-decoration:underline;margin-left:6px">reset cache</a></div>
   </div>
   <div class="tb-right">
     <div class="sync-pill" onclick="toggleSync()">
@@ -289,7 +291,7 @@ if(localStorage.getItem('hoc_oes_version') !== HOC_OES_VERSION){
     <div class="kpi"><div class="kl">Open Batches</div><div class="kv" id="kv-batches" style="color:var(--text)">—</div><div class="ks">Not started</div></div>
     <div class="kpi"><div class="kl">Synced Updates</div><div class="kv" id="kv-synced" style="color:var(--purple)">0</div><div class="ks">From floor tools</div></div>
     <div class="kpi"><div class="kl">Blocked Batches</div><div class="kv" id="kv-blocked" style="color:var(--text)">0</div><div class="ks">Upstream stopped</div></div>
-    <div class="kpi"><div class="kl">OEE (May)</div><div class="kv" id="kv-oee" style="color:var(--text)">—</div><div class="ks">vs 60% goal</div></div>
+    <div class="kpi"><div class="kl"><span id="kl-oee">OEE</span></div><div class="kv" id="kv-oee" style="color:var(--text)">—</div><div class="ks">vs 60% goal</div></div>
     <div class="kpi"><div class="kl">Attainment</div><div class="kv" id="kv-att" style="color:var(--text)">—</div><div class="ks">vs 90% goal</div></div>
   </div>
 
