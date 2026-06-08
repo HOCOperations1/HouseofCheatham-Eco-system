@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34n">
+<meta name="hoc-build" content="v6.34p">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Production Supervisor</title>
@@ -674,6 +674,101 @@ var FORECAST = [{"line":1,"batch":"MAIN063264","desc":"ORI Cocoa Butter Body Lot
 // ── LINE_DEFAULTS: per-line shift pattern + availability (configuration, not data) ──
 //   These don't change with the upload; they're plant configuration.
 //   Once we have Patch live, top-loss values will come from there too.
+// ─────────────────────────────────────────────────────────────────────
+// v6.34o: Dynamic available hours calculation
+//
+// Replaces the static availhr values below (which were full-month figures
+// assuming a "typical" month with no holidays). Now we compute the remaining
+// working days from today through end of month, multiply by 9.17 hrs/day,
+// and exclude HOLIDAYS_634o (currently Juneteenth Eve + Juneteenth Day).
+//
+// Per-line patterns are preserved — each line counts only its own working
+// days (e.g., Mon-Thu lines don't count Friday/Saturday).
+// ─────────────────────────────────────────────────────────────────────
+var WORKING_HOURS_PER_DAY_634o = 9.17;
+var HOLIDAYS_634o = {
+  // ISO date strings — add new holidays here as needed
+  '2026-01-01': "New Year's Day",
+  '2026-05-25': 'Memorial Day',
+  '2026-06-18': 'Juneteenth Eve (HOC)',
+  '2026-06-19': 'Juneteenth',
+  '2026-07-03': 'Independence Day (observed)',
+  '2026-07-04': 'Independence Day',
+  '2026-09-07': 'Labor Day',
+  '2026-11-26': 'Thanksgiving',
+  '2026-11-27': 'Day after Thanksgiving',
+  '2026-12-24': 'Christmas Eve',
+  '2026-12-25': 'Christmas Day',
+};
+// Day-of-week sets per pattern (0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat)
+var PATTERN_DAYS_634o = {
+  'Mon-Thu':   [1,2,3,4],
+  'Mon-Fri':   [1,2,3,4,5],
+  'Mon-Sat':   [1,2,3,4,5,6],
+  'Wed-Sat':   [3,4,5,6],
+  'Tue-Sat':   [2,3,4,5,6],
+  'As Needed': []
+};
+
+function _iso634o(d){
+  return d.getFullYear()+'-'+
+         String(d.getMonth()+1).padStart(2,'0')+'-'+
+         String(d.getDate()).padStart(2,'0');
+}
+
+// Count remaining working days (today through end of current month) for a pattern.
+// Excludes weekends not in pattern, and HOLIDAYS_634o (federal/HOC closures).
+function workingDaysRemaining634o(pattern){
+  var allowed = PATTERN_DAYS_634o[pattern];
+  if(!allowed || !allowed.length) return 0;
+  var now = new Date();
+  var endOfMonth = new Date(now.getFullYear(), now.getMonth()+1, 0); // last day of month
+  var count = 0;
+  // Start from today (inclusive) — today's hours still count until day end
+  var cursor = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  while(cursor <= endOfMonth){
+    var dow = cursor.getDay();
+    if(allowed.indexOf(dow) >= 0){
+      var iso = _iso634o(cursor);
+      if(!HOLIDAYS_634o[iso]){
+        count++;
+      }
+    }
+    cursor.setDate(cursor.getDate()+1);
+  }
+  return count;
+}
+
+// Available hours for a pattern = working days remaining × WORKING_HOURS_PER_DAY_634o
+function availableHours634o(pattern){
+  return workingDaysRemaining634o(pattern) * WORKING_HOURS_PER_DAY_634o;
+}
+
+// Plant-wide remaining working days: union of all line patterns excluding 'As Needed'.
+// Treats the plant calendar as "any day at least one line is scheduled to run".
+function plantWorkingDaysRemaining634o(){
+  // Union all the days any active line runs
+  var unionDays = {};
+  Object.keys(LINE_DEFAULTS).forEach(function(ln){
+    var d = LINE_DEFAULTS[ln];
+    var allowed = PATTERN_DAYS_634o[d.pattern];
+    if(allowed) allowed.forEach(function(dow){ unionDays[dow] = true; });
+  });
+  var now = new Date();
+  var endOfMonth = new Date(now.getFullYear(), now.getMonth()+1, 0);
+  var count = 0;
+  var cursor = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  while(cursor <= endOfMonth){
+    if(unionDays[cursor.getDay()] && !HOLIDAYS_634o[_iso634o(cursor)]){
+      count++;
+    }
+    cursor.setDate(cursor.getDate()+1);
+  }
+  return count;
+}
+
+// LINE_DEFAULTS now has _patternBase availhr (kept for backwards compat / reference)
+// but per-line stats below use availableHours634o(d.pattern) for the LIVE value.
 var LINE_DEFAULTS = {
   1:  {pattern:'Mon-Thu', availhr:128.33, availmin:7700,  toploss:'Short Stops 7.8%',          loss2:'Lunch Break 5.6%'},
   2:  {pattern:'Mon-Sat', availhr:210.83, availmin:12650, toploss:'Changeover 90min 7.0%',     loss2:'Short Stops 8.8%'},
@@ -709,32 +804,53 @@ function computeLines(){
     var done    = lineBatches.filter(function(b){ return b.status === 'COMPLETED'; }).length;
     var running = lineBatches.filter(function(b){ return b.status === 'RUNNING'; }).length;
     var pending = lineBatches.length - done - running;
-    // Remaining minutes: sum of estimated minutes for non-completed batches
+    // v6.34o: Remaining minutes = sum of minutes for batches dated this month
+    //         AND not yet COMPLETED. Uses b.minutes (the Excel "Minutes" column,
+    //         the standard runtime per batch) — falls back to eta_min or rem_min
+    //         if minutes isn't set on the batch.
+    var now = new Date();
+    var curMonth = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
     var remmin = 0;
     lineBatches.forEach(function(b){
       if(b.status === 'COMPLETED') return;
-      // Prefer eta_min from sync floor, fall back to std calculation if avail
-      var min = parseInt(b.eta_min) || parseInt(b.rem_min) || 0;
+      // Match by batch date in current month (b.date is ISO 'YYYY-MM-DD' or 'M/D/YYYY')
+      var batchMonth = '';
+      if(b.date){
+        var ds = String(b.date);
+        if(ds.indexOf('-')>0){
+          batchMonth = ds.slice(0,7);
+        } else if(ds.indexOf('/')>0){
+          var parts = ds.split('/');
+          if(parts.length >= 3){
+            var mm = parseInt(parts[0])||0, yy = parseInt(parts[2])||0;
+            batchMonth = (yy<100?2000+yy:yy)+'-'+String(mm).padStart(2,'0');
+          }
+        }
+      }
+      if(batchMonth !== curMonth) return;
+      var min = parseInt(b.minutes) || parseInt(b.eta_min) || parseInt(b.rem_min) || 0;
       remmin += min;
     });
-    // OEE: prefer Patch upload, otherwise fall back to a heuristic from done/total
+    // OEE: prefer Patch upload, otherwise fall back to a heuristic
     var oee = null;
     if(patchByLine[lineNum] && patchByLine[lineNum].oee != null){
-      oee = patchByLine[lineNum].oee / 100; // Patch stores as % (65.0)
+      oee = patchByLine[lineNum].oee / 100;
     }
     if(oee == null){
-      // Rough heuristic if no Patch data: 50% baseline, doesn't claim accuracy
       oee = 0.5;
     }
-    // Gap: remaining hours vs available — negative means overcapacity
+    // v6.34o: DYNAMIC available hours = working days remaining × 9.17 hrs/day
+    var liveAvailHr = availableHours634o(d.pattern);
+    var liveAvailMin = liveAvailHr * 60;
     var remhrs = remmin/60;
-    var gaphr = d.availhr - remhrs;
+    var gaphr = liveAvailHr - remhrs;
     // Signal: derive from gap + line state
     var signal;
-    if(d.availhr === 0) signal = 'LINE OFF';
-    else if(gaphr < 0)  signal = '⚠ CRITICAL';
-    else if(gaphr < 50) signal = '! WATCH';
-    else                signal = '✓ MONITOR';
+    if(d.pattern === 'As Needed') signal = 'LINE OFF';
+    else if(liveAvailHr === 0)    signal = 'LINE OFF (month end)';
+    else if(gaphr < 0)            signal = '⚠ CRITICAL';
+    else if(gaphr < liveAvailHr*0.15) signal = '! WATCH';  // <15% slack
+    else                          signal = '✓ MONITOR';
     // Top-loss preference: live Patch data overrides defaults
     var toploss = d.toploss;
     if(patchByLine[lineNum]){
@@ -747,7 +863,9 @@ function computeLines(){
       if(biggest && biggest.v > 0) toploss = 'Changeover '+biggest.k+' '+biggest.v.toFixed(1)+'%';
     }
     return {
-      line:lineNum, pattern:d.pattern, availhr:d.availhr, availmin:d.availmin,
+      line:lineNum, pattern:d.pattern,
+      availhr:Math.round(liveAvailHr*10)/10,  // v6.34o: now dynamic, was d.availhr
+      availmin:Math.round(liveAvailMin),
       oee:oee, toploss:toploss, loss2:d.loss2,
       total:lineBatches.length, done:done, running:running, pending:pending,
       remmin:remmin, gaphr:Math.round(gaphr*10)/10, signal:signal
@@ -1129,6 +1247,21 @@ function renderKPIs(){
   var attSubtitle = liveAttainment != null ? (attSource+' · vs '+attainGoal+'%') : 'Upload attainment / Patch';
   var attColor = liveAttainment == null ? 'var(--text3)' : liveAttainment>=attainGoal ? 'var(--green)' : 'var(--red)';
 
+  // v6.34o: plant-wide available + gap hours (sum across all lines)
+  var plantAvailHr = 0, plantRemMin = 0;
+  LINES.forEach(function(L){
+    plantAvailHr += (L.availhr||0);
+    plantRemMin  += (L.remmin||0);
+  });
+  var plantRemHr = plantRemMin / 60;
+  var plantGapHr = plantAvailHr - plantRemHr;
+  var plantWorkDays = plantWorkingDaysRemaining634o();
+  var avTooltip = plantWorkDays + ' work days × ' + WORKING_HOURS_PER_DAY_634o + 'h';
+  var gapSub = plantGapHr >= 0
+    ? '+' + N(Math.round(plantGapHr*10)/10) + 'h slack'
+    : N(Math.round(plantGapHr*10)/10) + 'h short';
+  var gapColor = plantGapHr < 0 ? 'var(--red)' : plantGapHr < plantAvailHr*0.10 ? 'var(--amber)' : 'var(--green)';
+
   document.getElementById('cmd-kpis').innerHTML=[
     {l:_monthLabel634h()+' Cases',     v:N(Math.round(monthCompletedCases)), s:caseSource, c:'var(--green)'},
     {l:'Case Balance',  v:(caseBalance>=0?'+':'')+N(Math.round(caseBalance)), s:'vs goal', c:caseBalance>=0?'var(--green)':'var(--red)'},
@@ -1138,6 +1271,8 @@ function renderKPIs(){
     {l:'OEE',           v:oeeDisplay, s:oeeSubtitle,   c:oeeColor},
     {l:'Attainment',    v:attDisplay, s:attSubtitle,   c:attColor},
     {l:'Case Goal',     v:N(Math.round(monthPlannedCases)), s:_monthLabel634h()+' target', c:'var(--text)'},
+    {l:'Available Hrs', v:N(Math.round(plantAvailHr*10)/10)+'h', s:avTooltip, c:'var(--blue)'},
+    {l:'Gap Hrs',       v:(plantGapHr>=0?'+':'')+N(Math.round(plantGapHr*10)/10)+'h', s:gapSub, c:gapColor},
   ].map(k=>`<div class="kpi"><div class="kl">${k.l}</div><div class="kv" style="color:${k.c}">${k.v}</div><div class="ks">${k.s}</div></div>`).join('');
 }
 
