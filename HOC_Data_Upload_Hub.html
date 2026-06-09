@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34p">
+<meta name="hoc-build" content="v6.34v">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -121,55 +121,6 @@ input:focus,select:focus,textarea:focus{border-color:var(--blue)}
        OData endpoints directly. Falls back to file drops below when the
        server is unreachable (off-network / VPN-down). Status indicator
        shows connection health; "Pull Now" forces immediate refresh. -->
-  <div id="vic-datalink-pc-banner" style="display:none;margin-bottom:10px;padding:10px 14px;background:linear-gradient(135deg,rgba(34,197,94,.12),rgba(59,130,246,.08));border:1px solid rgba(34,197,94,.4);border-left:4px solid var(--green);border-radius:8px;font-size:11px;color:var(--text)">
-    <strong style="color:var(--green)">📡 DATALINK PC MODE</strong> ·
-    This PC is the designated Vicinity bridge — keep this browser tab open. Auto-poll active.
-    <span style="color:var(--text3);font-size:10px;margin-left:6px">All other tablets read this data via Supabase.</span>
-  </div>
-
-  <div class="card" style="margin-bottom:14px;border:1px solid rgba(34,197,94,.3);background:linear-gradient(135deg,rgba(34,197,94,.05),rgba(59,130,246,.04))">
-    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-      <span>🔄 Live Vicinity Datalink <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3);font-size:9px;margin-left:6px">auto-pulls Production Schedule, Labor Standards, Patch OEE directly from Vicinity 4 OData</span></span>
-      <span id="vic-status-pill" style="font-size:9px;font-weight:700;padding:3px 10px;border-radius:10px;background:rgba(100,116,139,.15);color:var(--text3);border:1px solid rgba(100,116,139,.3)">⊙ Not tested</span>
-    </div>
-
-    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
-      <div style="font-size:10px;color:var(--text2);flex:1;min-width:200px">
-        Server: <code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-size:9px" id="vic-server-display">hoc-dts-svr-025:5555</code>
-        <span style="margin-left:10px;color:var(--text3)">Last pull: <span id="vic-last-pull">never</span></span>
-      </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="nb" onclick="vicProbe()" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);font-size:10px;font-weight:700">⚡ Test Connection</button>
-        <button class="nb" onclick="vicPullSchedule()" style="padding:6px 12px;border-radius:6px;background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.35);font-size:10px;font-weight:700">📊 Pull Schedule</button>
-        <button class="nb" onclick="vicPullLabor()" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);font-size:10px;font-weight:700">⏱ Pull Labor Std</button>
-        <button class="nb" onclick="vicPullOEE()" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);font-size:10px;font-weight:700">📈 Pull Patch OEE</button>
-        <button class="nb" onclick="vicPullAll()" style="padding:6px 12px;border-radius:6px;background:rgba(59,130,246,.15);color:var(--blue);border:1px solid rgba(59,130,246,.35);font-size:10px;font-weight:700">🔄 Pull All Tier 1</button>
-      </div>
-    </div>
-
-    <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:10px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
-      <label style="display:flex;align-items:center;gap:5px;cursor:pointer;color:var(--text2)">
-        <input type="checkbox" id="vic-autopoll" onchange="vicToggleAutoPoll()"> Auto-poll every 15 min
-      </label>
-      <button class="nb" onclick="vicShowEndpoints()" style="padding:4px 9px;border-radius:5px;border:1px solid var(--border);font-size:9px">View all 32 endpoints</button>
-      <button class="nb" onclick="vicConfigureServer()" style="padding:4px 9px;border-radius:5px;border:1px solid var(--border);font-size:9px;color:var(--text3)">⚙ Change server URL</button>
-      <span id="vic-status-msg" style="margin-left:auto;font-size:10px;color:var(--text3)"></span>
-    </div>
-
-    <div id="vic-endpoints-panel" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);max-height:280px;overflow-y:auto">
-      <table style="width:100%;font-size:10px">
-        <thead><tr>
-          <th style="text-align:left;padding:4px 6px;color:var(--text3);font-weight:700">Key</th>
-          <th style="text-align:left;padding:4px 6px;color:var(--text3);font-weight:700">Tier</th>
-          <th style="text-align:left;padding:4px 6px;color:var(--text3);font-weight:700">Purpose</th>
-          <th style="text-align:right;padding:4px 6px;color:var(--text3);font-weight:700">Records</th>
-          <th style="text-align:left;padding:4px 6px;color:var(--text3);font-weight:700">Last pull</th>
-          <th style="padding:4px 6px"></th>
-        </tr></thead>
-        <tbody id="vic-endpoints-tbody"></tbody>
-      </table>
-    </div>
-  </div>
 
   <div class="zone-grid">
     <!-- Production Tracker -->
@@ -217,6 +168,18 @@ input:focus,select:focus,textarea:focus{border-color:var(--blue)}
         <div class="drop-title">Fill_Labor_Extract.xlsx</div>
         <div class="drop-sub">Master labor standards by formula · Hours/LB compounding time · powers Compound forecast</div>
         <div class="drop-status" id="status-lb" style="color:var(--text3)">Drop file here or click to browse</div>
+      </div>
+    </div>
+
+    <!-- Line Setup (work patterns per line — v6.34v) -->
+    <div>
+      <div style="font-size:10px;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em">⚙️ Line Setup</div>
+      <div class="drop-zone" id="zone-ls" onclick="document.getElementById('file-ls').click()" ondragover="dragOver(event,'ls')" ondragleave="dragLeave('ls')" ondrop="dropFile(event,'ls')">
+        <input type="file" id="file-ls" accept=".xlsx,.xls,.csv" style="display:none" onchange="loadFile(this.files[0],'ls')">
+        <div class="drop-icon">⚙️</div>
+        <div class="drop-title">Line_Setup.xlsx</div>
+        <div class="drop-sub">Per-line work pattern · Hours/Day · Active flag · powers Line Summary in Production Supervisor</div>
+        <div class="drop-status" id="status-ls" style="color:var(--text3)">Drop file here or click to browse</div>
       </div>
     </div>
   </div>
@@ -401,106 +364,6 @@ function broadcastSchedule(payload){
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// OPTION B — Vicinity OData live-refresh (SCAFFOLD — disabled by default)
-// ═══════════════════════════════════════════════════════════════════
-// Pulls Vicinity inventory directly from the ERP OData feed,
-// eliminating the manual Planning_Data.xlsx export step.
-//
-// TO ENABLE:
-//   1. Verify tablets can reach hoc-dts-svr-025:5555 on the LAN
-//   2. Verify the endpoint returns JSON without a login prompt
-//   3. If CORS blocks the browser, ask IT to add this header on the
-//      Vicinity Web server response:
-//         Access-Control-Allow-Origin: *
-//      (or specific origin of where these HTML files are hosted)
-//   4. Flip OPTION_B_ENABLED to true below and reload.
-//
-var OPTION_B_ENABLED = false;
-var VICINITY_ODATA = 'http://hoc-dts-svr-025:5555/VicinityWeb/odata/HOCVIC/vv_Custom%20Views_Planning_MRP%20Detail?$format=json';
-
-function refreshFromVicinity(){
-  if(!OPTION_B_ENABLED){
-    progress('✗ Live refresh disabled. Set OPTION_B_ENABLED=true after confirming network + CORS.', 'err');
-    return;
-  }
-  var btn = document.getElementById('vic-refresh-btn');
-  if(btn){ btn.disabled = true; btn.textContent = '⏳ Pulling from Vicinity...'; }
-  document.getElementById('progress-area').style.display = 'block';
-  progress('Fetching live Vicinity feed...');
-
-  fetch(VICINITY_ODATA, {method:'GET', headers:{'Accept':'application/json'}})
-    .then(function(r){
-      if(!r.ok) throw new Error('HTTP '+r.status+' from Vicinity Web');
-      return r.json();
-    })
-    .then(function(json){
-      var rows = json.value || json.d && json.d.results || [];
-      progress('✓ Received ' + rows.length.toLocaleString() + ' rows from Vicinity', 'ok');
-      if(!rows.length) throw new Error('Empty payload — check feed URL');
-
-      // Run the same inventory-rollup logic the file path uses
-      var byComp = {};
-      rows.forEach(function(r){
-        var sku = String(r.ComponentId||'').trim();
-        if(!sku) return;
-        if(!byComp[sku]) byComp[sku] = {
-          sku:sku, desc:String(r.ComponentDescription||'').trim(),
-          type:String(r.ComponentType||'').trim(),
-          makebuy:String(r.MakeorBuy||'').trim(),
-          qoh:0, po_qty:0, prod_req:0
-        };
-        var qty = parseFloat(r.Quantity)||0;
-        var src = String(r.SourceType||'').trim();
-        if(src==='QOH') byComp[sku].qoh += qty;
-        else if(src==='Production'||src==='Planned Production') byComp[sku].prod_req += qty;
-        else if(src.indexOf('PO')>=0||src.indexOf('Purchase')>=0||src.indexOf('Order')>=0) byComp[sku].po_qty += qty;
-      });
-      var inventory = Object.values(byComp).map(function(c){
-        var net = c.qoh + c.po_qty - Math.abs(c.prod_req);
-        return Object.assign({}, c, {
-          net: Math.round(net*100)/100,
-          status: net<0?'LOW':'OK',
-          qoh: Math.round(c.qoh*100)/100,
-          po_qty: Math.round(c.po_qty*100)/100,
-          prod_req: Math.round(c.prod_req*100)/100
-        });
-      });
-
-      // Merge with whatever's already in localStorage (preserves batches/goals)
-      var existing = {};
-      try { existing = JSON.parse(localStorage.getItem(DATA_KEY)||'{}'); }catch(e){}
-      existing.inventory = inventory;
-      existing.inventory_ts = new Date().toISOString();
-      existing._updated = new Date().toISOString();
-      existing._source = 'vicinity_odata';
-      localStorage.setItem(DATA_KEY, JSON.stringify(existing));
-
-      var low = inventory.filter(function(i){return i.status==='LOW';});
-      progress('✓ Inventory: ' + inventory.length.toLocaleString() + ' SKUs · ' + low.length + ' LOW', 'ok');
-
-      // Broadcast to all tablets via Supabase
-      broadcastSchedule(existing);
-
-      progress('━━━ LIVE REFRESH COMPLETE ━━━', 'ok');
-      log('ok', 'Vicinity live refresh — ' + inventory.length + ' SKUs · ' + low.length + ' LOW');
-
-      if(btn){
-        btn.textContent = '✓ Live Refresh OK';
-        btn.style.background = 'var(--green)';
-        setTimeout(function(){
-          btn.textContent = '🔄 Refresh from Vicinity';
-          btn.style.background = '';
-          btn.disabled = false;
-        }, 3000);
-      }
-    })
-    .catch(function(err){
-      progress('✗ Vicinity refresh failed: ' + err.message, 'err');
-      log('err', 'Vicinity refresh: ' + err.message);
-      if(btn){ btn.textContent = '🔄 Refresh from Vicinity'; btn.disabled = false; }
-    });
-}
-// ═══════════════════════════════════════════════════════════════════
 
 // ── Drag/drop helpers ─────────────────────────────────────────────────
 function dragOver(e,zone){ e.preventDefault(); document.getElementById('zone-'+zone).classList.add('drag-over'); }
@@ -508,7 +371,7 @@ function dragLeave(zone){ document.getElementById('zone-'+zone).classList.remove
 function dropFile(e,zone){ e.preventDefault(); dragLeave(zone); var f=e.dataTransfer.files[0]; if(f)loadFile(f,zone); }
 
 // ── Loaded file registry ──────────────────────────────────────────────
-var loaded = {pt:null, pd:null};
+var loaded = {pt:null, pd:null, co:null, lb:null, ls:null};
 
 function loadFile(file, zone) {
   if(!file) return;
@@ -982,7 +845,7 @@ function parseAttainmentPaste(rows, statusEl){
 // ═══════════════════════════════════════════════════════════════════
 
 function checkReady() {
-  document.getElementById('update-btn').disabled = !(loaded.pt || loaded.pd || loaded.co || loaded.lb);
+  document.getElementById('update-btn').disabled = !(loaded.pt || loaded.pd || loaded.co || loaded.lb || loaded.ls);
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -1606,6 +1469,86 @@ function updateAllDashboards() {
         } catch(e){}
       }
 
+      // ── Parse Line Setup (work patterns per line) — v6.34v ──────────
+      // Schema: Line | Pattern | Hours/Day | Manual Days | Active | Notes
+      //   - Pattern values: Mon-Thu, Mon-Fri, Mon-Sat, Wed-Sat, As Needed, Down
+      //   - Manual Days (optional) overrides the pattern-based calc when set.
+      //     Matches the workbook's Setup sheet behavior where the planner
+      //     directly enters working days for the period rather than computing
+      //     from a date range (handles partial months, holidays, OT decisions).
+      //   - Active: TRUE/FALSE/Yes/No/1/0
+      //   - Notes: free text
+      if(loaded.ls) {
+        progress('Reading Line Setup...');
+        var wbLS = loaded.ls.wb;
+        var lsSheet = wbLS.Sheets[wbLS.SheetNames[0]];
+        if(!lsSheet) {
+          progress('⚠ Line Setup: no sheets found', 'warn');
+        } else {
+          var lsRows = XLSX.utils.sheet_to_json(lsSheet, {defval:''});
+          // Pattern → array of weekday numbers (0=Sun, 1=Mon, ..., 6=Sat)
+          var patternMap = {
+            'mon-thu':[1,2,3,4], 'mon-fri':[1,2,3,4,5], 'mon-sat':[1,2,3,4,5,6],
+            'wed-sat':[3,4,5,6], 'as needed':[], 'down':[]
+          };
+          var setup = [];
+          var bad = [];
+          lsRows.forEach(function(r){
+            // Tolerate header variants
+            var rawLine = r['Line']!==undefined?r['Line']:(r['Line #']!==undefined?r['Line #']:r['LineNumber']);
+            if(rawLine===''||rawLine===null||rawLine===undefined) return;
+            var lineNum = parseInt(String(rawLine).replace(/\D/g,''));
+            if(isNaN(lineNum)) return;
+            var patRaw = String(r['Pattern']||r['Work Pattern']||'').trim();
+            var pat = patRaw.toLowerCase();
+            var hpd = parseFloat(r['Hours/Day']||r['Hours per Day']||r['Hrs/Day']||9.17);
+            if(isNaN(hpd) || hpd <= 0) hpd = 9.17;
+            // Active
+            var actRaw = String(r['Active']||'').trim().toUpperCase();
+            var active = !(actRaw === 'FALSE' || actRaw === '0' || actRaw === 'NO' || actRaw === 'N');
+            var weekdays = patternMap[pat];
+            if(weekdays === undefined){
+              bad.push({line: lineNum, pattern: patRaw});
+              weekdays = [];
+            }
+            // Manual Days override — workbook compatibility
+            var mdRaw = r['Manual Days']!==undefined?r['Manual Days']:r['Manual Days Override'];
+            var manualDays = null;
+            if(mdRaw !== '' && mdRaw !== null && mdRaw !== undefined){
+              var mdNum = parseFloat(mdRaw);
+              if(!isNaN(mdNum) && mdNum >= 0) manualDays = mdNum;
+            }
+            setup.push({
+              line: lineNum,
+              pattern: patRaw,                  // original case for display
+              hours_per_day: hpd,
+              weekdays: weekdays,
+              manual_days: manualDays,          // null → engine uses date-range calc
+              active: active,
+              notes: String(r['Notes']||'').trim()
+            });
+          });
+          setup.sort(function(a,b){ return a.line - b.line; });
+          result.line_setup = setup;
+          result.line_setup_ts = ts;
+          var manualCount = setup.filter(function(s){ return s.manual_days !== null; }).length;
+          var msg = '✓ Line Setup: ' + setup.length + ' lines loaded'
+                  + (manualCount ? ' (' + manualCount + ' with manual day override)' : '')
+                  + (bad.length ? ' · ' + bad.length + ' unknown pattern(s)' : '');
+          progress(msg, bad.length ? 'warn' : 'ok');
+          if(bad.length){
+            bad.slice(0,3).forEach(function(b){
+              progress('   • Line ' + b.line + ': unknown pattern "' + b.pattern + '"', 'warn');
+            });
+          }
+          try {
+            localStorage.setItem('hoc_line_setup_v1', JSON.stringify({
+              setup: setup, _updated: ts
+            }));
+          } catch(e){}
+        }
+      }
+
       // ── Parse Planning Data ───────────────────────────────────────
       if(loaded.pd) {
         progress('Reading Planning Data (Vicinity)...');
@@ -1736,6 +1679,176 @@ function updateAllDashboards() {
         }
       }
 
+      // ─────────────────────────────────────────────────────────────
+      // v6.34r: Vicinity OData ingestion
+      //
+      // The planner can refresh OData connections in Planning_Data.xlsx
+      // (or Production Tracker) to pull live data from Vicinity. Two
+      // sheets are supported:
+      //
+      //   "Batches" — Vicinity batch register. Richer than Production
+      //   Tracker: includes FormulaID, ProcessCellID (mix tank ID),
+      //   ProcessingStage, audit timestamps.
+      //
+      //   "Query2" — Components Required per batch ticket. Maps each
+      //   batch to its required finished-good packaging components
+      //   (NOT raw chemical BOMs — that's a different Vicinity endpoint).
+      //
+      // Dates in these sheets are Excel serial numbers (days since
+      // 1899-12-30). We convert to ISO date strings.
+      //
+      // When Vicinity Batches data exists, it's merged onto the
+      // existing result.batches list (from Production Tracker) by
+      // BatchNumber. Vicinity WINS on shared fields (date, status).
+      // ─────────────────────────────────────────────────────────────
+      function _excelSerialToISO(s){
+        if(s === null || s === undefined || s === '') return '';
+        if(typeof s === 'string'){
+          // Already a string date
+          if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+          var d = new Date(s);
+          if(!isNaN(d.getTime())) return d.toISOString().slice(0,10);
+          return '';
+        }
+        var n = parseFloat(s);
+        if(isNaN(n) || n < 10000) return '';
+        // Excel epoch is 1899-12-30 (compensates for the 1900 leap year bug)
+        var ms = (n - 25569) * 86400 * 1000;
+        var d = new Date(ms);
+        if(isNaN(d.getTime())) return '';
+        return d.toISOString().slice(0,10);
+      }
+
+      function _findSheet(name){
+        // Helper: look for a named sheet in either loaded.pd or loaded.pt.
+        // Match case-insensitively and ignore trailing/leading whitespace,
+        // because Power Query connections occasionally emit sheet names
+        // like "Batches " with a trailing space.
+        function _findInWb(wb){
+          if(!wb || !wb.SheetNames) return null;
+          var target = name.toLowerCase().trim();
+          for(var i = 0; i < wb.SheetNames.length; i++){
+            var sn = wb.SheetNames[i];
+            if(String(sn).toLowerCase().trim() === target){
+              return wb.Sheets[sn];
+            }
+          }
+          return null;
+        }
+        var s = loaded.pd && _findInWb(loaded.pd.wb);
+        if(s) return {sheet: s, source: 'Planning Data'};
+        s = loaded.pt && _findInWb(loaded.pt.wb);
+        if(s) return {sheet: s, source: 'Production Tracker'};
+        return null;
+      }
+
+      // ── Vicinity Batches sheet ────────────────────────────────────
+      var vbSheet = _findSheet('Batches');
+      var vicinityBatches = [];
+      var vicinityBatchLookup = {};
+      if(vbSheet){
+        try {
+          var vbRows = XLSX.utils.sheet_to_json(vbSheet.sheet, {defval:''});
+          vbRows.forEach(function(row){
+            var batchNum = String(row['BatchNumber']||'').trim();
+            if(!batchNum) return;
+            var rec = {
+              batch: batchNum,
+              facility: String(row['FacilityID']||'').trim(),
+              formula_id: String(row['FormulaID']||'').trim(),
+              formula_version: row['FormulaVersionNumber']||0,
+              descr: String(row['BatchDescription']||'').trim(),
+              batch_type: String(row['BatchType']||'').trim(),
+              plan_start: _excelSerialToISO(row['PlanStartDate']),
+              plan_end:   _excelSerialToISO(row['PlanEndDate']),
+              processing_stage: String(row['ProcessingStage']||'').trim(),
+              active_status:    String(row['ActiveStatus']||'').trim(),
+              mix_or_fill:      String(row['MixorFill']||'').trim(),
+              process_cell:     String(row['ProcessCellID']||'').trim(),
+              bei_count: row['BEICount']||0,
+              notes: String(row['Notes']||'').trim(),
+              created_by: String(row['CreatedBy']||'').trim(),
+              modified_by: String(row['LastModifiedBy']||'').trim(),
+              modified_on: _excelSerialToISO(row['LastModifiedOn'])
+            };
+            vicinityBatches.push(rec);
+            vicinityBatchLookup[batchNum] = rec;
+          });
+          result.vicinity_batches = vicinityBatches;
+          result.vicinity_batches_ts = ts;
+          progress('✓ Vicinity Batches: ' + vicinityBatches.length + ' rows from ' + vbSheet.source, 'ok');
+        } catch(e){
+          progress('⚠ Vicinity Batches: parse error: ' + e.message, 'warn');
+        }
+      }
+
+      // ── Vicinity Components Required (Query2) ─────────────────────
+      var vcSheet = _findSheet('Query2');
+      if(vcSheet){
+        try {
+          var vcRows = XLSX.utils.sheet_to_json(vcSheet.sheet, {defval:''});
+          var components = [];
+          var componentsByBatch = {};
+          vcRows.forEach(function(row){
+            var doc = String(row['DocumentNumber']||'').trim();
+            var comp = String(row['ComponentID']||'').trim();
+            if(!doc || !comp) return;
+            var rec = {
+              batch: doc,
+              component_id: comp,
+              descr: String(row['Description']||'').trim(),
+              source: String(row['Source']||'').trim(),
+              batch_descr: String(row['BatchDescription']||'').trim(),
+              formula_id: String(row['FormulaID']||'').trim(),
+              start_date: _excelSerialToISO(row['StartDate']),
+              due_date:   _excelSerialToISO(row['DueDate']),
+              qty: parseFloat(row['Quantity']) || 0,
+              uom: String(row['UOM']||'').trim(),
+              status: String(row['Status']||'').trim(),
+              facility: String(row['FacilityId']||'').trim()
+            };
+            components.push(rec);
+            if(!componentsByBatch[doc]) componentsByBatch[doc] = [];
+            componentsByBatch[doc].push(rec);
+          });
+          result.vicinity_components = components;
+          result.vicinity_components_by_batch = componentsByBatch;
+          result.vicinity_components_ts = ts;
+          progress('✓ Vicinity Components: ' + components.length + ' rows / ' +
+                   Object.keys(componentsByBatch).length + ' batches from ' + vcSheet.source, 'ok');
+        } catch(e){
+          progress('⚠ Vicinity Components: parse error: ' + e.message, 'warn');
+        }
+      }
+
+      // ── Merge Vicinity Batch fields onto result.batches ───────────
+      // Vicinity is source of truth for shared fields. Add new fields
+      // (formula_id, process_cell, processing_stage) that Production
+      // Tracker doesn't provide.
+      if(vicinityBatches.length && Array.isArray(result.batches)){
+        var enriched = 0;
+        result.batches.forEach(function(b){
+          var v = vicinityBatchLookup[b.batch];
+          if(!v) return;
+          enriched++;
+          // Vicinity-only fields (additive)
+          b.formula_id = v.formula_id;
+          b.formula_version = v.formula_version;
+          b.process_cell = v.process_cell;
+          b.processing_stage = v.processing_stage;
+          b.mix_or_fill = v.mix_or_fill;
+          b.facility = v.facility;
+          b.bei_count = v.bei_count;
+          // Shared fields — Vicinity wins. Keep PT value as fallback only
+          // (e.g. if Vicinity has empty date, keep PT date).
+          if(v.plan_start) b.vicinity_plan_start = v.plan_start;
+          if(v.plan_end)   b.vicinity_plan_end   = v.plan_end;
+          if(v.active_status) b.vicinity_active_status = v.active_status;
+        });
+        progress('✓ Vicinity merge: enriched ' + enriched + ' of ' +
+                 result.batches.length + ' Production Tracker batches', 'ok');
+      }
+
       // ── Write to localStorage ─────────────────────────────────────
       result._updated = ts;
       localStorage.setItem(DATA_KEY, JSON.stringify(result));
@@ -1770,6 +1883,7 @@ function updateAllDashboards() {
       progress('Batches loaded: ' + batches.length + ' (C:'+comp+' R:'+run+' NS:'+ns+')', 'ok');
       if(goals.may_actual) progress('May Cases: ' + goals.may_actual.toLocaleString() + ' actual / ' + goals.may_goal.toLocaleString() + ' goal', 'ok');
       if(result.inventory) progress('Inventory: ' + result.inventory.length.toLocaleString() + ' SKUs · ' + result.inventory.filter(function(i){return i.status==='LOW';}).length + ' LOW', 'ok');
+      if(result.line_setup) progress('Line Setup: ' + result.line_setup.length + ' lines · ' + result.line_setup.filter(function(l){return l.active;}).length + ' active', 'ok');
       progress('All dashboards on every device will update within 30s ✓', 'ok');
 
       log('ok', 'Upload complete — ' + batches.length + ' batches · ' + (result.inventory||[]).length + ' inventory items');
@@ -1876,241 +1990,7 @@ function clearAllData() {
 renderSyncBar(document.getElementById('sync-bar'));
 setInterval(function(){ renderSyncBar(document.getElementById('sync-bar')); }, 15000);
 
-// ── Vicinity Datalink UI handlers ─────────────────────────────────────
-// These delegate to the VicinityDatalink module loaded below. They update
-// the status pill, the "last pull" timestamp, and post messages to the log.
-function vicSetStatus(state, msg){
-  var pill = document.getElementById('vic-status-pill');
-  var msgEl = document.getElementById('vic-status-msg');
-  if(!pill) return;
-  var map = {
-    ok:    {bg:'rgba(34,197,94,.15)',  fg:'var(--green)', bd:'rgba(34,197,94,.4)',  icon:'● '},
-    bad:   {bg:'rgba(239,68,68,.15)',  fg:'var(--red)',   bd:'rgba(239,68,68,.4)',  icon:'✗ '},
-    busy:  {bg:'rgba(245,158,11,.15)', fg:'var(--amber)', bd:'rgba(245,158,11,.4)', icon:'⟳ '},
-    idle:  {bg:'rgba(100,116,139,.15)',fg:'var(--text3)', bd:'rgba(100,116,139,.3)',icon:'⊙ '}
-  };
-  var s = map[state] || map.idle;
-  pill.style.background = s.bg;
-  pill.style.color = s.fg;
-  pill.style.border = '1px solid ' + s.bd;
-  pill.textContent = s.icon + (msg || state);
-  if(msgEl) msgEl.textContent = msg || '';
-}
-
-function vicRefreshTimestamp(){
-  var el = document.getElementById('vic-last-pull');
-  if(!el) return;
-  try {
-    var meta = window.VicinityDatalink && window.VicinityDatalink.loadMeta();
-    if(!meta) return el.textContent = 'never';
-    // Find most recent success across all endpoints
-    var latest = null;
-    Object.keys(meta).forEach(function(k){
-      var t = meta[k] && meta[k].success_at;
-      if(t && (!latest || t > latest)) latest = t;
-    });
-    if(!latest) return el.textContent = 'never';
-    var d = new Date(latest);
-    var minsAgo = Math.round((Date.now() - d.getTime()) / 60000);
-    el.textContent = minsAgo < 1 ? 'just now' :
-                     minsAgo < 60 ? minsAgo + ' min ago' :
-                     Math.round(minsAgo/60) + ' hr ago';
-    el.title = d.toLocaleString();
-  } catch(e){}
-}
-setInterval(vicRefreshTimestamp, 30000);
-
-async function vicProbe(){
-  if(!window.VicinityDatalink){ vicSetStatus('bad','datalink module not loaded'); return; }
-  vicSetStatus('busy','testing…');
-  var r = await window.VicinityDatalink.probe();
-  if(r.ok){
-    vicSetStatus('ok', 'Connected · ' + r.latency_ms + ' ms');
-    log('info', 'Vicinity probe OK · ' + r.latency_ms + ' ms');
-  } else {
-    vicSetStatus('bad', 'Unreachable · ' + r.error);
-    log('err', 'Vicinity probe failed: ' + r.error);
-  }
-  vicRefreshTimestamp();
-}
-
-async function vicPullSchedule(){
-  if(!window.VicinityDatalink) return;
-  vicSetStatus('busy','pulling Production Schedule…');
-  try {
-    var r = await window.VicinityDatalink.pullProductionSchedule();
-    vicSetStatus('ok', r.records.length + ' batches pulled');
-    log('info', '✓ Vicinity Production Schedule: ' + r.records.length + ' records → hoc_upload_v1');
-    // Mark Production Tracker drop-zone as live-sourced
-    var zone = document.getElementById('zone-pt');
-    var status = document.getElementById('status-pt');
-    if(zone) zone.classList.add('loaded');
-    if(status){ status.textContent = '✓ Live · Vicinity · ' + r.records.length + ' batches'; status.style.color = 'var(--green)'; }
-    if(typeof checkReady === 'function') checkReady();
-  } catch(err){
-    vicSetStatus('bad', 'pull failed · ' + (err.message || err));
-    log('err', 'Vicinity Production Schedule pull: ' + (err.message || err));
-  }
-  vicRefreshTimestamp();
-}
-
-async function vicPullLabor(){
-  if(!window.VicinityDatalink) return;
-  vicSetStatus('busy','pulling Component Std Runtime…');
-  try {
-    var r = await window.VicinityDatalink.pullLaborStandards();
-    var formulaCount = r.saved && r.saved.stats ? r.saved.stats.formulas : 0;
-    vicSetStatus('ok', formulaCount + ' formulas (labor std)');
-    log('info', '✓ Vicinity Labor Std: ' + r.records.length + ' rows, ' + formulaCount + ' formulas → hoc_labor_standards_v1');
-    var zone = document.getElementById('zone-lb');
-    var status = document.getElementById('status-lb');
-    if(zone) zone.classList.add('loaded');
-    if(status){ status.textContent = '✓ Live · Vicinity · ' + formulaCount + ' formulas'; status.style.color = 'var(--green)'; }
-  } catch(err){
-    vicSetStatus('bad', 'labor pull failed · ' + (err.message || err));
-    log('err', 'Vicinity Labor Std pull: ' + (err.message || err));
-  }
-  vicRefreshTimestamp();
-}
-
-async function vicPullOEE(){
-  if(!window.VicinityDatalink) return;
-  vicSetStatus('busy','pulling Patch OEE…');
-  try {
-    var r = await window.VicinityDatalink.pullPatchOEE();
-    vicSetStatus('ok', r.records.length + ' OEE records');
-    log('info', '✓ Vicinity Patch OEE: ' + r.records.length + ' records → hoc_patch_oee_v1');
-  } catch(err){
-    vicSetStatus('bad', 'OEE pull failed · ' + (err.message || err));
-    log('err', 'Vicinity Patch OEE pull: ' + (err.message || err));
-  }
-  vicRefreshTimestamp();
-}
-
-async function vicPullAll(){
-  vicSetStatus('busy','pulling Tier 1 endpoints…');
-  await vicPullSchedule();
-  await vicPullLabor();
-  await vicPullOEE();
-  vicSetStatus('ok','Tier 1 pull complete');
-}
-
-function vicToggleAutoPoll(){
-  if(!window.VicinityDatalink) return;
-  var on = document.getElementById('vic-autopoll').checked;
-  if(on){
-    window.VicinityDatalink.startAutoPoll(15*60*1000);
-    log('info','Vicinity auto-poll started (15 min interval)');
-    vicSetStatus('busy','auto-poll on');
-  } else {
-    window.VicinityDatalink.stopAutoPoll();
-    log('info','Vicinity auto-poll stopped');
-    vicSetStatus('idle','auto-poll off');
-  }
-}
-
-function vicShowEndpoints(){
-  var panel = document.getElementById('vic-endpoints-panel');
-  if(!panel) return;
-  if(panel.style.display === 'none'){
-    panel.style.display = 'block';
-    vicRenderEndpoints();
-  } else {
-    panel.style.display = 'none';
-  }
-}
-
-function vicRenderEndpoints(){
-  if(!window.VicinityDatalink) return;
-  var tbody = document.getElementById('vic-endpoints-tbody');
-  if(!tbody) return;
-  var meta = window.VicinityDatalink.loadMeta();
-  var rows = Object.entries(window.VicinityDatalink.VIEWS).map(function(entry){
-    var k = entry[0], v = entry[1];
-    var m = meta[k] || {};
-    var last = m.success_at ? new Date(m.success_at).toLocaleString() : '—';
-    var rec = (m.record_count != null) ? m.record_count : '—';
-    var tierColor = v.tier === 1 ? 'var(--green)' : v.tier === 2 ? 'var(--blue)' : v.tier === 3 ? 'var(--amber)' : 'var(--text3)';
-    return '<tr><td style="padding:3px 6px;font-family:ui-monospace,monospace;font-size:9px;color:var(--text)">'+k+'</td>'+
-      '<td style="padding:3px 6px"><span style="color:'+tierColor+';font-weight:700">T'+v.tier+'</span></td>'+
-      '<td style="padding:3px 6px;color:var(--text2);font-size:9px">'+v.purpose+'</td>'+
-      '<td style="padding:3px 6px;text-align:right;font-family:ui-monospace,monospace">'+rec+'</td>'+
-      '<td style="padding:3px 6px;font-size:9px;color:var(--text3)">'+last+'</td>'+
-      '<td style="padding:3px 6px;text-align:right"><button class="nb" onclick="vicPullOne(\''+k+'\')" style="padding:2px 8px;border-radius:4px;border:1px solid var(--border);font-size:9px">Pull</button></td></tr>';
-  }).join('');
-  tbody.innerHTML = rows;
-}
-
-async function vicPullOne(key){
-  if(!window.VicinityDatalink) return;
-  vicSetStatus('busy','pulling '+key+'…');
-  try {
-    var r = await window.VicinityDatalink.pull(key, {top:5000, timeout:15000});
-    vicSetStatus('ok', key+' · '+r.records.length+' records');
-    log('info','✓ Vicinity '+key+': '+r.records.length+' records');
-    vicRenderEndpoints();
-  } catch(err){
-    vicSetStatus('bad', key+' failed · '+(err.message||err));
-    log('err','Vicinity '+key+' pull: '+(err.message||err));
-  }
-  vicRefreshTimestamp();
-}
-
-function vicConfigureServer(){
-  if(!window.VicinityDatalink) return;
-  var current = window.VicinityDatalink.getBaseUrl();
-  var next = prompt('Vicinity OData base URL:', current);
-  if(next == null) return;
-  next = String(next).trim();
-  if(!next){
-    // empty → reset to default
-    try { localStorage.removeItem('hoc_vicinity_base_url'); } catch(e){}
-    document.getElementById('vic-server-display').textContent = window.VicinityDatalink.getBaseUrl().replace(/^https?:\/\//,'').replace(/\/VicinityWeb.*$/,'');
-    log('info','Vicinity server URL reset to default');
-    return;
-  }
-  window.VicinityDatalink.setBaseUrl(next);
-  document.getElementById('vic-server-display').textContent = next.replace(/^https?:\/\//,'').replace(/\/VicinityWeb.*$/,'');
-  log('info','Vicinity server URL set to ' + next);
-}
-
-// Initial status + auto-probe on load (silent — only updates pill)
-setTimeout(function(){
-  if(window.VicinityDatalink){
-    vicRefreshTimestamp();
-    // Try a silent probe to set initial pill state
-    window.VicinityDatalink.probe().then(function(r){
-      if(r.ok) vicSetStatus('ok', 'Connected · ' + r.latency_ms + ' ms');
-      else    vicSetStatus('idle', 'click Test Connection');
-
-      // ── Auto-enable auto-poll when this browser IS the datalink PC ──
-      // Detection: we're loaded from localhost / 127.0.0.1 / file://
-      // (the dedicated PC pattern) AND the connection just succeeded.
-      // Saves the operator from clicking the checkbox after every restart.
-      try {
-        var isLocalDatalink = /^(localhost|127\.0\.0\.1|\[::1\])$/i.test(window.location.hostname)
-                           || window.location.protocol === 'file:';
-        if(isLocalDatalink){
-          // Show the banner regardless of probe result so the operator
-          // can see they're on the right machine
-          var banner = document.getElementById('vic-datalink-pc-banner');
-          if(banner) banner.style.display = 'block';
-        }
-        if(r.ok && isLocalDatalink){
-          var cb = document.getElementById('vic-autopoll');
-          if(cb && !cb.checked){
-            cb.checked = true;
-            vicToggleAutoPoll();
-            log('info','Auto-poll auto-enabled (running on localhost — designated datalink PC)');
-          }
-        }
-      } catch(e){}
-    });
-  }
-}, 500);
-
 </script>
-<script src="vicinity_datalink.js"></script>
 <script src="hoc_events.js"></script>
 </body>
 </html>

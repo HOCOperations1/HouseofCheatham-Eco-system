@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34p">
+<meta name="hoc-build" content="v6.34v">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Production Supervisor</title>
@@ -130,6 +130,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--green)}
   <nav class="nav">
     <button class="nb active" onclick="P('cmd')">Command Center</button>
     <button class="nb" onclick="P('forecast')">Capacity Forecast</button>
+    <button class="nb" onclick="P('linesum')">Line Summary</button>
     <button class="nb" onclick="P('lines')">Lines</button>
     <button class="nb" onclick="P('batches')">All Batches</button>
     <button class="nb" onclick="P('sync')">Sync &amp; Export</button>
@@ -283,6 +284,45 @@ select:focus,input:focus,textarea:focus{border-color:var(--green)}
         <span class="saved-msg" id="bd-sv" style="color:var(--green)">✓ Synced — visible in Compound &amp; QC tools</span>
       </div>
     </div>
+  </div>
+</div></div>
+
+<!-- LINE SUMMARY (v6.34v) -->
+<style>
+.ls-header{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:10px}
+.ls-title-meta{font-size:10px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase}
+.ls-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px}
+.ls-kpi{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.ls-kpi-lbl{font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+.ls-kpi-val{font-size:18px;font-weight:700;color:var(--text)}
+.ls-kpi-sub{font-size:10px;color:var(--text2);margin-top:2px}
+.ls-empty{padding:30px;text-align:center;color:var(--text2);font-size:12px;background:var(--bg2);border:1px dashed var(--border);border-radius:8px}
+.ls-table{width:100%;border-collapse:collapse;font-size:11px}
+.ls-table th{padding:7px 8px;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+              color:var(--text3);text-align:left;border-bottom:1px solid var(--border);background:var(--bg2);
+              position:sticky;top:0;z-index:1}
+.ls-table th.num,.ls-table td.num{text-align:right;font-variant-numeric:tabular-nums}
+.ls-table td{padding:6px 8px;border-bottom:1px solid rgba(30,41,59,.5);vertical-align:middle}
+.ls-table tr:hover td{background:var(--bg2)}
+.ls-chip{display:inline-block;padding:2px 7px;border-radius:10px;font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.ls-chip-safe{background:var(--green-l);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.ls-chip-risk{background:var(--amber-l);color:var(--amber);border:1px solid rgba(245,158,11,.3)}
+.ls-chip-miss{background:var(--red-l);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.ls-chip-noload{background:rgba(138,151,180,.1);color:var(--text2);border:1px solid var(--border)}
+.ls-signal-row{display:flex;gap:6px;align-items:center}
+.ls-signal{display:inline-block;width:10px;height:10px;border-radius:50%}
+.ls-signal-red{background:var(--red);box-shadow:0 0 6px rgba(239,68,68,.5)}
+.ls-signal-amber{background:var(--amber);box-shadow:0 0 6px rgba(245,158,11,.5)}
+.ls-signal-green{background:var(--green);box-shadow:0 0 6px rgba(34,197,94,.5)}
+</style>
+<div class="page" id="page-linesum"><div class="content">
+  <div class="card">
+    <div class="ls-header">
+      <div class="card-title" style="margin:0">Line Summary</div>
+      <div class="ls-title-meta">Live from upload data · sorted by Gap Hrs ascending</div>
+      <div class="ls-title-meta" id="ls-asof" style="margin-left:auto"></div>
+    </div>
+    <div id="ls-content"><div class="ls-empty">Loading…</div></div>
   </div>
 </div></div>
 
@@ -1031,8 +1071,8 @@ function showPage(id, map) {
 }
 
 let bF='ALL', fcF='ALL', activeBatch=null;
-const PM = {cmd:0,forecast:1,lines:2,batches:3,sync:4};
-function P(id){showPage(id,PM);if(id==='batches')renderBatches();if(id==='forecast')renderFC();}
+const PM = {cmd:0,forecast:1,linesum:2,lines:3,batches:4,sync:5};
+function P(id){showPage(id,PM);if(id==='batches')renderBatches();if(id==='forecast')renderFC();if(id==='linesum')renderLineSum();}
 
 function renderAll(){
   // Recompute LINES from live BATCHES on every render so OEE/capacity stays current
@@ -1405,6 +1445,111 @@ function openLD(ln){
   document.getElementById('ld').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
+// ── Line Summary (v6.34v) ────────────────────────────────────────────
+// Reads live from HOC_Capacity engine, which reads from hoc_upload_v1
+// and hoc_line_setup_v1. Empty state shown if either is missing.
+function renderLineSum(){
+  var container = document.getElementById('ls-content');
+  if(typeof HOC_Capacity === 'undefined'){
+    container.innerHTML = '<div class="ls-empty">Capacity engine not loaded. Reload the page.</div>';
+    return;
+  }
+  // Check inputs
+  var up = {}; var ls = {};
+  try { up = JSON.parse(localStorage.getItem('hoc_upload_v1') || '{}'); } catch(e){}
+  try { ls = JSON.parse(localStorage.getItem('hoc_line_setup_v1') || '{}'); } catch(e){}
+  var hasBatches = Array.isArray(up.batches) && up.batches.length > 0;
+  var hasSetup = Array.isArray(ls.setup) && ls.setup.length > 0;
+  if(!hasBatches && !hasSetup){
+    container.innerHTML = '<div class="ls-empty">'
+      + '<div style="font-size:14px;font-weight:700;margin-bottom:8px">No upload data yet</div>'
+      + '<div>Upload <b>Planning_Data.xlsx</b> (batches) and <b>Line_Setup.xlsx</b> via the Data Upload Hub to populate this view.</div>'
+      + '</div>';
+    return;
+  }
+  if(!hasBatches){
+    container.innerHTML = '<div class="ls-empty">'
+      + '<div style="font-size:14px;font-weight:700;margin-bottom:8px">Missing batch data</div>'
+      + '<div>Line Setup is loaded but no batch schedule has been uploaded. Upload Planning_Data.xlsx via the Data Upload Hub.</div>'
+      + '</div>';
+    return;
+  }
+  if(!hasSetup){
+    container.innerHTML = '<div class="ls-empty">'
+      + '<div style="font-size:14px;font-weight:700;margin-bottom:8px">Missing line setup</div>'
+      + '<div>Batch schedule is loaded but no per-line work patterns have been uploaded. Upload <b>Line_Setup.xlsx</b> via the Data Upload Hub.</div>'
+      + '<div style="margin-top:10px;font-size:10px;color:var(--text3)">Required columns: Line · Pattern · Hours/Day · Active · Notes</div>'
+      + '</div>';
+    return;
+  }
+  // Compute
+  var asOf = new Date();
+  var rows = HOC_Capacity.lineSummary(asOf);
+  var ctl  = HOC_Capacity.fullControl(asOf);
+  // Sort by gap_hrs ascending (worst first), but push NO LOAD lines to bottom
+  rows.sort(function(a,b){
+    var aNL = a.risk_status === 'NO LOAD';
+    var bNL = b.risk_status === 'NO LOAD';
+    if(aNL && !bNL) return 1;
+    if(bNL && !aNL) return -1;
+    return a.gap_hrs - b.gap_hrs;
+  });
+  // Render
+  var asOfStr = asOf.toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'});
+  document.getElementById('ls-asof').textContent = 'As of ' + asOfStr;
+
+  function chip(status){
+    var cls = 'ls-chip-safe';
+    if(status === 'WILL MISS') cls = 'ls-chip-miss';
+    else if(status === 'AT RISK') cls = 'ls-chip-risk';
+    else if(status === 'NO LOAD') cls = 'ls-chip-noload';
+    return '<span class="ls-chip ' + cls + '">' + status + '</span>';
+  }
+  function signalDot(s){
+    var cls = s === 'RED' ? 'ls-signal-red' : s === 'AMBER' ? 'ls-signal-amber' : 'ls-signal-green';
+    return '<span class="ls-signal ' + cls + '"></span>';
+  }
+
+  var html = '';
+  // KPI strip
+  html += '<div class="ls-kpis">';
+  html += '<div class="ls-kpi"><div class="ls-kpi-lbl">Open Batches</div><div class="ls-kpi-val">' + ctl.open_batches + '</div><div class="ls-kpi-sub">' + ctl.open_hours.toFixed(1) + ' hrs remaining</div></div>';
+  html += '<div class="ls-kpi"><div class="ls-kpi-lbl">Will Miss</div><div class="ls-kpi-val" style="color:var(--red)">' + ctl.will_miss_lines + '</div><div class="ls-kpi-sub">' + (ctl.will_miss_lines === 1 ? 'line' : 'lines') + ' over capacity</div></div>';
+  html += '<div class="ls-kpi"><div class="ls-kpi-lbl">At Risk</div><div class="ls-kpi-val" style="color:var(--amber)">' + ctl.at_risk_lines + '</div><div class="ls-kpi-sub">gap ≤ 5 hrs</div></div>';
+  html += '<div class="ls-kpi"><div class="ls-kpi-lbl">Total Gap</div><div class="ls-kpi-val" style="color:' + (ctl.total_gap_hrs < 0 ? 'var(--red)' : 'var(--text)') + '">' + ctl.total_gap_hrs.toFixed(1) + ' h</div><div class="ls-kpi-sub">avail − remaining</div></div>';
+  html += '<div class="ls-kpi"><div class="ls-kpi-lbl">Signals</div><div class="ls-signal-row" style="margin-top:6px">' + signalDot(ctl.case_signal) + ' <span style="font-size:9px;color:var(--text2)">Case</span> ' + signalDot(ctl.batch_signal) + ' <span style="font-size:9px;color:var(--text2)">Batch</span></div></div>';
+  html += '</div>';
+
+  // Table
+  html += '<div style="overflow-x:auto"><table class="ls-table"><thead><tr>';
+  html += '<th>Line</th><th>Pattern</th><th class="num">Avail Hrs</th><th class="num">Rem Batches</th><th class="num">Rem Hrs</th><th class="num">Gap Hrs</th><th class="num">Util</th><th>Risk</th><th>Suggested Action</th>';
+  html += '</tr></thead><tbody>';
+  rows.forEach(function(r){
+    var gapColor = r.gap_hrs < 0 ? 'var(--red)' : r.gap_hrs <= 5 ? 'var(--amber)' : 'var(--text)';
+    var utilPct = (r.utilization * 100).toFixed(1) + '%';
+    html += '<tr>';
+    html += '<td><b>' + r.line + '</b></td>';
+    html += '<td>' + (r.pattern || '—') + '</td>';
+    html += '<td class="num">' + r.avail_hours.toFixed(1) + '</td>';
+    html += '<td class="num">' + r.remaining_batches + (r.overdue_batches ? ' <span style="color:var(--red);font-size:9px">(' + r.overdue_batches + ' overdue)</span>' : '') + '</td>';
+    html += '<td class="num">' + r.total_remaining_hrs.toFixed(1) + '</td>';
+    html += '<td class="num" style="color:' + gapColor + ';font-weight:700">' + r.gap_hrs.toFixed(2) + '</td>';
+    html += '<td class="num">' + utilPct + '</td>';
+    html += '<td>' + chip(r.risk_status) + '</td>';
+    html += '<td style="color:var(--text2);font-size:10px">' + (r.suggested_action || '') + '</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+
+  // Footer note
+  html += '<div style="margin-top:10px;font-size:9px;color:var(--text3);font-style:italic">'
+       + 'Risk thresholds: NO LOAD (0 batches) · WILL MISS (gap &lt; 0) · AT RISK (gap ≤ 5 hrs) · SAFE. '
+       + 'Math ported from HOC Production Tracker workbook · validated against Excel.'
+       + '</div>';
+
+  container.innerHTML = html;
+}
+
 function renderBatches(){
   const cnts={
     'ALL':BATCHES.length,
@@ -1772,6 +1917,7 @@ setInterval(function() {
   setInterval(applyLiveData,30000);
 })();
 </script>
+<script src="hoc_capacity_engine.js"></script>
 <script src="hoc_events.js"></script>
 <script>
 // Auto-update header date placeholder
