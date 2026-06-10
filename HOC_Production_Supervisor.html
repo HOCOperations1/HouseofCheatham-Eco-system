@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34z">
+<meta name="hoc-build" content="v6.34ab">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Production Supervisor</title>
@@ -120,6 +120,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--green)}
 <meta http-equiv="Expires" content="0">
 <script>var HOC_OES_VERSION="1778588401";</script>
 <script src="hoc_theme.js"></script>
+<script src="hoc_attainment.js"></script>
 </head><body>
 
 <div class="topbar">
@@ -524,21 +525,21 @@ function initSupabaseRealtime() {
   }, 15000); // Check every 15 seconds
 }
 
-// ── Sync bus bar: show Supabase connection status + manual KPIs (v6.34x) ──
+// ── Sync bus bar: Supabase status + OEE (stored) + Attainment (live) — v6.34ab ──
 function renderSyncBar(el) {
   if (!el) return;
   var now = new Date().toLocaleTimeString('en-US', {hour:'numeric',minute:'2-digit',second:'2-digit'});
 
-  // Read manual KPIs from same key as index.html (hoc_kpi_manual_v1)
+  // Read goals + OEE from storage, attainment from live compute
   var oeePill = '';
   var attPill = '';
+  var oeeGoal = 60, attGoal = 90;
   try {
     var raw = localStorage.getItem('hoc_kpi_manual_v1');
     var kpi = raw ? JSON.parse(raw) : null;
     if(kpi){
-      var oeeGoal = (kpi.oee_goal != null) ? Number(kpi.oee_goal) : 60;
-      var attGoal = (kpi.att_goal != null) ? Number(kpi.att_goal) : 90;
-      // OEE pill
+      if(kpi.oee_goal != null) oeeGoal = Number(kpi.oee_goal);
+      if(kpi.att_goal != null) attGoal = Number(kpi.att_goal);
       if(kpi.oee != null){
         var oeeVal = Math.round(Number(kpi.oee) * 10) / 10;
         var oeeColor = oeeVal >= oeeGoal ? 'var(--green)' : 'var(--red)';
@@ -546,33 +547,28 @@ function renderSyncBar(el) {
                 + '<span style="color:var(--text3)">OEE:</span>'
                 + '<span style="color:' + oeeColor + ';font-weight:700">' + oeeVal + '%</span>';
       }
-      // Attainment pill: facility avg + worst line side by side
-      var attAvg = (kpi.att != null) ? Number(kpi.att) : null;
-      var worstLine = null, worstVal = null;
-      if(kpi.lines){
-        Object.keys(kpi.lines).forEach(function(l){
-          var v = kpi.lines[l];
-          if(v === null || v === undefined) return;
-          if(worstVal === null || v < worstVal){ worstVal = v; worstLine = l; }
-        });
-      }
-      if(attAvg != null || worstVal != null){
-        attPill = '<span style="color:var(--text3)">·</span>'
-                + '<span style="color:var(--text3)">Att:</span>';
-        if(attAvg != null){
-          var attColor = attAvg >= attGoal ? 'var(--green)' : 'var(--red)';
-          attPill += '<span style="color:' + attColor + ';font-weight:700">' + attAvg + '%</span>';
-        }
-        if(worstVal != null){
-          var worstColor = worstVal >= attGoal ? 'var(--green)' : 'var(--red)';
-          attPill += '<span style="color:var(--text3);font-size:9px">worst:</span>'
-                   + '<span style="color:' + worstColor + ';font-weight:700">L' + worstLine + ' ' + worstVal + '%</span>';
-        }
-      }
     }
   } catch(e){ /* missing or invalid — skip */ }
 
-  el.innerHTML = 
+  // Attainment — computed live from uploaded batches
+  if(typeof HOC_Attainment !== 'undefined'){
+    var s = HOC_Attainment.summary();
+    if(s.plant != null || (s.worst != null)){
+      attPill = '<span style="color:var(--text3)">·</span>'
+              + '<span style="color:var(--text3)">Att:</span>';
+      if(s.plant != null){
+        var attColor = s.plant >= attGoal ? 'var(--green)' : 'var(--red)';
+        attPill += '<span style="color:' + attColor + ';font-weight:700">' + s.plant.toFixed(1) + '%</span>';
+      }
+      if(s.worst){
+        var wColor = s.worst.value >= attGoal ? 'var(--green)' : 'var(--red)';
+        attPill += '<span style="color:var(--text3);font-size:9px">worst:</span>'
+                 + '<span style="color:' + wColor + ';font-weight:700">L' + s.worst.line + ' ' + s.worst.value.toFixed(1) + '%</span>';
+      }
+    }
+  }
+
+  el.innerHTML =
     '<span style="color:var(--green);font-weight:700">● LIVE</span>' +
     '<span style="color:var(--text3)">Supabase real-time sync active</span>' +
     oeePill + attPill +

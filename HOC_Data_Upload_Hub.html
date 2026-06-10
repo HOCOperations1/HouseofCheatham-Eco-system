@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34z">
+<meta name="hoc-build" content="v6.34ab">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -93,6 +93,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--blue)}
 .stat-val{font-weight:700;color:var(--text)}
 </style>
 <script src="hoc_theme.js"></script>
+<script src="hoc_attainment.js"></script>
 </head>
 <body>
 
@@ -201,14 +202,15 @@ input:focus,select:focus,textarea:focus{border-color:var(--blue)}
   </button>
   <button class="clear-btn" onclick="clearAllData()">🗑 Clear All Uploaded Data</button>
 
-  <!-- ── MANUAL KPI ENTRY (v6.34x) ─────────────────────────────────── -->
-  <!--    Daily-update fields for OEE % and Schedule Attainment %.
-          Displayed on index.html status bar and Production Supervisor topbar.
-          No file required — operator types in, hits save. -->
+  <!-- ── MANUAL KPI ENTRY (v6.34x · simplified in v6.34ab) ──────────── -->
+  <!--    OEE is manually entered (Patch source pending v6.34ab+).
+          Schedule attainment is now COMPUTED LIVE from the uploaded
+          production schedule (actqty/origqty per batch). The manual
+          attainment fields were removed in v6.34ab. -->
   <div class="card" style="margin-top:14px">
     <div class="card-title">
       📊 Manual KPI Entry
-      <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3);font-size:9px">Daily-update facility OEE % and per-line Schedule Attainment %</span>
+      <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3);font-size:9px">Facility OEE % · daily entry</span>
     </div>
 
     <!-- Last update info -->
@@ -225,17 +227,17 @@ input:focus,select:focus,textarea:focus{border-color:var(--blue)}
       <span style="font-size:9px;color:var(--text3);font-style:italic">Single facility-wide OEE for the day</span>
     </div>
 
-    <!-- Attainment Section -->
-    <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px">Schedule Attainment % — % of batches completed per line</div>
-    <div id="kpi-attainment-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:14px">
-      <!-- Line inputs injected by JS -->
+    <!-- Schedule Attainment — now COMPUTED LIVE (v6.34ab) -->
+    <div id="kpi-computed-attainment" style="margin-bottom:14px;padding:10px 12px;background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.2);border-radius:8px;font-size:10px;color:var(--text2)">
+      <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:6px">📈 Schedule Attainment — computed live</div>
+      <div id="kpi-comp-content">No production schedule uploaded yet. Attainment will populate once Planning_Data.xlsx is loaded.</div>
     </div>
 
     <!-- Save Button -->
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <button id="kpi-save-btn" onclick="saveManualKPIs()"
               style="background:var(--blue);color:#fff;border:none;border-radius:6px;padding:8px 16px;font:inherit;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer">
-        💾 Save KPI Values
+        💾 Save OEE
       </button>
       <button onclick="clearManualKPIs()"
               style="background:none;color:var(--text3);border:1px solid var(--border);border-radius:6px;padding:8px 14px;font:inherit;font-size:10px;cursor:pointer">
@@ -1158,7 +1160,14 @@ function updateAllDashboards() {
               fg_status:status,
               var_pct: 0,
               case_var:actqty-origqty,
-              rem_min: 0,
+              // rem_min: minutes still to run. Was hardcoded to 0 — fixed v6.34aa.
+              // = std minutes × (1 − percent complete). Drives Rem Hrs / Gap Hrs
+              // in Line Summary, capacity engine, and Production Supervisor tabs.
+              rem_min: (function(){
+                var stdMin = parseFloat(r['Minutes']||0) || 0;
+                var pct = origqty > 0 ? Math.min(100, (actqty/origqty)*100) : 0;
+                return Math.max(0, Math.round(stdMin * (1 - pct/100)));
+              })(),
               cum_min: 0,
               std_min: parseFloat(r['Minutes']||0)||0,
               lbs:     origqty,
@@ -2191,35 +2200,16 @@ function clearAllData() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// v6.34x — Manual KPI Entry (Facility OEE + Schedule Attainment per line)
-// Storage: localStorage 'hoc_kpi_manual_v1' = {oee, att, oee_goal, att_goal,
-//          lines:{1:..,2:..,...}, _updated}.
-// Schema aligns with existing reader in index.html lines 875-929 — preserves
-// oee_goal/att_goal config and the existing oee/att field names. The 'lines'
-// object and '_updated' timestamp are v6.34x additions.
-// Read by index.html topbar pill and Production Supervisor sync bar.
+// v6.34x → v6.34ab — Manual KPI Entry (Facility OEE only)
+// Storage: localStorage 'hoc_kpi_manual_v1' = {oee, oee_goal, att_goal,
+//          _updated}. Schedule attainment is now COMPUTED LIVE from the
+//          uploaded production schedule (see hoc_attainment.js).
+//
+// Schema legacy fields `att` and `lines` are no longer written by this
+// page; consumer readers compute them via HOC_Attainment.summary().
+// Existing oee_goal/att_goal config (defaults 60/90) is preserved.
 // ═══════════════════════════════════════════════════════════════════════
-// Aligned with EXISTING storage key + schema already read by index.html
-// at lines 875-929. We extend (don't replace) by adding a 'lines' object
-// and '_updated' timestamp. The existing 'oee', 'att', 'oee_goal',
-// 'att_goal' fields are preserved so legacy readers keep working.
 var KPI_STORAGE_KEY = 'hoc_kpi_manual_v1';
-var KPI_LINES = [1, 2, 3, 4, 5, 7, 11, 16];
-
-function buildAttainmentGrid(){
-  var grid = document.getElementById('kpi-attainment-grid');
-  if(!grid) return;
-  var html = '';
-  KPI_LINES.forEach(function(l){
-    html += '<div style="display:flex;gap:6px;align-items:center;padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px">';
-    html += '<div style="font-size:10px;font-weight:700;color:var(--text2);min-width:50px">Line ' + l + '</div>';
-    html += '<input type="number" id="kpi-attain-' + l + '" min="0" max="100" step="0.1" placeholder="—"';
-    html += ' style="background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:5px;padding:5px 8px;font:inherit;font-size:12px;width:70px;text-align:right;font-variant-numeric:tabular-nums">';
-    html += '<span style="font-size:11px;color:var(--text2)">%</span>';
-    html += '</div>';
-  });
-  grid.innerHTML = html;
-}
 
 function loadManualKPIs(){
   try {
@@ -2231,18 +2221,12 @@ function loadManualKPIs(){
 
 function populateKPIFields(){
   var data = loadManualKPIs();
-  // OEE (existing field name in schema)
+  // OEE
   var oeeEl = document.getElementById('kpi-oee');
   if(oeeEl){
     oeeEl.value = (data && data.oee !== null && data.oee !== undefined) ? data.oee : '';
   }
-  // Per-line attainment (new v6.34x field)
-  KPI_LINES.forEach(function(l){
-    var el = document.getElementById('kpi-attain-' + l);
-    if(!el) return;
-    el.value = (data && data.lines && data.lines[l] !== undefined && data.lines[l] !== null) ? data.lines[l] : '';
-  });
-  // Last update display
+  // Last update display (only meaningful for OEE saves now)
   var updEl = document.getElementById('kpi-last-update');
   if(updEl){
     if(data && data._updated){
@@ -2252,11 +2236,53 @@ function populateKPIFields(){
       var label = hoursOld < 1 ? 'just now'
                 : hoursOld < 24 ? Math.round(hoursOld) + 'h ago'
                 : Math.round(hoursOld / 24) + 'd ago';
-      updEl.innerHTML = 'Last saved: <b style="color:' + tone + '">' + d.toLocaleString() + '</b> · ' + label;
+      updEl.innerHTML = 'OEE last saved: <b style="color:' + tone + '">' + d.toLocaleString() + '</b> · ' + label;
     } else {
-      updEl.innerHTML = '<span style="color:var(--text3)">No values saved yet</span>';
+      updEl.innerHTML = '<span style="color:var(--text3)">No OEE saved yet</span>';
     }
   }
+}
+
+// Live preview of computed attainment — refreshes from hoc_upload_v1.batches
+function renderComputedAttainmentPreview(){
+  var el = document.getElementById('kpi-comp-content');
+  if(!el) return;
+  if(typeof HOC_Attainment === 'undefined'){
+    el.innerHTML = '<span style="color:var(--amber)">Attainment library not loaded. Reload the page.</span>';
+    return;
+  }
+  var s = HOC_Attainment.summary();
+  if(s.batch_count === 0){
+    el.textContent = 'No production schedule uploaded yet. Attainment will populate once Planning_Data.xlsx is loaded.';
+    return;
+  }
+  var attGoal = 90;
+  try {
+    var data = loadManualKPIs();
+    if(data && data.att_goal != null) attGoal = Number(data.att_goal);
+  } catch(e){}
+  function fmtVal(v){
+    if(v === null || v === undefined) return '<span style="color:var(--text3)">—</span>';
+    var color = v >= attGoal ? 'var(--green)' : 'var(--red)';
+    return '<b style="color:' + color + '">' + v.toFixed(1) + '%</b>';
+  }
+  var html = '';
+  html += '<div style="display:flex;gap:24px;flex-wrap:wrap;align-items:baseline;margin-bottom:8px">';
+  html += '<div><span style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Plant: </span>' + fmtVal(s.plant) + '</div>';
+  if(s.worst){
+    var wc = s.worst.value >= attGoal ? 'var(--green)' : 'var(--red)';
+    html += '<div><span style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Worst line: </span><b style="color:' + wc + '">L' + s.worst.line + ' ' + s.worst.value.toFixed(1) + '%</b></div>';
+  }
+  html += '</div>';
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px">';
+  s.tracked_lines.forEach(function(ln){
+    html += '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:5px 8px;text-align:center">';
+    html += '<div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">Line ' + ln + '</div>';
+    html += '<div style="font-size:13px;margin-top:2px">' + fmtVal(s.lines[ln]) + '</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  el.innerHTML = html;
 }
 
 function readKPIInput(id){
@@ -2264,47 +2290,26 @@ function readKPIInput(id){
   if(!el || el.value === '' || el.value === null) return null;
   var n = parseFloat(el.value);
   if(isNaN(n)) return null;
-  // Clamp 0..100
   if(n < 0) n = 0;
   if(n > 100) n = 100;
-  return Math.round(n * 10) / 10;  // 1 decimal place
+  return Math.round(n * 10) / 10;
 }
 
 function saveManualKPIs(){
-  // Read currently-stored data so we PRESERVE oee_goal, att_goal, and any
-  // other fields that might have been set by another tool. We only update
-  // the 4 fields we own: oee, lines, att (rolled-up), _updated.
   var existing = loadManualKPIs() || {};
-
   var oee = readKPIInput('kpi-oee');
-  var lines = {};
-  var anyLineValue = false;
-  KPI_LINES.forEach(function(l){
-    var v = readKPIInput('kpi-attain-' + l);
-    lines[l] = v;
-    if(v !== null) anyLineValue = true;
-  });
-  if(oee === null && !anyLineValue){
-    setKPIStatus('Nothing to save — enter at least one value.', 'warn');
+  if(oee === null){
+    setKPIStatus('Nothing to save — enter an OEE value.', 'warn');
     return;
   }
-  // Roll-up: facility-average attainment from non-null per-line values.
-  // Maintains back-compat with existing readers that consume `att`.
-  var attAvg = null;
-  var lineVals = Object.values(lines).filter(function(v){ return v !== null; });
-  if(lineVals.length){
-    attAvg = Math.round((lineVals.reduce(function(a,b){ return a+b; }, 0) / lineVals.length) * 10) / 10;
-  }
-
-  // Merge with existing — keep oee_goal/att_goal, anything else not ours
+  // v6.34ab: only write oee + goals + timestamp. Remove any stale 'att' or
+  // 'lines' fields from prior versions so consumers fall through to live compute.
   existing.oee = oee;
-  existing.lines = lines;
-  existing.att = attAvg;
+  delete existing.att;
+  delete existing.lines;
   existing._updated = new Date().toISOString();
-  // Default goals if never set (matches index.html defaults)
   if(existing.oee_goal === undefined || existing.oee_goal === null) existing.oee_goal = 60;
   if(existing.att_goal === undefined || existing.att_goal === null) existing.att_goal = 90;
-
   try {
     localStorage.setItem(KPI_STORAGE_KEY, JSON.stringify(existing));
     populateKPIFields();
@@ -2315,29 +2320,25 @@ function saveManualKPIs(){
 }
 
 function clearManualKPIs(){
-  if(!confirm("Clear all manual KPI values? This removes today's OEE and Schedule Attainment entries but keeps the configured goal targets.")) return;
-  // Preserve goals — only clear the actual values
+  if(!confirm("Clear OEE value? Goal targets and computed attainment data are not affected.")) return;
   var existing = loadManualKPIs() || {};
   var preserved = {};
   if(existing.oee_goal !== undefined) preserved.oee_goal = existing.oee_goal;
   if(existing.att_goal !== undefined) preserved.att_goal = existing.att_goal;
-  // If nothing to preserve, drop the key entirely
   if(Object.keys(preserved).length === 0){
     localStorage.removeItem(KPI_STORAGE_KEY);
   } else {
     localStorage.setItem(KPI_STORAGE_KEY, JSON.stringify(preserved));
   }
-  document.getElementById('kpi-oee').value = '';
-  KPI_LINES.forEach(function(l){
-    var el = document.getElementById('kpi-attain-' + l);
-    if(el) el.value = '';
-  });
+  var oeeEl = document.getElementById('kpi-oee');
+  if(oeeEl) oeeEl.value = '';
   populateKPIFields();
   setKPIStatus('Cleared', 'warn');
 }
 
 function setKPIStatus(msg, kind){
   var el = document.getElementById('kpi-save-status');
+  if(!el) return;
   var color = kind === 'ok' ? 'var(--green)' : kind === 'err' ? 'var(--red)' : 'var(--amber)';
   el.style.color = color;
   el.textContent = msg;
@@ -2347,10 +2348,13 @@ function setKPIStatus(msg, kind){
 }
 
 // Init manual KPI section
-buildAttainmentGrid();
 populateKPIFields();
-// Refresh the "last saved" display every minute so the "h ago" stays accurate
-setInterval(populateKPIFields, 60000);
+renderComputedAttainmentPreview();
+// Refresh the displays — "h ago" stays accurate, computed attainment stays current
+setInterval(function(){
+  populateKPIFields();
+  renderComputedAttainmentPreview();
+}, 60000);
 
 // ── Init ──────────────────────────────────────────────────────────────
 renderSyncBar(document.getElementById('sync-bar'));

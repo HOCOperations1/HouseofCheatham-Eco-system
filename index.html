@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34z">
+<meta name="hoc-build" content="v6.34ab">
 
 <meta charset="UTF-8">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -130,7 +130,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--text)}
 
 <script>
 // v6.34h: Version stamp + badge. Bump on every deploy.
-var HOC_OES_VERSION = 'v6.34z-20260610';
+var HOC_OES_VERSION = 'v6.34ab-20260610';
 var HOC_OES_BUILD_TS = '1779870500';
 if(localStorage.getItem('hoc_oes_version') !== HOC_OES_VERSION){
   localStorage.setItem('hoc_oes_version', HOC_OES_VERSION);
@@ -155,6 +155,7 @@ if(localStorage.getItem('hoc_oes_version') !== HOC_OES_VERSION){
 })();
 </script>
 <script src="hoc_theme.js"></script>
+<script src="hoc_attainment.js"></script>
 </head>
 <body>
 
@@ -162,7 +163,7 @@ if(localStorage.getItem('hoc_oes_version') !== HOC_OES_VERSION){
   <div class="tb-logo">HC</div>
   <div>
     <div class="tb-title">HOC-OES</div>
-    <div class="tb-sub">House of Cheatham Operational Ecosystem · <span id="hoc-month-year">May 2026</span> · <span id="ver-badge" style="background:rgba(34,197,94,.15);color:#22C55E;padding:1px 6px;border-radius:4px;font-weight:700;font-family:ui-monospace;font-size:9px;letter-spacing:.05em">v6.34z</span> · <a href="reset.html" style="color:#8899AA;font-size:9px;text-decoration:underline;margin-left:6px">reset cache</a></div>
+    <div class="tb-sub">House of Cheatham Operational Ecosystem · <span id="hoc-month-year">May 2026</span> · <span id="ver-badge" style="background:rgba(34,197,94,.15);color:#22C55E;padding:1px 6px;border-radius:4px;font-weight:700;font-family:ui-monospace;font-size:9px;letter-spacing:.05em">v6.34ab</span> · <a href="reset.html" style="color:#8899AA;font-size:9px;text-decoration:underline;margin-left:6px">reset cache</a></div>
   </div>
   <div class="tb-right">
     <div class="sync-pill" onclick="toggleSync()">
@@ -908,39 +909,33 @@ function loadKPIs() {
   var attEl = document.getElementById('kv-att');
   var ksAttEl = document.getElementById('ks-att');
   if(attEl){
+    // v6.34ab: attainment is now COMPUTED LIVE from uploaded batches.
+    // Manual entry fields removed. Falls back to legacy stored value only
+    // if hoc_attainment.js is missing for any reason.
     var attVal = null;
-    if(manualKpi.att != null){
+    var attSummary = null;
+    if(typeof HOC_Attainment !== 'undefined'){
+      attSummary = HOC_Attainment.summary();
+      attVal = attSummary.plant;
+    } else if(manualKpi.att != null){
+      // Fallback: stale stored value (shouldn't happen if hoc_attainment.js loads)
       attVal = Math.round(Number(manualKpi.att) * 10) / 10;
     } else if(attainmentPctFromPaste != null){
       attVal = attainmentPctFromPaste;
-    } else {
-      var attMap = (_UPLOAD && _UPLOAD.goals && _UPLOAD.goals.att_by_line) || {};
-      var attValues = Object.values(attMap).filter(function(v){ return v > 0; });
-      if(attValues.length){
-        attVal = Math.round(attValues.reduce(function(a,b){ return a+b; }, 0) / attValues.length);
-      }
     }
     if(attVal != null){
-      attEl.textContent = attVal + '%';
+      attEl.textContent = attVal.toFixed(1) + '%';
       attEl.style.color = attVal >= attGoalLocal ? 'var(--green)' : 'var(--red)';
     } else {
       attEl.textContent = '—';
       attEl.style.color = 'var(--text3)';
     }
-    // v6.34x — when manual per-line data exists, surface the worst line as subtext
+    // Worst line subtext — pulled from computed summary
     if(ksAttEl){
-      var worstLine = null;
-      var worstVal = null;
-      if(manualKpi.lines){
-        Object.keys(manualKpi.lines).forEach(function(l){
-          var v = manualKpi.lines[l];
-          if(v === null || v === undefined) return;
-          if(worstVal === null || v < worstVal){ worstVal = v; worstLine = l; }
-        });
-      }
-      if(worstLine !== null){
-        var worstColor = worstVal >= attGoalLocal ? 'var(--green)' : 'var(--red)';
-        ksAttEl.innerHTML = 'Worst: <span style="color:' + worstColor + ';font-weight:700">L' + worstLine + ' ' + worstVal + '%</span>';
+      var w = attSummary ? attSummary.worst : null;
+      if(w){
+        var wColor = w.value >= attGoalLocal ? 'var(--green)' : 'var(--red)';
+        ksAttEl.innerHTML = 'Worst: <span style="color:' + wColor + ';font-weight:700">L' + w.line + ' ' + w.value.toFixed(1) + '%</span>';
       } else {
         ksAttEl.textContent = 'vs ' + attGoalLocal + '% goal';
       }

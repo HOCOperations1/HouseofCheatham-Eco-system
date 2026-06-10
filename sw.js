@@ -12,7 +12,7 @@
 //   nothing to stale.
 //
 // Bump CACHE on every deploy. The activate handler nukes prior caches.
-const CACHE = 'hoc-oes-v6.34z-20260610';
+const CACHE = 'hoc-oes-v6.34ab-20260610';
 
 // Minimal shell — JUST what's needed to bootstrap the app. NO dashboard HTML.
 const SHELL = [
@@ -21,6 +21,7 @@ const SHELL = [
   './manifest.json',
   './hoc_events.js',
   './hoc_theme.js',
+  './hoc_attainment.js',
   './hoc_capacity_engine.js',
   './reset.html',
 ];
