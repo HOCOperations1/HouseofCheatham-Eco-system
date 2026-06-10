@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34ab">
+<meta name="hoc-build" content="v6.34ae">
 
 <meta charset="UTF-8">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -130,7 +130,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--text)}
 
 <script>
 // v6.34h: Version stamp + badge. Bump on every deploy.
-var HOC_OES_VERSION = 'v6.34ab-20260610';
+var HOC_OES_VERSION = 'v6.34ae-20260610';
 var HOC_OES_BUILD_TS = '1779870500';
 if(localStorage.getItem('hoc_oes_version') !== HOC_OES_VERSION){
   localStorage.setItem('hoc_oes_version', HOC_OES_VERSION);
@@ -163,7 +163,7 @@ if(localStorage.getItem('hoc_oes_version') !== HOC_OES_VERSION){
   <div class="tb-logo">HC</div>
   <div>
     <div class="tb-title">HOC-OES</div>
-    <div class="tb-sub">House of Cheatham Operational Ecosystem · <span id="hoc-month-year">May 2026</span> · <span id="ver-badge" style="background:rgba(34,197,94,.15);color:#22C55E;padding:1px 6px;border-radius:4px;font-weight:700;font-family:ui-monospace;font-size:9px;letter-spacing:.05em">v6.34ab</span> · <a href="reset.html" style="color:#8899AA;font-size:9px;text-decoration:underline;margin-left:6px">reset cache</a></div>
+    <div class="tb-sub">House of Cheatham Operational Ecosystem · <span id="hoc-month-year">May 2026</span> · <span id="ver-badge" style="background:rgba(34,197,94,.15);color:#22C55E;padding:1px 6px;border-radius:4px;font-weight:700;font-family:ui-monospace;font-size:9px;letter-spacing:.05em">v6.34ae</span> · <a href="reset.html" style="color:#8899AA;font-size:9px;text-decoration:underline;margin-left:6px">reset cache</a></div>
   </div>
   <div class="tb-right">
     <div class="sync-pill" onclick="toggleSync()">
@@ -877,13 +877,28 @@ function loadKPIs() {
   var oeeGoalLocal = manualKpi.oee_goal != null ? Number(manualKpi.oee_goal) : 60;
   var attGoalLocal = manualKpi.att_goal != null ? Number(manualKpi.att_goal) : 90;
 
-  // OEE: PRIORITY ORDER (v6.32)
-  //   1. Manual entry (Data Upload Hub)
-  //   2. Patch per-line average
-  //   3. "—"
+  // OEE: PRIORITY ORDER (v6.34ad)
+  //   1. Patch OEE upload (authoritative when present)
+  //   2. Manual entry (Data Upload Hub)
+  //   3. Legacy Patch per-line in _UPLOAD.goals
+  //   4. "—"
   var oeeEl = document.getElementById('kv-oee');
   if(oeeEl){
-    if(manualKpi.oee != null){
+    var patchOEE = null;
+    try {
+      var po = JSON.parse(localStorage.getItem('hoc_patch_oee_v1')||'null');
+      if(po && po.lines){
+        var vals = Object.values(po.lines).map(function(L){ return L.oee; }).filter(function(v){ return v != null; });
+        if(vals.length){
+          patchOEE = (vals.reduce(function(a,b){return a+b;}, 0) / vals.length) * 100;
+        }
+      }
+    } catch(e){}
+    if(patchOEE != null){
+      var pVal = Math.round(patchOEE * 10) / 10;
+      oeeEl.textContent = pVal.toFixed(1) + '%';
+      oeeEl.style.color = pVal >= oeeGoalLocal ? 'var(--green)' : 'var(--red)';
+    } else if(manualKpi.oee != null){
       var manualOEE = Math.round(Number(manualKpi.oee) * 10) / 10;
       oeeEl.textContent = manualOEE + '%';
       oeeEl.style.color = manualOEE >= oeeGoalLocal ? 'var(--green)' : 'var(--red)';

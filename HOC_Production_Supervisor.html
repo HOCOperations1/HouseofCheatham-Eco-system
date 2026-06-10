@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34ab">
+<meta name="hoc-build" content="v6.34ae">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Production Supervisor</title>
@@ -132,6 +132,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--green)}
     <button class="nb active" onclick="P('cmd')">Command Center</button>
     <button class="nb" onclick="P('forecast')">Capacity Forecast</button>
     <button class="nb" onclick="P('linesum')">Line Summary</button>
+    <button class="nb" onclick="P('engine')">Engine</button>
     <button class="nb" onclick="P('lines')">Lines</button>
     <button class="nb" onclick="P('batches')">All Batches</button>
     <button class="nb" onclick="P('sync')">Sync &amp; Export</button>
@@ -324,6 +325,18 @@ select:focus,input:focus,textarea:focus{border-color:var(--green)}
       <div class="ls-title-meta" id="ls-asof" style="margin-left:auto"></div>
     </div>
     <div id="ls-content"><div class="ls-empty">Loading…</div></div>
+  </div>
+</div></div>
+
+<!-- ENGINE (v6.34ae · Goal vs Capacity scoring) -->
+<div class="page" id="page-engine"><div class="content">
+  <div class="card">
+    <div class="ls-header">
+      <div class="card-title" style="margin:0">Goal vs Capacity Engine</div>
+      <div class="ls-title-meta">Faithful port of HOC Production Tracker · scores lines 1, 2, 3, 4, 5, 11</div>
+      <div class="ls-title-meta" id="eng-asof" style="margin-left:auto"></div>
+    </div>
+    <div id="eng-content"><div class="ls-empty">Loading…</div></div>
   </div>
 </div></div>
 
@@ -534,21 +547,39 @@ function renderSyncBar(el) {
   var oeePill = '';
   var attPill = '';
   var oeeGoal = 60, attGoal = 90;
+  // Read goals from manual KPI store
   try {
     var raw = localStorage.getItem('hoc_kpi_manual_v1');
     var kpi = raw ? JSON.parse(raw) : null;
     if(kpi){
       if(kpi.oee_goal != null) oeeGoal = Number(kpi.oee_goal);
       if(kpi.att_goal != null) attGoal = Number(kpi.att_goal);
-      if(kpi.oee != null){
-        var oeeVal = Math.round(Number(kpi.oee) * 10) / 10;
-        var oeeColor = oeeVal >= oeeGoal ? 'var(--green)' : 'var(--red)';
-        oeePill = '<span style="color:var(--text3)">·</span>'
-                + '<span style="color:var(--text3)">OEE:</span>'
-                + '<span style="color:' + oeeColor + ';font-weight:700">' + oeeVal + '%</span>';
+    }
+  } catch(e){}
+  // v6.34ad: OEE priority — Patch first, then manual
+  var oeeVal = null;
+  try {
+    var po = JSON.parse(localStorage.getItem('hoc_patch_oee_v1')||'null');
+    if(po && po.lines){
+      var vals = Object.values(po.lines).map(function(L){ return L.oee; }).filter(function(v){ return v != null; });
+      if(vals.length){
+        oeeVal = Math.round((vals.reduce(function(a,b){return a+b;}, 0) / vals.length) * 1000) / 10;
       }
     }
-  } catch(e){ /* missing or invalid — skip */ }
+  } catch(e){}
+  if(oeeVal == null){
+    try {
+      var raw2 = localStorage.getItem('hoc_kpi_manual_v1');
+      var kpi2 = raw2 ? JSON.parse(raw2) : null;
+      if(kpi2 && kpi2.oee != null) oeeVal = Math.round(Number(kpi2.oee) * 10) / 10;
+    } catch(e){}
+  }
+  if(oeeVal != null){
+    var oeeColor = oeeVal >= oeeGoal ? 'var(--green)' : 'var(--red)';
+    oeePill = '<span style="color:var(--text3)">·</span>'
+            + '<span style="color:var(--text3)">OEE:</span>'
+            + '<span style="color:' + oeeColor + ';font-weight:700">' + oeeVal.toFixed(1) + '%</span>';
+  }
 
   // Attainment — computed live from uploaded batches
   if(typeof HOC_Attainment !== 'undefined'){
@@ -867,15 +898,17 @@ var LINE_DEFAULTS = {
 // ── computeLines: derive live per-line stats from BATCHES + Patch data ──
 function computeLines(){
   var lineNums = Object.keys(LINE_DEFAULTS).map(Number).sort(function(a,b){return a-b;});
-  // Try to load Patch OEE for live top-loss per line if uploaded
-  var patchByLine = {};
+  // v6.34ad: Patch OEE + Stops now live in dedicated storage keys
+  // populated by the Data Upload Hub parsers.
+  var patchOEE = {};
+  var patchStops = {};
   try {
-    var patch = JSON.parse(localStorage.getItem('hoc_changeover_data_v1')||'null');
-    if(patch){
-      ((patch.ytd_main||[]).concat(patch.ytd_component||[])).forEach(function(l){
-        patchByLine[l.line] = l;
-      });
-    }
+    var po = JSON.parse(localStorage.getItem('hoc_patch_oee_v1')||'null');
+    if(po && po.lines) patchOEE = po.lines;
+  } catch(e){}
+  try {
+    var ps = JSON.parse(localStorage.getItem('hoc_patch_stops_v1')||'null');
+    if(ps && ps.lines) patchStops = ps.lines;
   } catch(e){}
 
   return lineNums.map(function(lineNum){
@@ -884,10 +917,13 @@ function computeLines(){
     var done    = lineBatches.filter(function(b){ return b.status === 'COMPLETED'; }).length;
     var running = lineBatches.filter(function(b){ return b.status === 'RUNNING'; }).length;
     var pending = lineBatches.length - done - running;
-    // v6.34o: Remaining minutes = sum of minutes for batches dated this month
-    //         AND not yet COMPLETED. Uses b.minutes (the Excel "Minutes" column,
-    //         the standard runtime per batch) — falls back to eta_min or rem_min
-    //         if minutes isn't set on the batch.
+    // v6.34o: Remaining minutes = sum of REMAINING minutes for batches
+    //         dated this month AND not yet COMPLETED.
+    // v6.34ac fix: was summing b.minutes (the FULL std min), now uses
+    //         b.rem_min which is std × (1 − pct_complete). Falls back to
+    //         std minutes for batches missing rem_min (e.g., not-yet-started
+    //         batches from old uploads). Completed batches are already
+    //         skipped by the status check below.
     var now = new Date();
     var curMonth = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
     var remmin = 0;
@@ -908,13 +944,21 @@ function computeLines(){
         }
       }
       if(batchMonth !== curMonth) return;
-      var min = parseInt(b.minutes) || parseInt(b.eta_min) || parseInt(b.rem_min) || 0;
+      // rem_min is the actual remaining minutes; only fall back to full std
+      // (b.minutes) when rem_min is genuinely absent (legacy data without it).
+      var rm = b.rem_min;
+      var min;
+      if(rm !== null && rm !== undefined && rm !== '' && !isNaN(parseInt(rm))){
+        min = parseInt(rm);
+      } else {
+        min = parseInt(b.minutes) || parseInt(b.eta_min) || 0;
+      }
       remmin += min;
     });
-    // OEE: prefer Patch upload, otherwise fall back to a heuristic
+    // OEE: v6.34ad — read live Patch upload via hoc_patch_oee_v1.
     var oee = null;
-    if(patchByLine[lineNum] && patchByLine[lineNum].oee != null){
-      oee = patchByLine[lineNum].oee / 100;
+    if(patchOEE[lineNum] && patchOEE[lineNum].oee != null){
+      oee = patchOEE[lineNum].oee;  // already 0..1 fraction
     }
     if(oee == null){
       oee = 0.5;
@@ -931,22 +975,22 @@ function computeLines(){
     else if(gaphr < 0)            signal = '⚠ CRITICAL';
     else if(gaphr < liveAvailHr*0.15) signal = '! WATCH';  // <15% slack
     else                          signal = '✓ MONITOR';
-    // Top-loss preference: live Patch data overrides defaults
+    // v6.34ad: Top-loss now sourced from Patch Stops upload (was hardcoded default).
     var toploss = d.toploss;
-    if(patchByLine[lineNum]){
-      var p = patchByLine[lineNum];
-      var biggest = [
-        {k:'CO[10m]',v:p.co10_loss||0},
-        {k:'CO[60m]',v:p.co60_loss||0},
-        {k:'CO[90m]',v:p.co90_loss||0}
-      ].sort(function(a,b){ return b.v - a.v; })[0];
-      if(biggest && biggest.v > 0) toploss = 'Changeover '+biggest.k+' '+biggest.v.toFixed(1)+'%';
+    var loss2   = d.loss2;
+    var lossCategories = null;  // for drill-down popup
+    if(patchStops[lineNum]){
+      var ps = patchStops[lineNum];
+      if(ps.top_loss)    toploss = ps.top_loss;
+      if(ps.second_loss) loss2   = ps.second_loss;
+      lossCategories     = ps.categories || null;
     }
     return {
       line:lineNum, pattern:d.pattern,
       availhr:Math.round(liveAvailHr*10)/10,  // v6.34o: now dynamic, was d.availhr
       availmin:Math.round(liveAvailMin),
-      oee:oee, toploss:toploss, loss2:d.loss2,
+      oee:oee, toploss:toploss, loss2:loss2,
+      loss_categories: lossCategories,
       total:lineBatches.length, done:done, running:running, pending:pending,
       remmin:remmin, gaphr:Math.round(gaphr*10)/10, signal:signal
     };
@@ -1111,8 +1155,8 @@ function showPage(id, map) {
 }
 
 let bF='ALL', fcF='ALL', activeBatch=null;
-const PM = {cmd:0,forecast:1,linesum:2,lines:3,batches:4,sync:5};
-function P(id){showPage(id,PM);if(id==='batches')renderBatches();if(id==='forecast')renderFC();if(id==='linesum')renderLineSum();}
+const PM = {cmd:0,forecast:1,linesum:2,engine:3,lines:4,batches:5,sync:6};
+function P(id){showPage(id,PM);if(id==='batches')renderBatches();if(id==='forecast')renderFC();if(id==='linesum')renderLineSum();if(id==='engine')renderEngine();}
 
 function renderAll(){
   // Recompute LINES from live BATCHES on every render so OEE/capacity stays current
@@ -1482,6 +1526,23 @@ function openLD(ln){
     <div class="df"><label>Signal</label><span>${l.signal}</span></div>
   </div>`;
   if(od.length){h+=`<div style="margin:8px 0;padding:8px;background:rgba(239,68,68,.06);border-radius:6px;border:1px solid rgba(239,68,68,.15)"><div style="font-size:9px;font-weight:700;color:var(--red);margin-bottom:5px">COMPOUND OVERDUE</div>`;od.forEach(b=>{h+=`<div style="font-size:10px;margin-bottom:3px">${b.batch} — ${b.desc.slice(0,50)} <span style="color:var(--red)">due ${fD(b.cmpddue)}</span></div>`;});h+=`</div>`;}
+  // v6.34ad: Patch loss-categories breakdown (drill-down from card)
+  if(l.loss_categories && l.loss_categories.length){
+    h += `<div style="margin:8px 0;padding:8px;background:var(--bg2);border-radius:6px;border:1px solid var(--border)">
+      <div style="font-size:9px;font-weight:700;color:var(--text2);margin-bottom:6px;letter-spacing:.06em;text-transform:uppercase">Loss Categories (from Patch)</div>
+      <table style="width:100%;font-size:10px;border-collapse:collapse">
+        <thead><tr style="border-bottom:1px solid var(--border)">
+          <th style="text-align:left;padding:4px 6px;color:var(--text3);font-weight:600">Category</th>
+          <th style="text-align:right;padding:4px 6px;color:var(--text3);font-weight:600">% of Time</th>
+        </tr></thead>
+        <tbody>`;
+    l.loss_categories.forEach(function(c, i){
+      var color = i===0 ? 'var(--red)' : i===1 ? 'var(--amber)' : 'var(--text)';
+      h += `<tr><td style="padding:3px 6px">${c.category}</td>
+            <td style="padding:3px 6px;text-align:right;color:${color};font-weight:600">${(c.pct*100).toFixed(2)}%</td></tr>`;
+    });
+    h += `</tbody></table></div>`;
+  }
   h+=`<div class="tbl-wrap" style="margin-top:8px"><table>
     <thead><tr><th>Batch</th><th>Date</th><th>Description</th><th style="text-align:right">Orig</th><th style="text-align:right">Actual</th><th>Status</th><th>Compound</th><th>QC</th></tr></thead>
     <tbody>${lb.map(b=>`<tr onclick="P('batches');openBD('${b.batch}')" style="cursor:pointer">
@@ -1598,6 +1659,143 @@ function renderLineSum(){
        + '</div>';
 
   container.innerHTML = html;
+}
+
+// ── renderEngine: Goal vs Capacity Engine — v6.34ae ─────────────────────
+// Faithful port of the HOC Production Tracker "Goal vs Capacity Engine"
+// sheet. Scores lines 1, 2, 3, 4, 5, 11. Driven by hoc_goal_engine.js.
+function renderEngine(){
+  var container = document.getElementById('eng-content');
+  if(!container) return;
+  if(typeof HOC_GoalEngine === 'undefined'){
+    container.innerHTML = '<div class="ls-empty">Goal Engine not loaded. Reload the page.</div>';
+    return;
+  }
+  var rows = HOC_GoalEngine.scoreLines();
+  var asOf = new Date();
+  var asOfEl = document.getElementById('eng-asof');
+  if(asOfEl) asOfEl.textContent = 'As of ' + asOf.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+
+  if(!rows.length){
+    container.innerHTML = '<div class="ls-empty">No lines to score.</div>';
+    return;
+  }
+
+  // Sort: highest priority first (MUST RUN > SHOULD RUN > DEFER, then by score desc)
+  var tierRank = {'MUST RUN':0, 'SHOULD RUN':1, 'DEFER IF NEEDED':2};
+  rows.sort(function(a,b){
+    var ta = tierRank[a.priority_tier] != null ? tierRank[a.priority_tier] : 99;
+    var tb = tierRank[b.priority_tier] != null ? tierRank[b.priority_tier] : 99;
+    if(ta !== tb) return ta - tb;
+    return b.priority_score - a.priority_score;
+  });
+
+  // KPI summary
+  var mustRun = rows.filter(function(r){ return r.priority_tier === 'MUST RUN'; }).length;
+  var shouldRun = rows.filter(function(r){ return r.priority_tier === 'SHOULD RUN'; }).length;
+  var defer = rows.filter(function(r){ return r.priority_tier === 'DEFER IF NEEDED'; }).length;
+  var red = rows.filter(function(r){ return r.combined_risk === 'RED'; }).length;
+  var unscorable = rows.filter(function(r){ return !r.scorable; }).length;
+
+  var html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px">';
+  html += '<div class="ls-kpi"><div class="ls-kpi-lbl">MUST RUN</div><div class="ls-kpi-val" style="color:var(--red)">' + mustRun + '</div><div class="ls-kpi-sub">' + (mustRun===1?'line':'lines') + ' locked</div></div>';
+  html += '<div class="ls-kpi"><div class="ls-kpi-lbl">SHOULD RUN</div><div class="ls-kpi-val" style="color:var(--amber)">' + shouldRun + '</div><div class="ls-kpi-sub">' + (shouldRun===1?'line':'lines') + ' to watch</div></div>';
+  html += '<div class="ls-kpi"><div class="ls-kpi-lbl">DEFER</div><div class="ls-kpi-val" style="color:var(--green)">' + defer + '</div><div class="ls-kpi-sub">flex capacity</div></div>';
+  html += '<div class="ls-kpi"><div class="ls-kpi-lbl">RED Risk</div><div class="ls-kpi-val" style="color:var(--red)">' + red + '</div><div class="ls-kpi-sub">need action today</div></div>';
+  if(unscorable){
+    html += '<div class="ls-kpi"><div class="ls-kpi-lbl">N/A</div><div class="ls-kpi-val" style="color:var(--text3)">' + unscorable + '</div><div class="ls-kpi-sub">missing data</div></div>';
+  }
+  html += '</div>';
+
+  // Helpers
+  function pctFmt(v){
+    if(v === null || v === undefined) return '<span style="color:var(--text3)">—</span>';
+    return (v * 100).toFixed(1) + '%';
+  }
+  function gapFmt(v){
+    if(v === null || v === undefined) return '<span style="color:var(--text3)">—</span>';
+    var pct = v * 100;
+    var color = pct < 0 ? 'var(--red)' : pct < 5 ? 'var(--amber)' : 'var(--green)';
+    var sign = pct >= 0 ? '+' : '';
+    return '<span style="color:' + color + ';font-weight:600">' + sign + pct.toFixed(1) + 'pp</span>';
+  }
+  function riskBadge(risk){
+    var colors = {'RED':'rgba(239,68,68,.15)|var(--red)', 'YELLOW':'rgba(245,158,11,.18)|var(--amber)', 'GREEN':'rgba(34,197,94,.15)|var(--green)'};
+    var c = (colors[risk] || 'var(--bg3)|var(--text3)').split('|');
+    return '<span style="background:' + c[0] + ';color:' + c[1] + ';font-weight:700;font-size:9px;padding:2px 7px;border-radius:10px;letter-spacing:.05em">' + risk + '</span>';
+  }
+  function tierBadge(tier){
+    var colors = {
+      'MUST RUN':        'rgba(239,68,68,.15)|var(--red)',
+      'SHOULD RUN':      'rgba(245,158,11,.18)|var(--amber)',
+      'DEFER IF NEEDED': 'rgba(148,163,184,.15)|var(--text3)'
+    };
+    var c = (colors[tier] || 'var(--bg3)|var(--text3)').split('|');
+    return '<span style="background:' + c[0] + ';color:' + c[1] + ';font-weight:700;font-size:9px;padding:2px 7px;border-radius:10px;letter-spacing:.05em">' + tier + '</span>';
+  }
+  function lockBadge(lock){
+    var colors = {'LOCK':'var(--red)', 'WATCH':'var(--amber)', 'FLEX':'var(--green)'};
+    var color = colors[lock] || 'var(--text3)';
+    return '<span style="color:' + color + ';font-weight:700;font-size:10px">' + lock + '</span>';
+  }
+  function timeBadge(t){
+    if(t === 'TODAY') return '<span style="color:var(--red);font-weight:700;font-size:10px">' + t + '</span>';
+    if(t === 'NEXT SHIFT') return '<span style="color:var(--amber);font-weight:700;font-size:10px">' + t + '</span>';
+    return '<span style="color:var(--text3);font-size:10px">' + t + '</span>';
+  }
+
+  // Table
+  html += '<div class="tbl-wrap"><table>';
+  html += '<thead><tr>'
+       + '<th>Line</th>'
+       + '<th>OEE</th>'
+       + '<th>OEE Gap</th>'
+       + '<th>Att</th>'
+       + '<th>Att Gap</th>'
+       + '<th style="text-align:right">Rem Batch</th>'
+       + '<th style="text-align:right">Rem Hrs</th>'
+       + '<th>Batch Risk</th>'
+       + '<th>Risk</th>'
+       + '<th style="text-align:right">Score</th>'
+       + '<th>Tier</th>'
+       + '<th>Lock</th>'
+       + '<th>Primary Constraint</th>'
+       + '<th>Action Required</th>'
+       + '<th>When</th>'
+       + '</tr></thead><tbody>';
+
+  rows.forEach(function(r){
+    var rowStyle = r.combined_risk === 'RED' ? 'background:rgba(239,68,68,.04)' :
+                   r.combined_risk === 'YELLOW' ? 'background:rgba(245,158,11,.04)' : '';
+    html += '<tr style="' + rowStyle + '">'
+         + '<td style="font-weight:700">' + r.line + '</td>'
+         + '<td>' + pctFmt(r.oee_actual) + '</td>'
+         + '<td>' + gapFmt(r.oee_gap) + '</td>'
+         + '<td>' + pctFmt(r.attain_actual) + '</td>'
+         + '<td>' + gapFmt(r.attain_gap) + '</td>'
+         + '<td class="num">' + r.remaining_batches + '</td>'
+         + '<td class="num">' + r.remaining_hrs.toFixed(1) + '</td>'
+         + '<td style="font-size:9px;color:var(--text2)">' + (r.batch_risk || '—') + '</td>'
+         + '<td>' + riskBadge(r.combined_risk) + '</td>'
+         + '<td class="num" style="font-weight:700">' + r.priority_score.toFixed(1) + '</td>'
+         + '<td>' + tierBadge(r.priority_tier) + '</td>'
+         + '<td>' + lockBadge(r.scheduler_lock) + '</td>'
+         + '<td style="font-size:10px;color:var(--text2)">' + r.primary_constraint + '</td>'
+         + '<td style="font-size:10px">' + r.action_required + '</td>'
+         + '<td>' + timeBadge(r.action_timing) + '</td>'
+         + '</tr>';
+  });
+  html += '</tbody></table></div>';
+
+  // Footer note
+  var notes = [];
+  if(unscorable){
+    notes.push(unscorable + ' line(s) marked N/A — missing Patch OEE or capacity data.');
+  }
+  notes.push('Formulas faithfully ported from HOC Production Tracker workbook (rows 13-18).');
+  notes.push('Priority Score = MAX(0,−OEE_Gap)×30 + MAX(0,−Att_Gap)×30 + Rem_Batches×4 + Rem_Hrs×0.2');
+  notes.push('Tier thresholds: ≥60 MUST RUN · ≥35 SHOULD RUN · else DEFER.');
+  html = container.innerHTML = '<div>' + html + '<div style="margin-top:10px;font-size:9px;color:var(--text3);font-style:italic">' + notes.join(' · ') + '</div></div>';
 }
 
 function renderBatches(){
@@ -1968,6 +2166,7 @@ setInterval(function() {
 })();
 </script>
 <script src="hoc_capacity_engine.js"></script>
+<script src="hoc_goal_engine.js"></script>
 <script src="hoc_events.js"></script>
 <script>
 // Auto-update header date placeholder

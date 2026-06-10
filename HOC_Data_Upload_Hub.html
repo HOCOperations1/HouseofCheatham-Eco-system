@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34ab">
+<meta name="hoc-build" content="v6.34ae">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -193,6 +193,30 @@ input:focus,select:focus,textarea:focus{border-color:var(--blue)}
         <div class="drop-title">Line_Clearance_PowerBI.xlsx</div>
         <div class="drop-sub">Per-batch scrap reconciliation · GP vs FASCOR sync · Ext Scrap Value · powers Line Clearance dashboard</div>
         <div class="drop-status" id="status-lc" style="color:var(--text3)">Drop file here or click to browse</div>
+      </div>
+    </div>
+
+    <!-- Patch OEE Efficiency (per-schedule production records — v6.34ad) -->
+    <div>
+      <div style="font-size:10px;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em">📈 Patch OEE Efficiency</div>
+      <div class="drop-zone" id="zone-po" onclick="document.getElementById('file-po').click()" ondragover="dragOver(event,'po')" ondragleave="dragLeave('po')" ondrop="dropFile(event,'po')">
+        <input type="file" id="file-po" accept=".xlsx,.xls,.csv" style="display:none" onchange="loadFile(this.files[0],'po')">
+        <div class="drop-icon">📈</div>
+        <div class="drop-title">EfficiencyReport (Patch)</div>
+        <div class="drop-sub">Per-schedule OEE % from Patch · rolls up to per-line OEE · disables manual OEE entry</div>
+        <div class="drop-status" id="status-po" style="color:var(--text3)">Drop file here or click to browse</div>
+      </div>
+    </div>
+
+    <!-- Patch Stops Report (per-line stop breakdown — v6.34ad) -->
+    <div>
+      <div style="font-size:10px;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em">🛑 Patch Stops Report</div>
+      <div class="drop-zone" id="zone-ps" onclick="document.getElementById('file-ps').click()" ondragover="dragOver(event,'ps')" ondragleave="dragLeave('ps')" ondrop="dropFile(event,'ps')">
+        <input type="file" id="file-ps" accept=".xlsx,.xls,.csv" style="display:none" onchange="loadFile(this.files[0],'ps')">
+        <div class="drop-icon">🛑</div>
+        <div class="drop-title">StopsReport (Patch)</div>
+        <div class="drop-sub">Per-line top-loss categories from Patch · powers Top Loss on Production Supervisor line cards</div>
+        <div class="drop-status" id="status-ps" style="color:var(--text3)">Drop file here or click to browse</div>
       </div>
     </div>
   </div>
@@ -429,7 +453,7 @@ function dragLeave(zone){ document.getElementById('zone-'+zone).classList.remove
 function dropFile(e,zone){ e.preventDefault(); dragLeave(zone); var f=e.dataTransfer.files[0]; if(f)loadFile(f,zone); }
 
 // ── Loaded file registry ──────────────────────────────────────────────
-var loaded = {pt:null, pd:null, co:null, lb:null, ls:null, lc:null};
+var loaded = {pt:null, pd:null, co:null, lb:null, ls:null, lc:null, po:null, ps:null};
 
 function loadFile(file, zone) {
   if(!file) return;
@@ -903,7 +927,7 @@ function parseAttainmentPaste(rows, statusEl){
 // ═══════════════════════════════════════════════════════════════════
 
 function checkReady() {
-  document.getElementById('update-btn').disabled = !(loaded.pt || loaded.pd || loaded.co || loaded.lb || loaded.ls || loaded.lc);
+  document.getElementById('update-btn').disabled = !(loaded.pt || loaded.pd || loaded.co || loaded.lb || loaded.ls || loaded.lc || loaded.po || loaded.ps);
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -1761,6 +1785,199 @@ function updateAllDashboards() {
         }
       }
 
+      // ── Parse Patch OEE Efficiency Report (v6.34ad) ─────────────────
+      // Source: EfficiencyReport sheet, one row per schedule run.
+      // Per-line OEE = simple arithmetic mean of 'Effective Time (OEE)%'.
+      // Stored as fractions (0..1); display layer renders as percentages.
+      if(loaded.po) {
+        progress('Reading Patch OEE...');
+        var wbPO = loaded.po.wb;
+        var poSheet = wbPO.Sheets['EfficiencyReport'] || wbPO.Sheets[wbPO.SheetNames[0]];
+        if(!poSheet){
+          progress('⚠ Patch OEE: EfficiencyReport sheet not found', 'warn');
+        } else {
+          var poRows = XLSX.utils.sheet_to_json(poSheet, {defval:null, raw:true});
+          // Per-line accumulator
+          var byLine = {};   // 'Line 1' -> {oee_sum, oee_n, used_sec, planned_units, registered_units, period_min, period_max}
+          var dateMin = null, dateMax = null;
+          poRows.forEach(function(r){
+            var machine = r['Machine'];
+            if(!machine) return;
+            machine = String(machine).trim();
+            // OEE — float 0..1 (or slightly >1 in burst cases)
+            var oeeRaw = r['Effective Time (OEE)%'];
+            if(oeeRaw === null || oeeRaw === undefined || oeeRaw === '') return;
+            var oee = parseFloat(oeeRaw);
+            if(isNaN(oee)) return;
+            if(!byLine[machine]){
+              byLine[machine] = {
+                oee_sum:0, oee_n:0,
+                planned_units:0, registered_units:0, rejected_units:0,
+                min_oee:null, max_oee:null
+              };
+            }
+            var L = byLine[machine];
+            L.oee_sum += oee;
+            L.oee_n++;
+            if(L.min_oee === null || oee < L.min_oee) L.min_oee = oee;
+            if(L.max_oee === null || oee > L.max_oee) L.max_oee = oee;
+            L.planned_units    += parseFloat(r['Planned quantity [Units]']||0) || 0;
+            L.registered_units += parseFloat(r['Registered [Units]']||0) || 0;
+            L.rejected_units   += parseFloat(r['Rejected [Units]']||0) || 0;
+            // Track period — Start time may be Date obj or string
+            var st = r['Start time'];
+            var et = r['End time'];
+            function toISO(v){
+              if(!v) return null;
+              if(v instanceof Date) return v.toISOString().slice(0,10);
+              if(typeof v === 'number'){
+                var ms = (v - 25569) * 86400 * 1000;
+                return new Date(ms).toISOString().slice(0,10);
+              }
+              try { var d = new Date(v); if(!isNaN(d.getTime())) return d.toISOString().slice(0,10); } catch(e){}
+              return null;
+            }
+            var s = toISO(st), e = toISO(et);
+            if(s && (!dateMin || s < dateMin)) dateMin = s;
+            if(e && (!dateMax || e > dateMax)) dateMax = e;
+          });
+          // Reduce to per-line summary
+          var linesOut = {};
+          var lineKeyMap = {};  // 'Line 1' -> 1 (for numeric matching with hoc_upload_v1.batches)
+          Object.keys(byLine).forEach(function(machine){
+            var L = byLine[machine];
+            if(L.oee_n === 0) return;
+            var meanOEE = L.oee_sum / L.oee_n;
+            // Strip 'Line ' prefix to get numeric key
+            var num = parseInt(String(machine).replace(/[^\d]/g,''));
+            var key = isNaN(num) ? machine : num;
+            lineKeyMap[machine] = key;
+            linesOut[key] = {
+              machine_label: machine,
+              oee: meanOEE,                              // fraction 0..1
+              oee_pct: Math.round(meanOEE * 1000) / 10,  // pretty % (1 decimal)
+              oee_min: L.min_oee,
+              oee_max: L.max_oee,
+              schedule_count: L.oee_n,
+              planned_units: L.planned_units,
+              registered_units: L.registered_units,
+              rejected_units: L.rejected_units
+            };
+          });
+          var data = {
+            lines: linesOut,
+            period_start: dateMin,
+            period_end: dateMax,
+            row_count: poRows.length,
+            _updated: ts
+          };
+          try {
+            localStorage.setItem('hoc_patch_oee_v1', JSON.stringify(data));
+          } catch(e){
+            progress('⚠ Patch OEE: localStorage full', 'warn');
+          }
+          result.patch_oee = data;
+          result.patch_oee_ts = ts;
+          var lineCount = Object.keys(linesOut).length;
+          progress('✓ Patch OEE: ' + poRows.length + ' schedule rows across ' + lineCount + ' lines · period '
+                   + (dateMin||'?') + ' to ' + (dateMax||'?'), 'ok');
+          Object.keys(linesOut).sort(function(a,b){return parseInt(a)-parseInt(b);}).forEach(function(k){
+            var L = linesOut[k];
+            progress('   Line ' + k + ': ' + L.oee_pct.toFixed(1) + '% OEE (n=' + L.schedule_count + ')', 'ok');
+          });
+        }
+      }
+
+      // ── Parse Patch Stops Report (v6.34ad) ──────────────────────────
+      // Source: 'All machines' sheet — per-line × per-stop-code breakdown.
+      // We aggregate by OEE Category per line, sort by % loss descending.
+      // Top loss = highest non-production, non-factory-closed category.
+      if(loaded.ps) {
+        progress('Reading Patch Stops...');
+        var wbPS = loaded.ps.wb;
+        var psSheet = wbPS.Sheets['All machines'] || wbPS.Sheets[wbPS.SheetNames[0]];
+        if(!psSheet){
+          progress('⚠ Patch Stops: All machines sheet not found', 'warn');
+        } else {
+          var psRows = XLSX.utils.sheet_to_json(psSheet, {defval:null, raw:true});
+          // EXCLUDE these categories from "top loss" calc (they aren't real losses):
+          var EXCLUDE_CATS = {'Factory Closed':1, 'Production time':1};
+
+          var byLineStops = {};  // 'Line 1' -> {byCategory: {cat: pctSum}, allStops: [...]}
+          psRows.forEach(function(r){
+            var machine = r['Machine'];
+            if(!machine) return;
+            machine = String(machine).trim();
+            var cat = String(r['OEE Category']||'').trim();
+            var sub = String(r['OEE Subcategory']||'').trim();
+            var desc = String(r['Description']||'').trim();
+            var stopCode = String(r['Stop code']||'').trim();
+            var stopTime = String(r['Stop time']||'').trim();
+            // Pick whichever % is populated. Source has them as fractions.
+            var usedPct  = r['% of the Used Time'];
+            var totalPct = r['% of the Total Time'];
+            var pct = (usedPct !== null && usedPct !== undefined && usedPct !== '')
+                      ? parseFloat(usedPct)
+                      : (totalPct !== null && totalPct !== undefined && totalPct !== '')
+                        ? parseFloat(totalPct)
+                        : 0;
+            if(isNaN(pct)) pct = 0;
+            var numStops = parseInt(r['Number of stops']||0) || 0;
+
+            if(!byLineStops[machine]){
+              byLineStops[machine] = { byCategory: {}, allStops: [] };
+            }
+            var L = byLineStops[machine];
+            L.allStops.push({
+              code: stopCode, desc: desc, category: cat, subcategory: sub,
+              pct: pct, stop_time: stopTime, num_stops: numStops
+            });
+            if(!EXCLUDE_CATS[cat]){
+              if(!L.byCategory[cat]) L.byCategory[cat] = 0;
+              L.byCategory[cat] += pct;
+            }
+          });
+
+          // Reduce to per-line top losses
+          var stopsOut = {};
+          Object.keys(byLineStops).forEach(function(machine){
+            var L = byLineStops[machine];
+            var sorted = Object.keys(L.byCategory).map(function(c){
+              return { category: c, pct: L.byCategory[c] };
+            }).sort(function(a,b){ return b.pct - a.pct; });
+            var num = parseInt(String(machine).replace(/[^\d]/g,''));
+            var key = isNaN(num) ? machine : num;
+            // Pre-format displayable strings
+            function fmtLoss(s){ return s ? (s.category + ' ' + (s.pct*100).toFixed(1) + '%') : ''; }
+            stopsOut[key] = {
+              machine_label: machine,
+              top_loss:    fmtLoss(sorted[0]),
+              second_loss: fmtLoss(sorted[1]),
+              categories:  sorted,        // full sorted list for drill-down
+              all_stops:   L.allStops.sort(function(a,b){ return b.pct - a.pct; })
+            };
+          });
+
+          var stopsData = {
+            lines: stopsOut,
+            row_count: psRows.length,
+            _updated: ts
+          };
+          try {
+            localStorage.setItem('hoc_patch_stops_v1', JSON.stringify(stopsData));
+          } catch(e){
+            progress('⚠ Patch Stops: localStorage full', 'warn');
+          }
+          result.patch_stops = stopsData;
+          result.patch_stops_ts = ts;
+          var sCount = Object.keys(stopsOut).length;
+          progress('✓ Patch Stops: ' + psRows.length + ' stop records across ' + sCount + ' lines', 'ok');
+          Object.keys(stopsOut).sort(function(a,b){return parseInt(a)-parseInt(b);}).forEach(function(k){
+            progress('   Line ' + k + ': ' + (stopsOut[k].top_loss || '(no losses)'), 'ok');
+          });
+        }
+      }
+
       // ── Parse Planning Data ───────────────────────────────────────
       if(loaded.pd) {
         progress('Reading Planning Data (Vicinity)...');
@@ -2221,15 +2438,49 @@ function loadManualKPIs(){
 
 function populateKPIFields(){
   var data = loadManualKPIs();
-  // OEE
+  // v6.34ad: If Patch OEE is uploaded, it's authoritative — disable manual entry.
+  var patchPresent = false;
+  var patchAvg = null;
+  try {
+    var po = JSON.parse(localStorage.getItem('hoc_patch_oee_v1')||'null');
+    if(po && po.lines){
+      patchPresent = true;
+      var vals = Object.values(po.lines).map(function(L){ return L.oee; }).filter(function(v){ return v != null; });
+      if(vals.length){
+        patchAvg = vals.reduce(function(a,b){ return a+b; }, 0) / vals.length;
+      }
+    }
+  } catch(e){}
+
+  // OEE input
   var oeeEl = document.getElementById('kpi-oee');
   if(oeeEl){
-    oeeEl.value = (data && data.oee !== null && data.oee !== undefined) ? data.oee : '';
+    if(patchPresent){
+      oeeEl.disabled = true;
+      oeeEl.value = patchAvg != null ? (patchAvg * 100).toFixed(1) : '';
+      oeeEl.style.opacity = '0.5';
+      oeeEl.title = 'Patch OEE is uploaded — facility-mean OEE shown. To enter manually, clear Patch OEE first.';
+    } else {
+      oeeEl.disabled = false;
+      oeeEl.value = (data && data.oee !== null && data.oee !== undefined) ? data.oee : '';
+      oeeEl.style.opacity = '';
+      oeeEl.title = '';
+    }
   }
-  // Last update display (only meaningful for OEE saves now)
+  // Save button — also disable when Patch is authoritative
+  var saveBtn = document.getElementById('kpi-save-btn');
+  if(saveBtn){
+    saveBtn.disabled = patchPresent;
+    saveBtn.style.opacity = patchPresent ? '0.5' : '';
+    saveBtn.style.cursor = patchPresent ? 'not-allowed' : 'pointer';
+  }
+  // Last update display
   var updEl = document.getElementById('kpi-last-update');
   if(updEl){
-    if(data && data._updated){
+    if(patchPresent){
+      updEl.innerHTML = '<span style="color:var(--blue);font-weight:700">📈 Patch OEE active</span> '
+        + '<span style="color:var(--text3)">— manual OEE entry disabled. Mean across lines shown above.</span>';
+    } else if(data && data._updated){
       var d = new Date(data._updated);
       var hoursOld = (Date.now() - d.getTime()) / 36e5;
       var tone = hoursOld > 24 ? 'var(--amber)' : 'var(--green)';
