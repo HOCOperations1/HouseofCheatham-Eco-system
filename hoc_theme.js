@@ -69,7 +69,7 @@
     '}' +
     // Theme toggle button itself
     '#hoc-theme-toggle{' +
-      'position:fixed;top:8px;right:8px;z-index:9999;' +
+      'position:fixed;bottom:8px;left:8px;z-index:9999;' +
       'width:32px;height:32px;border-radius:50%;border:1px solid var(--border);' +
       'background:var(--bg2);color:var(--text);' +
       'font:14px/1 system-ui,sans-serif;cursor:pointer;' +

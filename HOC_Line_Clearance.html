@@ -1,0 +1,938 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta name="hoc-build" content="v6.34z">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HOC Line Clearance Dashboard</title>
+<script src="hoc_theme.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0B0E17;--bg2:#111520;--bg3:#161C28;--border:#1E293B;
+  --text:#DDE4F0;--text2:#8A97B4;--text3:#4A5570;
+  --green:#22C55E;--green-l:rgba(34,197,94,.12);
+  --blue:#3B82F6;--blue-l:rgba(59,130,246,.12);
+  --amber:#F59E0B;--amber-l:rgba(245,158,11,.12);
+  --red:#EF4444;--red-l:rgba(239,68,68,.12);
+  --teal:#10B981;--teal-l:rgba(16,185,129,.10);
+  --purple:#8B5CF6;--purple-l:rgba(139,92,246,.10);
+  font-family:ui-monospace,"Cascadia Code","Fira Code",monospace;
+}
+body{background:var(--bg);color:var(--text);min-height:100vh;font-size:12px;padding:14px;max-width:1400px;margin:0 auto}
+
+/* Top bar */
+.topbar{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.title{font-size:16px;font-weight:700}
+.subtitle{font-size:10px;color:var(--text3);letter-spacing:.06em;text-transform:uppercase}
+.meta{font-size:10px;color:var(--text2);margin-left:auto}
+.meta b{color:var(--text)}
+.btn{font:inherit;font-size:10px;letter-spacing:.06em;text-transform:uppercase;
+     background:var(--bg2);color:var(--text);border:1px solid var(--border);
+     border-radius:6px;padding:6px 11px;cursor:pointer;transition:all .15s}
+.btn:hover{background:var(--bg3);border-color:var(--text3)}
+
+/* Nav tabs */
+.nav{display:flex;gap:4px;margin-bottom:14px;flex-wrap:wrap;border-bottom:1px solid var(--border);padding-bottom:6px}
+.nb{font:inherit;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+    background:none;border:1px solid var(--border);color:var(--text2);
+    border-radius:6px;padding:8px 14px;cursor:pointer;transition:all .15s}
+.nb.active{background:var(--blue-l);color:var(--blue);border-color:rgba(59,130,246,.5)}
+.nb:hover:not(.active){color:var(--text);border-color:var(--text3)}
+
+/* Pages */
+.page{display:none}.page.active{display:block}
+
+/* Cards */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px}
+.card-title{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+
+/* KPI strip */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px}
+.kpi-lbl{font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+.kpi-val{font-size:22px;font-weight:700}
+.kpi-sub{font-size:10px;color:var(--text2);margin-top:2px}
+.kpi.red .kpi-val{color:var(--red)}
+.kpi.amber .kpi-val{color:var(--amber)}
+.kpi.green .kpi-val{color:var(--green)}
+
+/* Signal tiles (4 prominent at top) */
+.signals{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:14px}
+.sig{padding:14px;border-radius:10px;border:1px solid var(--border);background:var(--bg2)}
+.sig-lbl{font-size:10px;color:var(--text2);font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
+.sig-val{font-size:18px;font-weight:700;margin-bottom:4px}
+.sig-detail{font-size:10px;color:var(--text2)}
+.sig.red{border-color:rgba(239,68,68,.4);background:var(--red-l)}.sig.red .sig-val{color:var(--red)}
+.sig.amber{border-color:rgba(245,158,11,.4);background:var(--amber-l)}.sig.amber .sig-val{color:var(--amber)}
+.sig.green{border-color:rgba(34,197,94,.4);background:var(--green-l)}.sig.green .sig-val{color:var(--green)}
+.sig.blue{border-color:rgba(59,130,246,.4);background:var(--blue-l)}.sig.blue .sig-val{color:var(--blue)}
+
+/* Tables */
+.tbl{width:100%;border-collapse:collapse;font-size:11px}
+.tbl th{padding:7px 10px;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+        color:var(--text3);text-align:left;border-bottom:1px solid var(--border);background:var(--bg2);
+        position:sticky;top:0;z-index:1;cursor:pointer;user-select:none}
+.tbl th.num,.tbl td.num{text-align:right;font-variant-numeric:tabular-nums}
+.tbl th:hover{color:var(--text)}
+.tbl th .sort-ind{font-size:8px;color:var(--text3);margin-left:4px}
+.tbl td{padding:7px 10px;border-bottom:1px solid rgba(30,41,59,.5);vertical-align:middle}
+.tbl tr:hover td{background:var(--bg2)}
+.tbl tr.clickable{cursor:pointer}
+.tbl tr.clickable:hover td{background:var(--bg3)}
+
+/* Chips */
+.chip{display:inline-block;padding:2px 7px;border-radius:10px;font-size:9px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.chip-synced{background:var(--green-l);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.chip-mismatch{background:var(--red-l);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.chip-na{background:rgba(138,151,180,.1);color:var(--text2);border:1px solid var(--border)}
+
+/* Bar chart (simple SVG) */
+.bar-chart{width:100%;height:auto}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:10px}
+.bar-label{width:80px;color:var(--text2);font-weight:700;text-align:right;font-size:10px}
+.bar-track{flex:1;height:20px;background:var(--bg3);border-radius:3px;position:relative;overflow:hidden}
+.bar-fill{position:absolute;top:0;left:0;height:100%;background:linear-gradient(90deg,var(--blue),var(--purple));border-radius:3px;transition:width .3s}
+.bar-val{width:80px;color:var(--text);font-size:10px;text-align:right;font-variant-numeric:tabular-nums}
+
+/* Trend line chart */
+.trend-svg{width:100%;height:200px;background:var(--bg);border-radius:6px}
+
+/* Empty state */
+.empty{padding:40px;text-align:center;color:var(--text2);font-size:12px;background:var(--bg2);border:1px dashed var(--border);border-radius:8px}
+
+/* Filter row */
+.filter-row{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
+.filter-row input,.filter-row select{background:var(--bg2);color:var(--text);border:1px solid var(--border);
+                                     border-radius:5px;padding:6px 10px;font:inherit;font-size:11px}
+.filter-row input:focus,.filter-row select:focus{outline:none;border-color:var(--blue)}
+.filter-row label{font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+
+/* Drawer */
+.drawer{position:fixed;top:0;right:-50vw;width:50vw;max-width:800px;min-width:380px;height:100vh;
+        background:var(--bg2);border-left:1px solid var(--border);overflow-y:auto;
+        transition:right .25s;z-index:100;box-shadow:-4px 0 24px rgba(0,0,0,.3);padding:16px}
+.drawer.open{right:0}
+.drawer-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
+.drawer-title{font-size:13px;font-weight:700;color:var(--text)}
+.drawer-sub{font-size:10px;color:var(--text2);margin-top:2px}
+.drawer-close{background:none;border:1px solid var(--border);color:var(--text2);
+              border-radius:50%;width:28px;height:28px;font-size:14px;cursor:pointer;
+              display:flex;align-items:center;justify-content:center}
+.drawer-close:hover{color:var(--text);border-color:var(--text3)}
+.drawer-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
+.drawer-stat{background:var(--bg3);border-radius:6px;padding:8px 10px}
+.drawer-stat-lbl{font-size:9px;color:var(--text3);font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.drawer-stat-val{font-size:14px;font-weight:700;color:var(--text);margin-top:2px}
+
+/* Mobile */
+@media (max-width: 720px){
+  body{padding:8px}
+  .drawer{width:100vw;max-width:100vw;min-width:0}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="title">📊 Line Clearance Dashboard</div>
+    <div class="subtitle">Scrap reconciliation · GP vs FASCOR sync · Ext Scrap Value</div>
+  </div>
+  <div class="meta" id="meta-info"></div>
+  <a href="index.html" class="btn">← Home</a>
+</div>
+
+<div class="nav">
+  <button class="nb active" onclick="P('summary')">Summary</button>
+  <button class="nb" onclick="P('byline')">By Line</button>
+  <button class="nb" onclick="P('byweek')">By Week</button>
+  <button class="nb" onclick="P('bysku')">By SKU</button>
+  <button class="nb" onclick="P('sync')">Sync Mismatches</button>
+  <button class="nb" onclick="P('records')">All Records</button>
+</div>
+
+<!-- SUMMARY -->
+<div class="page active" id="page-summary">
+  <div id="summary-content"><div class="empty">Loading…</div></div>
+</div>
+
+<!-- BY LINE -->
+<div class="page" id="page-byline">
+  <div class="card">
+    <div class="card-title">Scrap Value by Line · click row for details</div>
+    <div id="byline-content"><div class="empty">Loading…</div></div>
+  </div>
+</div>
+
+<!-- BY WEEK -->
+<div class="page" id="page-byweek">
+  <div class="card">
+    <div class="card-title">Scrap Value by Week</div>
+    <div id="byweek-content"><div class="empty">Loading…</div></div>
+  </div>
+</div>
+
+<!-- BY SKU -->
+<div class="page" id="page-bysku">
+  <div class="card">
+    <div class="card-title">Scrap Value by SKU · top 25 · click row for details</div>
+    <div id="bysku-content"><div class="empty">Loading…</div></div>
+  </div>
+</div>
+
+<!-- SYNC -->
+<div class="page" id="page-sync">
+  <div class="card">
+    <div class="card-title">Sync Mismatch Worklist · GP vs FASCOR variance > 1</div>
+    <div id="sync-content"><div class="empty">Loading…</div></div>
+  </div>
+</div>
+
+<!-- ALL RECORDS -->
+<div class="page" id="page-records">
+  <div class="card">
+    <div class="card-title">All Records</div>
+    <div class="filter-row">
+      <label>Line:</label><select id="f-line" onchange="renderRecords()"><option value="">All</option></select>
+      <label>Sync:</label><select id="f-sync" onchange="renderRecords()">
+        <option value="">All</option>
+        <option value="SYNCED">SYNCED</option>
+        <option value="MISMATCH">MISMATCH</option>
+        <option value="(empty)">No GP/FASCOR data</option>
+      </select>
+      <label>SKU contains:</label><input type="text" id="f-sku" placeholder="e.g. 7-4185" oninput="renderRecords()">
+      <button class="btn" onclick="exportCSV()">⬇ Export CSV</button>
+      <span id="records-count" style="color:var(--text2);font-size:10px;margin-left:auto"></span>
+    </div>
+    <div id="records-content"><div class="empty">Loading…</div></div>
+  </div>
+</div>
+
+<!-- DRAWER -->
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div>
+      <div class="drawer-title" id="drawer-title">Detail</div>
+      <div class="drawer-sub" id="drawer-sub"></div>
+    </div>
+    <button class="drawer-close" onclick="closeDrawer()">×</button>
+  </div>
+  <div id="drawer-body"></div>
+</div>
+
+<script>
+'use strict';
+
+// ─── State ────────────────────────────────────────────────────────────
+var DATA = null;
+var sortState = { records: {col:'date', dir:'desc'}, byline: {col:'scrap_value', dir:'desc'},
+                  bysku: {col:'scrap_value', dir:'desc'}, sync: {col:'date', dir:'desc'},
+                  drawer: {col:'date', dir:'desc'} };
+var drawerRecords = [];  // records being shown in drawer
+
+function load(){
+  try {
+    var raw = localStorage.getItem('hoc_line_clearance_v1');
+    DATA = raw ? JSON.parse(raw) : null;
+  } catch(e){ DATA = null; }
+}
+
+function fmt$(n){
+  if(n === null || n === undefined || isNaN(n)) return '—';
+  return '$' + Math.round(n).toLocaleString();
+}
+function fmt$2(n){
+  if(n === null || n === undefined || isNaN(n)) return '—';
+  return '$' + n.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function fmtN(n){
+  if(n === null || n === undefined || isNaN(n)) return '—';
+  return n.toLocaleString();
+}
+function fmtPct(n, dec){
+  if(n === null || n === undefined || isNaN(n)) return '—';
+  return (n).toFixed(dec || 1) + '%';
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, function(m){
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m];
+  });
+}
+
+// ─── Page nav ────────────────────────────────────────────────────────
+function P(name){
+  document.querySelectorAll('.nb').forEach(function(b){ b.classList.remove('active'); });
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  event && event.target && event.target.classList.add('active');
+  document.getElementById('page-' + name).classList.add('active');
+  closeDrawer();
+  switch(name){
+    case 'summary': renderSummary(); break;
+    case 'byline': renderByLine(); break;
+    case 'byweek': renderByWeek(); break;
+    case 'bysku': renderBySKU(); break;
+    case 'sync': renderSyncList(); break;
+    case 'records': renderRecords(); break;
+  }
+}
+
+// ─── Empty state ─────────────────────────────────────────────────────
+function emptyState(){
+  return '<div class="empty">'
+    + '<div style="font-size:14px;font-weight:700;margin-bottom:8px">No Line Clearance data uploaded yet</div>'
+    + '<div>Upload <b>Line_Clearance_PowerBI.xlsx</b> via the Data Upload Hub to populate this dashboard.</div>'
+    + '<div style="margin-top:14px;font-size:10px;color:var(--text3)">Expected sheet: <code>Clearance_Fact</code> with 24 columns including Date, Line Number, SKU, Quantity Scrapped, Std Cost, GP Qty, FASCOR Qty.</div>'
+    + '</div>';
+}
+
+// ─── Render Summary ──────────────────────────────────────────────────
+function renderSummary(){
+  var c = document.getElementById('summary-content');
+  if(!DATA || !DATA.records || DATA.records.length === 0){
+    c.innerHTML = emptyState();
+    return;
+  }
+  var stats = DATA.stats;
+
+  // Identify top-of-mind issues for the signal tiles
+  // 1. Highest-loss line
+  var topLine = null;
+  Object.keys(stats.lines).forEach(function(line){
+    if(!topLine || stats.lines[line].scrap_value > stats.lines[topLine].scrap_value) topLine = line;
+  });
+  // 2. Worst SKU (sum across all records)
+  var skuTotals = {};
+  DATA.records.forEach(function(r){
+    if(!r.sku) return;
+    if(!skuTotals[r.sku]) skuTotals[r.sku] = {sku:r.sku, desc:r.sku_description, value:0};
+    skuTotals[r.sku].value += r.ext_scrap_value;
+  });
+  var topSKU = Object.values(skuTotals).sort(function(a,b){ return b.value - a.value; })[0];
+
+  // 3. Sync mismatch rate (both denominators)
+  var mismatchRate_bothExist = stats.both_populated > 0
+    ? (stats.mismatched / stats.both_populated * 100)
+    : 0;
+  var mismatchRate_all = stats.total_records > 0
+    ? (stats.mismatched / stats.total_records * 100)
+    : 0;
+
+  // 4. Records this month
+  var now = new Date();
+  var thisMonth = now.toLocaleString('en-US',{month:'long'});
+  var thisYear = now.getFullYear();
+  var thisMonthCount = DATA.records.filter(function(r){
+    return r.month === thisMonth && r.year === thisYear;
+  }).length;
+  var thisMonthValue = DATA.records.filter(function(r){
+    return r.month === thisMonth && r.year === thisYear;
+  }).reduce(function(a,r){ return a + r.ext_scrap_value; }, 0);
+
+  var html = '';
+
+  // 4 signal tiles at top
+  html += '<div class="signals">';
+  // Total scrap $
+  html += '<div class="sig red">';
+  html += '<div class="sig-lbl">Total Scrap Value</div>';
+  html += '<div class="sig-val">' + fmt$(stats.total_scrap_value) + '</div>';
+  html += '<div class="sig-detail">' + fmtN(stats.total_scrap_units) + ' units · ' + stats.date_min + ' to ' + stats.date_max + '</div>';
+  html += '</div>';
+  // Worst line
+  html += '<div class="sig amber">';
+  html += '<div class="sig-lbl">Highest-loss Line</div>';
+  html += '<div class="sig-val">Line ' + topLine + '</div>';
+  html += '<div class="sig-detail">' + fmt$(stats.lines[topLine].scrap_value) + ' across ' + stats.lines[topLine].records + ' records</div>';
+  html += '</div>';
+  // Sync rate
+  var syncTone = mismatchRate_bothExist > 15 ? 'red' : mismatchRate_bothExist > 5 ? 'amber' : 'green';
+  html += '<div class="sig ' + syncTone + '">';
+  html += '<div class="sig-lbl">Sync Mismatch Rate</div>';
+  html += '<div class="sig-val">' + fmtPct(mismatchRate_bothExist) + ' <span style="font-size:11px;color:var(--text2);font-weight:400">of populated</span></div>';
+  html += '<div class="sig-detail">' + stats.mismatched + ' of ' + stats.both_populated + ' checked · ' + fmtPct(mismatchRate_all) + ' of all records</div>';
+  html += '</div>';
+  // Worst SKU
+  if(topSKU){
+    html += '<div class="sig blue">';
+    html += '<div class="sig-lbl">Worst SKU</div>';
+    html += '<div class="sig-val">' + escapeHtml(topSKU.sku) + '</div>';
+    html += '<div class="sig-detail">' + fmt$(topSKU.value) + ' total scrap value</div>';
+    html += '</div>';
+  }
+  html += '</div>';
+
+  // KPI strip
+  html += '<div class="kpis">';
+  html += '<div class="kpi"><div class="kpi-lbl">Records</div><div class="kpi-val">' + fmtN(stats.total_records) + '</div><div class="kpi-sub">' + Object.keys(stats.lines).length + ' lines · ' + stats.skus_count + ' SKUs</div></div>';
+  html += '<div class="kpi"><div class="kpi-lbl">This Month</div><div class="kpi-val">' + fmtN(thisMonthCount) + '</div><div class="kpi-sub">' + fmt$(thisMonthValue) + ' scrap value</div></div>';
+  html += '<div class="kpi"><div class="kpi-lbl">Total Units Scrapped</div><div class="kpi-val">' + fmtN(stats.total_scrap_units) + '</div></div>';
+  html += '<div class="kpi"><div class="kpi-lbl">Synced Records</div><div class="kpi-val green">' + stats.synced + '</div><div class="kpi-sub">of ' + stats.both_populated + ' with both qtys</div></div>';
+  html += '<div class="kpi"><div class="kpi-lbl">Mismatches</div><div class="kpi-val ' + (stats.mismatched > 0 ? 'red' : 'green') + '">' + stats.mismatched + '</div><div class="kpi-sub">need investigation</div></div>';
+  html += '</div>';
+
+  // Quick navigation cards
+  html += '<div class="card">';
+  html += '<div class="card-title">Drill into the details</div>';
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">';
+  html += '<button class="btn" onclick="P(\'byline\')" style="padding:14px;text-align:left;height:auto">📈 By Line<div style="font-size:9px;color:var(--text3);margin-top:4px;text-transform:none">Rank lines by scrap value</div></button>';
+  html += '<button class="btn" onclick="P(\'byweek\')" style="padding:14px;text-align:left;height:auto">📅 By Week<div style="font-size:9px;color:var(--text3);margin-top:4px;text-transform:none">Trend over time</div></button>';
+  html += '<button class="btn" onclick="P(\'bysku\')" style="padding:14px;text-align:left;height:auto">🏷️ By SKU<div style="font-size:9px;color:var(--text3);margin-top:4px;text-transform:none">Top scrap SKUs</div></button>';
+  html += '<button class="btn" onclick="P(\'sync\')" style="padding:14px;text-align:left;height:auto;border-color:rgba(239,68,68,.4)">⚠ Sync Mismatches<div style="font-size:9px;color:var(--text3);margin-top:4px;text-transform:none">' + stats.mismatched + ' to investigate</div></button>';
+  html += '</div></div>';
+
+  c.innerHTML = html;
+}
+
+// ─── Sort helper ─────────────────────────────────────────────────────
+function makeSortable(thead, key){
+  // Returns an event handler for sortable headers (used in renders below)
+}
+function getCmp(col, dir){
+  return function(a, b){
+    var av = a[col], bv = b[col];
+    if(av === null || av === undefined) av = -Infinity;
+    if(bv === null || bv === undefined) bv = -Infinity;
+    if(typeof av === 'string') av = av.toLowerCase();
+    if(typeof bv === 'string') bv = bv.toLowerCase();
+    if(av < bv) return dir === 'asc' ? -1 : 1;
+    if(av > bv) return dir === 'asc' ? 1 : -1;
+    return 0;
+  };
+}
+function sortInd(state, col){
+  if(state.col !== col) return '';
+  return ' <span class="sort-ind">' + (state.dir === 'asc' ? '▲' : '▼') + '</span>';
+}
+
+// ─── Render By Line ──────────────────────────────────────────────────
+function renderByLine(){
+  var c = document.getElementById('byline-content');
+  if(!DATA || !DATA.records || DATA.records.length === 0){
+    c.innerHTML = emptyState();
+    return;
+  }
+  var st = sortState.byline;
+  var rows = Object.keys(DATA.stats.lines).map(function(line){
+    var info = DATA.stats.lines[line];
+    var lineRecs = DATA.records.filter(function(r){ return r.line === line; });
+    var units = lineRecs.reduce(function(a,r){ return a + (r.quantity_scrapped||0); }, 0);
+    return {
+      line: line,
+      records: info.records,
+      scrap_value: info.scrap_value,
+      scrap_units: units,
+      avg_per_record: info.records > 0 ? info.scrap_value / info.records : 0
+    };
+  });
+  rows.sort(getCmp(st.col, st.dir));
+
+  // Bar chart visualization
+  var maxVal = Math.max.apply(null, rows.map(function(r){ return r.scrap_value; }));
+  var chartHtml = '<div style="margin-bottom:14px">';
+  rows.forEach(function(r){
+    var pct = maxVal > 0 ? (r.scrap_value / maxVal * 100) : 0;
+    chartHtml += '<div class="bar-row">';
+    chartHtml += '<div class="bar-label">Line ' + escapeHtml(r.line) + '</div>';
+    chartHtml += '<div class="bar-track"><div class="bar-fill" style="width:' + pct.toFixed(1) + '%"></div></div>';
+    chartHtml += '<div class="bar-val">' + fmt$(r.scrap_value) + '</div>';
+    chartHtml += '</div>';
+  });
+  chartHtml += '</div>';
+
+  // Table
+  var th = function(col, label, num){
+    var cls = num ? ' class="num"' : '';
+    return '<th' + cls + ' onclick="sortByLine(\'' + col + '\')">' + label + sortInd(st, col) + '</th>';
+  };
+  var tableHtml = '<table class="tbl"><thead><tr>'
+    + th('line', 'Line')
+    + th('records', 'Records', true)
+    + th('scrap_units', 'Units Scrapped', true)
+    + th('scrap_value', 'Scrap Value', true)
+    + th('avg_per_record', 'Avg per Record', true)
+    + '<th></th>'
+    + '</tr></thead><tbody>';
+  rows.forEach(function(r){
+    tableHtml += '<tr class="clickable" onclick="openLineDrawer(\'' + r.line + '\')">';
+    tableHtml += '<td><b>Line ' + escapeHtml(r.line) + '</b></td>';
+    tableHtml += '<td class="num">' + fmtN(r.records) + '</td>';
+    tableHtml += '<td class="num">' + fmtN(r.scrap_units) + '</td>';
+    tableHtml += '<td class="num" style="color:var(--red);font-weight:700">' + fmt$(r.scrap_value) + '</td>';
+    tableHtml += '<td class="num">' + fmt$2(r.avg_per_record) + '</td>';
+    tableHtml += '<td style="color:var(--text3)">→</td>';
+    tableHtml += '</tr>';
+  });
+  tableHtml += '</tbody></table>';
+
+  c.innerHTML = chartHtml + tableHtml;
+}
+function sortByLine(col){
+  var st = sortState.byline;
+  if(st.col === col) st.dir = st.dir === 'asc' ? 'desc' : 'asc';
+  else { st.col = col; st.dir = (col === 'line' ? 'asc' : 'desc'); }
+  renderByLine();
+}
+
+// ─── Render By Week ──────────────────────────────────────────────────
+function renderByWeek(){
+  var c = document.getElementById('byweek-content');
+  if(!DATA || !DATA.records || DATA.records.length === 0){
+    c.innerHTML = emptyState();
+    return;
+  }
+  // Aggregate by year_week
+  var byWeek = {};
+  DATA.records.forEach(function(r){
+    var k = r.year_week || (r.year + '-W' + String(r.week).padStart(2,'0'));
+    if(!byWeek[k]) byWeek[k] = {year_week: k, records: 0, scrap_value: 0, scrap_units: 0, mismatches: 0};
+    byWeek[k].records++;
+    byWeek[k].scrap_value += r.ext_scrap_value;
+    byWeek[k].scrap_units += r.quantity_scrapped;
+    if(r.sync_issue === 'MISMATCH') byWeek[k].mismatches++;
+  });
+  var weeks = Object.values(byWeek).sort(function(a,b){ return a.year_week < b.year_week ? -1 : 1; });
+
+  // Trend chart (SVG)
+  var W = 700, H = 200, P = 40;
+  var maxVal = Math.max.apply(null, weeks.map(function(w){ return w.scrap_value; })) || 1;
+  var pts = weeks.map(function(w, i){
+    var x = P + (i / Math.max(weeks.length - 1, 1)) * (W - 2*P);
+    var y = H - P - (w.scrap_value / maxVal) * (H - 2*P);
+    return {x:x, y:y, w:w};
+  });
+  var pathD = pts.map(function(p,i){ return (i === 0 ? 'M' : 'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1); }).join(' ');
+  var areaD = pathD + ' L' + (P + (weeks.length - 1) / Math.max(weeks.length-1,1) * (W - 2*P)).toFixed(1) + ',' + (H-P) + ' L' + P + ',' + (H-P) + ' Z';
+
+  var svg = '<svg class="trend-svg" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet">';
+  // Y axis grid
+  for(var i = 0; i <= 4; i++){
+    var y = P + (i / 4) * (H - 2*P);
+    var v = maxVal * (1 - i/4);
+    svg += '<line x1="' + P + '" y1="' + y + '" x2="' + (W-P) + '" y2="' + y + '" stroke="var(--border)" stroke-dasharray="2,2" stroke-width="0.5"/>';
+    svg += '<text x="' + (P-6) + '" y="' + (y+3) + '" fill="var(--text3)" font-size="9" text-anchor="end">' + fmt$(v) + '</text>';
+  }
+  // Area
+  svg += '<path d="' + areaD + '" fill="rgba(59,130,246,.15)"/>';
+  // Line
+  svg += '<path d="' + pathD + '" fill="none" stroke="var(--blue)" stroke-width="2"/>';
+  // Points + week labels
+  pts.forEach(function(p, i){
+    svg += '<circle cx="' + p.x + '" cy="' + p.y + '" r="3" fill="var(--blue)"/>';
+    if(i % Math.max(1, Math.floor(weeks.length/8)) === 0){
+      svg += '<text x="' + p.x + '" y="' + (H-P+14) + '" fill="var(--text3)" font-size="9" text-anchor="middle">' + p.w.year_week.slice(-3) + '</text>';
+    }
+  });
+  svg += '</svg>';
+
+  // Table
+  var tableHtml = '<table class="tbl"><thead><tr>'
+    + '<th>Week</th>'
+    + '<th class="num">Records</th>'
+    + '<th class="num">Units Scrapped</th>'
+    + '<th class="num">Scrap Value</th>'
+    + '<th class="num">Sync Issues</th>'
+    + '</tr></thead><tbody>';
+  weeks.slice().reverse().forEach(function(w){
+    tableHtml += '<tr>';
+    tableHtml += '<td><b>' + escapeHtml(w.year_week) + '</b></td>';
+    tableHtml += '<td class="num">' + fmtN(w.records) + '</td>';
+    tableHtml += '<td class="num">' + fmtN(w.scrap_units) + '</td>';
+    tableHtml += '<td class="num">' + fmt$(w.scrap_value) + '</td>';
+    tableHtml += '<td class="num">' + (w.mismatches > 0 ? '<span style="color:var(--red);font-weight:700">' + w.mismatches + '</span>' : '0') + '</td>';
+    tableHtml += '</tr>';
+  });
+  tableHtml += '</tbody></table>';
+
+  c.innerHTML = svg + '<div style="margin-top:14px">' + tableHtml + '</div>';
+}
+
+// ─── Render By SKU ───────────────────────────────────────────────────
+function renderBySKU(){
+  var c = document.getElementById('bysku-content');
+  if(!DATA || !DATA.records || DATA.records.length === 0){
+    c.innerHTML = emptyState();
+    return;
+  }
+  var byS = {};
+  DATA.records.forEach(function(r){
+    if(!r.sku) return;
+    if(!byS[r.sku]) byS[r.sku] = {sku: r.sku, desc: r.sku_description, records: 0, scrap_value: 0, scrap_units: 0};
+    byS[r.sku].records++;
+    byS[r.sku].scrap_value += r.ext_scrap_value;
+    byS[r.sku].scrap_units += r.quantity_scrapped;
+  });
+  var skus = Object.values(byS);
+  var st = sortState.bysku;
+  skus.sort(getCmp(st.col, st.dir));
+  var top = skus.slice(0, 25);
+
+  var th = function(col, label, num){
+    var cls = num ? ' class="num"' : '';
+    return '<th' + cls + ' onclick="sortBySKU(\'' + col + '\')">' + label + sortInd(st, col) + '</th>';
+  };
+  var html = '<table class="tbl"><thead><tr>'
+    + th('sku', 'SKU')
+    + '<th>Description</th>'
+    + th('records', 'Records', true)
+    + th('scrap_units', 'Units Scrapped', true)
+    + th('scrap_value', 'Scrap Value', true)
+    + '<th></th>'
+    + '</tr></thead><tbody>';
+  top.forEach(function(s){
+    html += '<tr class="clickable" onclick="openSKUDrawer(\'' + escapeHtml(s.sku) + '\')">';
+    html += '<td><b>' + escapeHtml(s.sku) + '</b></td>';
+    html += '<td style="color:var(--text2);font-size:10px">' + escapeHtml(s.desc).slice(0,50) + '</td>';
+    html += '<td class="num">' + fmtN(s.records) + '</td>';
+    html += '<td class="num">' + fmtN(s.scrap_units) + '</td>';
+    html += '<td class="num" style="color:var(--red);font-weight:700">' + fmt$(s.scrap_value) + '</td>';
+    html += '<td style="color:var(--text3)">→</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  html += '<div style="margin-top:10px;font-size:10px;color:var(--text3);font-style:italic">Showing top 25 of ' + skus.length + ' SKUs by selected sort.</div>';
+
+  c.innerHTML = html;
+}
+function sortBySKU(col){
+  var st = sortState.bysku;
+  if(st.col === col) st.dir = st.dir === 'asc' ? 'desc' : 'asc';
+  else { st.col = col; st.dir = (col === 'sku' ? 'asc' : 'desc'); }
+  renderBySKU();
+}
+
+// ─── Render Sync Mismatches ──────────────────────────────────────────
+function renderSyncList(){
+  var c = document.getElementById('sync-content');
+  if(!DATA || !DATA.records || DATA.records.length === 0){
+    c.innerHTML = emptyState();
+    return;
+  }
+  var mm = DATA.records.filter(function(r){ return r.sync_issue === 'MISMATCH'; });
+  if(mm.length === 0){
+    c.innerHTML = '<div class="empty" style="background:var(--green-l);border-color:rgba(34,197,94,.3);color:var(--green)">'
+                + '<div style="font-size:14px;font-weight:700">No sync mismatches</div>'
+                + '<div style="margin-top:6px;color:var(--text2)">All records where both GP and FASCOR are populated are within tolerance (±1 unit).</div>'
+                + '</div>';
+    return;
+  }
+  var st = sortState.sync;
+  mm.sort(getCmp(st.col, st.dir));
+
+  var th = function(col, label, num){
+    var cls = num ? ' class="num"' : '';
+    return '<th' + cls + ' onclick="sortSync(\'' + col + '\')">' + label + sortInd(st, col) + '</th>';
+  };
+  var html = '<div style="margin-bottom:10px;padding:10px;background:var(--red-l);border:1px solid rgba(239,68,68,.3);border-radius:6px;font-size:11px;color:var(--text2)">';
+  html += '<b style="color:var(--red)">' + mm.length + ' records</b> where physical (GP) count differs from system (FASCOR) count by more than 1 unit. Review and reconcile.';
+  html += '</div>';
+  html += '<table class="tbl"><thead><tr>'
+    + th('date', 'Date')
+    + th('line', 'Line')
+    + th('sku', 'SKU')
+    + '<th>Description</th>'
+    + th('gp_qty', 'GP Qty', true)
+    + th('fascor_qty', 'FASCOR Qty', true)
+    + th('sync_variance', 'Variance', true)
+    + th('ext_scrap_value', 'Scrap $', true)
+    + '<th>Notes</th>'
+    + '</tr></thead><tbody>';
+  mm.forEach(function(r){
+    html += '<tr>';
+    html += '<td>' + escapeHtml(r.date) + '</td>';
+    html += '<td><b>L' + escapeHtml(r.line) + '</b></td>';
+    html += '<td>' + escapeHtml(r.sku) + '</td>';
+    html += '<td style="color:var(--text2);font-size:10px">' + escapeHtml(r.sku_description).slice(0,40) + '</td>';
+    html += '<td class="num">' + fmtN(r.gp_qty) + '</td>';
+    html += '<td class="num">' + fmtN(r.fascor_qty) + '</td>';
+    html += '<td class="num" style="color:var(--red);font-weight:700">' + (r.sync_variance > 0 ? '+' : '') + fmtN(r.sync_variance) + '</td>';
+    html += '<td class="num">' + fmt$(r.ext_scrap_value) + '</td>';
+    html += '<td style="font-size:10px;color:var(--text2);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escapeHtml(r.notes) + '">' + escapeHtml(r.notes) + '</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  c.innerHTML = html;
+}
+function sortSync(col){
+  var st = sortState.sync;
+  if(st.col === col) st.dir = st.dir === 'asc' ? 'desc' : 'asc';
+  else { st.col = col; st.dir = (['date','line','sku'].indexOf(col) >= 0 ? 'asc' : 'desc'); }
+  renderSyncList();
+}
+
+// ─── Render All Records ──────────────────────────────────────────────
+function renderRecords(){
+  var c = document.getElementById('records-content');
+  if(!DATA || !DATA.records || DATA.records.length === 0){
+    c.innerHTML = emptyState();
+    return;
+  }
+  // Populate line dropdown once
+  var lineFilter = document.getElementById('f-line');
+  if(lineFilter && lineFilter.options.length <= 1){
+    var lines = Object.keys(DATA.stats.lines).sort();
+    lines.forEach(function(l){
+      var opt = document.createElement('option');
+      opt.value = l; opt.textContent = 'Line ' + l;
+      lineFilter.appendChild(opt);
+    });
+  }
+  // Apply filters
+  var fLine = document.getElementById('f-line').value;
+  var fSync = document.getElementById('f-sync').value;
+  var fSKU = document.getElementById('f-sku').value.trim().toLowerCase();
+  var filtered = DATA.records.filter(function(r){
+    if(fLine && r.line !== fLine) return false;
+    if(fSync){
+      if(fSync === '(empty)' && r.sync_issue) return false;
+      if(fSync !== '(empty)' && r.sync_issue !== fSync) return false;
+    }
+    if(fSKU && r.sku.toLowerCase().indexOf(fSKU) < 0 && (r.sku_description||'').toLowerCase().indexOf(fSKU) < 0) return false;
+    return true;
+  });
+  document.getElementById('records-count').textContent = filtered.length.toLocaleString() + ' records';
+
+  var st = sortState.records;
+  filtered.sort(getCmp(st.col, st.dir));
+
+  // Cap rendered rows for performance
+  var MAX_ROWS = 500;
+  var displayed = filtered.slice(0, MAX_ROWS);
+
+  var th = function(col, label, num){
+    var cls = num ? ' class="num"' : '';
+    return '<th' + cls + ' onclick="sortRecords(\'' + col + '\')">' + label + sortInd(st, col) + '</th>';
+  };
+  var html = '<div style="overflow-x:auto"><table class="tbl"><thead><tr>'
+    + th('date', 'Date')
+    + th('line', 'Line')
+    + th('batch', 'Batch')
+    + th('sku', 'SKU')
+    + '<th>Description</th>'
+    + th('gp_qty', 'GP', true)
+    + th('fascor_qty', 'FASCOR', true)
+    + th('sync_issue', 'Sync')
+    + th('quantity_scrapped', 'Scrap Qty', true)
+    + th('ext_scrap_value', 'Scrap $', true)
+    + '</tr></thead><tbody>';
+  displayed.forEach(function(r){
+    var chip;
+    if(r.sync_issue === 'SYNCED') chip = '<span class="chip chip-synced">Synced</span>';
+    else if(r.sync_issue === 'MISMATCH') chip = '<span class="chip chip-mismatch">Mismatch</span>';
+    else chip = '<span class="chip chip-na">—</span>';
+    html += '<tr>';
+    html += '<td>' + escapeHtml(r.date) + '</td>';
+    html += '<td><b>L' + escapeHtml(r.line) + '</b></td>';
+    html += '<td style="font-size:10px;color:var(--text2)">' + escapeHtml(r.batch).slice(0,16) + '</td>';
+    html += '<td>' + escapeHtml(r.sku) + '</td>';
+    html += '<td style="color:var(--text2);font-size:10px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escapeHtml(r.sku_description).slice(0,40) + '</td>';
+    html += '<td class="num">' + (r.gp_qty !== null ? fmtN(r.gp_qty) : '—') + '</td>';
+    html += '<td class="num">' + (r.fascor_qty !== null ? fmtN(r.fascor_qty) : '—') + '</td>';
+    html += '<td>' + chip + '</td>';
+    html += '<td class="num">' + fmtN(r.quantity_scrapped) + '</td>';
+    html += '<td class="num" style="color:var(--red)">' + fmt$2(r.ext_scrap_value) + '</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  if(filtered.length > MAX_ROWS){
+    html += '<div style="margin-top:10px;font-size:10px;color:var(--text3);font-style:italic">Showing first ' + MAX_ROWS + ' of ' + filtered.length + ' records. Filter further or export CSV for full list.</div>';
+  }
+  c.innerHTML = html;
+}
+function sortRecords(col){
+  var st = sortState.records;
+  if(st.col === col) st.dir = st.dir === 'asc' ? 'desc' : 'asc';
+  else { st.col = col; st.dir = (['date','line','batch','sku','sync_issue'].indexOf(col) >= 0 ? 'asc' : 'desc'); }
+  renderRecords();
+}
+
+// ─── CSV Export ──────────────────────────────────────────────────────
+function exportCSV(){
+  if(!DATA || !DATA.records || DATA.records.length === 0) return;
+  var fLine = document.getElementById('f-line').value;
+  var fSync = document.getElementById('f-sync').value;
+  var fSKU = document.getElementById('f-sku').value.trim().toLowerCase();
+  var filtered = DATA.records.filter(function(r){
+    if(fLine && r.line !== fLine) return false;
+    if(fSync){
+      if(fSync === '(empty)' && r.sync_issue) return false;
+      if(fSync !== '(empty)' && r.sync_issue !== fSync) return false;
+    }
+    if(fSKU && r.sku.toLowerCase().indexOf(fSKU) < 0) return false;
+    return true;
+  });
+  var headers = ['Date','Line','Batch','SKU','Description','GP Qty','FASCOR Qty','Sync','Variance','Scrap Qty','Std Cost','Scrap Value','Notes'];
+  var rows = [headers.join(',')];
+  filtered.forEach(function(r){
+    function esc(v){
+      v = (v === null || v === undefined) ? '' : String(v);
+      if(v.indexOf(',') >= 0 || v.indexOf('"') >= 0 || v.indexOf('\n') >= 0){
+        v = '"' + v.replace(/"/g,'""') + '"';
+      }
+      return v;
+    }
+    rows.push([
+      r.date, r.line, r.batch, r.sku, r.sku_description,
+      r.gp_qty, r.fascor_qty, r.sync_issue, r.sync_variance,
+      r.quantity_scrapped, r.std_cost, r.ext_scrap_value, r.notes
+    ].map(esc).join(','));
+  });
+  var blob = new Blob([rows.join('\n')], {type:'text/csv'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'hoc_line_clearance_' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+}
+
+// ─── Drawer: Open with line or SKU records ───────────────────────────
+function openLineDrawer(line){
+  var recs = DATA.records.filter(function(r){ return r.line === line; });
+  var total = recs.reduce(function(a,r){ return a + r.ext_scrap_value; }, 0);
+  var units = recs.reduce(function(a,r){ return a + r.quantity_scrapped; }, 0);
+  var mismatches = recs.filter(function(r){ return r.sync_issue === 'MISMATCH'; }).length;
+  var topSKUs = {};
+  recs.forEach(function(r){
+    if(!r.sku) return;
+    topSKUs[r.sku] = (topSKUs[r.sku] || 0) + r.ext_scrap_value;
+  });
+  var topSKU = Object.entries(topSKUs).sort(function(a,b){ return b[1] - a[1]; })[0];
+  openDrawer('Line ' + line, recs.length + ' records · ' + stats.date_min + ' to ' + stats.date_max,
+    recs, {
+      'Records': fmtN(recs.length),
+      'Units scrapped': fmtN(units),
+      'Total scrap $': fmt$(total),
+      'Mismatches': mismatches > 0 ? '<span style="color:var(--red)">' + mismatches + '</span>' : '0',
+      'Top SKU': topSKU ? topSKU[0] + ' (' + fmt$(topSKU[1]) + ')' : '—'
+    });
+}
+function openSKUDrawer(sku){
+  var recs = DATA.records.filter(function(r){ return r.sku === sku; });
+  var total = recs.reduce(function(a,r){ return a + r.ext_scrap_value; }, 0);
+  var units = recs.reduce(function(a,r){ return a + r.quantity_scrapped; }, 0);
+  var desc = recs[0] ? recs[0].sku_description : '';
+  var lines = {};
+  recs.forEach(function(r){
+    lines[r.line] = (lines[r.line] || 0) + r.ext_scrap_value;
+  });
+  var topLine = Object.entries(lines).sort(function(a,b){ return b[1] - a[1]; })[0];
+  openDrawer(sku, desc, recs, {
+    'Records': fmtN(recs.length),
+    'Units scrapped': fmtN(units),
+    'Total scrap $': fmt$(total),
+    'Worst on': topLine ? 'Line ' + topLine[0] + ' (' + fmt$(topLine[1]) + ')' : '—',
+    'Std Cost': recs[0] ? fmt$2(recs[0].std_cost) : '—'
+  });
+}
+var stats; // alias for ease in drawer
+function openDrawer(title, sub, recs, statsObj){
+  stats = DATA.stats; // for fmt
+  drawerRecords = recs.slice();
+  document.getElementById('drawer-title').textContent = title;
+  document.getElementById('drawer-sub').textContent = sub;
+  // Reset drawer sort
+  sortState.drawer = {col:'date', dir:'desc'};
+  var statsHtml = '<div class="drawer-stats">';
+  Object.entries(statsObj).forEach(function(kv){
+    statsHtml += '<div class="drawer-stat"><div class="drawer-stat-lbl">' + kv[0] + '</div><div class="drawer-stat-val">' + kv[1] + '</div></div>';
+  });
+  statsHtml += '</div>';
+  document.getElementById('drawer-body').innerHTML = statsHtml + '<div id="drawer-table"></div>';
+  renderDrawerTable();
+  document.getElementById('drawer').classList.add('open');
+}
+function renderDrawerTable(){
+  var st = sortState.drawer;
+  drawerRecords.sort(getCmp(st.col, st.dir));
+  var th = function(col, label, num){
+    var cls = num ? ' class="num"' : '';
+    return '<th' + cls + ' onclick="sortDrawer(\'' + col + '\')">' + label + sortInd(st, col) + '</th>';
+  };
+  var html = '<table class="tbl" style="font-size:10px"><thead><tr>'
+    + th('date', 'Date')
+    + th('line', 'Line')
+    + th('batch', 'Batch')
+    + th('sku', 'SKU')
+    + th('quantity_scrapped', 'Qty', true)
+    + th('ext_scrap_value', '$', true)
+    + th('sync_issue', 'Sync')
+    + '</tr></thead><tbody>';
+  drawerRecords.forEach(function(r){
+    var chip;
+    if(r.sync_issue === 'SYNCED') chip = '<span class="chip chip-synced">✓</span>';
+    else if(r.sync_issue === 'MISMATCH') chip = '<span class="chip chip-mismatch">✗</span>';
+    else chip = '<span class="chip chip-na">—</span>';
+    html += '<tr>';
+    html += '<td>' + escapeHtml(r.date) + '</td>';
+    html += '<td><b>L' + escapeHtml(r.line) + '</b></td>';
+    html += '<td style="font-size:9px;color:var(--text2)">' + escapeHtml(r.batch).slice(0,14) + '</td>';
+    html += '<td>' + escapeHtml(r.sku) + '</td>';
+    html += '<td class="num">' + fmtN(r.quantity_scrapped) + '</td>';
+    html += '<td class="num">' + fmt$2(r.ext_scrap_value) + '</td>';
+    html += '<td>' + chip + '</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('drawer-table').innerHTML = html;
+}
+function sortDrawer(col){
+  var st = sortState.drawer;
+  if(st.col === col) st.dir = st.dir === 'asc' ? 'desc' : 'asc';
+  else { st.col = col; st.dir = (['date','line','batch','sku','sync_issue'].indexOf(col) >= 0 ? 'asc' : 'desc'); }
+  renderDrawerTable();
+}
+function closeDrawer(){
+  document.getElementById('drawer').classList.remove('open');
+}
+
+// Click outside drawer to close
+document.addEventListener('click', function(e){
+  var drawer = document.getElementById('drawer');
+  if(!drawer.classList.contains('open')) return;
+  if(drawer.contains(e.target)) return;
+  // Don't close if click is on a row/button that opens the drawer
+  if(e.target.closest('.clickable, .nb')) return;
+  closeDrawer();
+});
+
+// ─── Init ────────────────────────────────────────────────────────────
+load();
+// Meta info
+var metaEl = document.getElementById('meta-info');
+if(DATA && DATA._updated){
+  var d = new Date(DATA._updated);
+  metaEl.innerHTML = 'Last updated <b>' + d.toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'}) + '</b> · '
+                   + (DATA.records ? DATA.records.length + ' records' : '');
+} else {
+  metaEl.innerHTML = '<span style="color:var(--amber)">No data yet</span>';
+}
+renderSummary();
+
+// Auto-reload from localStorage every 30s (cross-tab sync)
+setInterval(function(){
+  var oldTs = DATA && DATA._updated;
+  load();
+  var newTs = DATA && DATA._updated;
+  if(newTs !== oldTs){
+    // Re-render current page
+    var active = document.querySelector('.page.active');
+    var name = active ? active.id.replace('page-','') : 'summary';
+    switch(name){
+      case 'summary': renderSummary(); break;
+      case 'byline': renderByLine(); break;
+      case 'byweek': renderByWeek(); break;
+      case 'bysku': renderBySKU(); break;
+      case 'sync': renderSyncList(); break;
+      case 'records': renderRecords(); break;
+    }
+    // Update meta
+    if(DATA && DATA._updated){
+      var d = new Date(DATA._updated);
+      metaEl.innerHTML = 'Last updated <b>' + d.toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'}) + '</b> · '
+                       + (DATA.records ? DATA.records.length + ' records' : '');
+    }
+  }
+}, 30000);
+</script>
+
+</body></html>

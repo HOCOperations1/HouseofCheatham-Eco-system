@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34v">
+<meta name="hoc-build" content="v6.34z">
 
 <meta charset="UTF-8">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -130,7 +130,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--text)}
 
 <script>
 // v6.34h: Version stamp + badge. Bump on every deploy.
-var HOC_OES_VERSION = 'v6.34v-20260609';
+var HOC_OES_VERSION = 'v6.34z-20260610';
 var HOC_OES_BUILD_TS = '1779870500';
 if(localStorage.getItem('hoc_oes_version') !== HOC_OES_VERSION){
   localStorage.setItem('hoc_oes_version', HOC_OES_VERSION);
@@ -162,7 +162,7 @@ if(localStorage.getItem('hoc_oes_version') !== HOC_OES_VERSION){
   <div class="tb-logo">HC</div>
   <div>
     <div class="tb-title">HOC-OES</div>
-    <div class="tb-sub">House of Cheatham Operational Ecosystem · <span id="hoc-month-year">May 2026</span> · <span id="ver-badge" style="background:rgba(34,197,94,.15);color:#22C55E;padding:1px 6px;border-radius:4px;font-weight:700;font-family:ui-monospace;font-size:9px;letter-spacing:.05em">v6.34v</span> · <a href="reset.html" style="color:#8899AA;font-size:9px;text-decoration:underline;margin-left:6px">reset cache</a></div>
+    <div class="tb-sub">House of Cheatham Operational Ecosystem · <span id="hoc-month-year">May 2026</span> · <span id="ver-badge" style="background:rgba(34,197,94,.15);color:#22C55E;padding:1px 6px;border-radius:4px;font-weight:700;font-family:ui-monospace;font-size:9px;letter-spacing:.05em">v6.34z</span> · <a href="reset.html" style="color:#8899AA;font-size:9px;text-decoration:underline;margin-left:6px">reset cache</a></div>
   </div>
   <div class="tb-right">
     <div class="sync-pill" onclick="toggleSync()">
@@ -292,7 +292,7 @@ if(localStorage.getItem('hoc_oes_version') !== HOC_OES_VERSION){
     <div class="kpi"><div class="kl">Synced Updates</div><div class="kv" id="kv-synced" style="color:var(--purple)">0</div><div class="ks">From floor tools</div></div>
     <div class="kpi"><div class="kl">Blocked Batches</div><div class="kv" id="kv-blocked" style="color:var(--text)">0</div><div class="ks">Upstream stopped</div></div>
     <div class="kpi"><div class="kl"><span id="kl-oee">OEE</span></div><div class="kv" id="kv-oee" style="color:var(--text)">—</div><div class="ks">vs 60% goal</div></div>
-    <div class="kpi"><div class="kl">Attainment</div><div class="kv" id="kv-att" style="color:var(--text)">—</div><div class="ks">vs 90% goal</div></div>
+    <div class="kpi"><div class="kl">Attainment</div><div class="kv" id="kv-att" style="color:var(--text)">—</div><div class="ks" id="ks-att">vs 90% goal</div></div>
   </div>
 
   <!-- WORKFLOW FLOW BAR -->
@@ -441,6 +441,16 @@ if(localStorage.getItem('hoc_oes_version') !== HOC_OES_VERSION){
         <div class="tc-desc">Log scrap per batch · By reason · By shift · CSV export · Supabase sync</div>
       </div>
       <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:#EF444422;color:#EF4444;border:1px solid #EF444444">NEW</span>
+      <div class="tc-arrow">›</div>
+    </a>
+
+    <a href="HOC_Line_Clearance.html" class="tool-card" style="border-color:#A855F722;text-decoration:none;border-width:2px" onmouseover="this.style.borderColor='#A855F788'" onmouseout="this.style.borderColor='#A855F722'">
+      <div class="tc-logo" style="background:#A855F722;color:#A855F7;border:1px solid #A855F744">📊</div>
+      <div class="tc-body">
+        <div class="tc-name" style="color:#A855F7">Line Clearance</div>
+        <div class="tc-desc">Scrap reconciliation · GP vs FASCOR sync · Ext Scrap Value · By line / week / SKU</div>
+      </div>
+      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:#A855F722;color:#A855F7;border:1px solid #A855F744">NEW</span>
       <div class="tc-arrow">›</div>
     </a>
     <a href="HOC_Finance.html" class="tool-card" style="border-color:#FBBF2422;text-decoration:none;border-width:2px" onmouseover="this.style.borderColor='#FBBF2488'" onmouseout="this.style.borderColor='#FBBF2422'">
@@ -896,6 +906,7 @@ function loadKPIs() {
   //   3. Patch per-line average
   //   4. "—"
   var attEl = document.getElementById('kv-att');
+  var ksAttEl = document.getElementById('ks-att');
   if(attEl){
     var attVal = null;
     if(manualKpi.att != null){
@@ -915,6 +926,24 @@ function loadKPIs() {
     } else {
       attEl.textContent = '—';
       attEl.style.color = 'var(--text3)';
+    }
+    // v6.34x — when manual per-line data exists, surface the worst line as subtext
+    if(ksAttEl){
+      var worstLine = null;
+      var worstVal = null;
+      if(manualKpi.lines){
+        Object.keys(manualKpi.lines).forEach(function(l){
+          var v = manualKpi.lines[l];
+          if(v === null || v === undefined) return;
+          if(worstVal === null || v < worstVal){ worstVal = v; worstLine = l; }
+        });
+      }
+      if(worstLine !== null){
+        var worstColor = worstVal >= attGoalLocal ? 'var(--green)' : 'var(--red)';
+        ksAttEl.innerHTML = 'Worst: <span style="color:' + worstColor + ';font-weight:700">L' + worstLine + ' ' + worstVal + '%</span>';
+      } else {
+        ksAttEl.textContent = 'vs ' + attGoalLocal + '% goal';
+      }
     }
   }
 

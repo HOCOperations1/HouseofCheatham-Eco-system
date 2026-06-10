@@ -45,8 +45,20 @@
   }
 
   // ── Date helpers ───────────────────────────────────────────────────
+  // HOC closures (v6.34z). Mirrors HOLIDAYS_634o in HOC_Production_Supervisor.html.
+  // Keep these two lists in sync when adding/removing closures.
+  var HOLIDAYS = {
+    '2026-06-18': 1, '2026-06-20': 1, '2026-07-02': 1, '2026-07-04': 1,
+    '2026-09-05': 1, '2026-09-07': 1, '2026-11-26': 1, '2026-11-27': 1,
+    '2026-12-25': 1
+  };
+  function iso(d){
+    return d.getFullYear()+'-'+
+           String(d.getMonth()+1).padStart(2,'0')+'-'+
+           String(d.getDate()).padStart(2,'0');
+  }
   // Given a Date and a weekdays array (e.g. [1,2,3,4] for Mon-Thu),
-  // count the matching days from asOf through end-of-month.
+  // count the matching days from asOf through end-of-month, minus HOC closures.
   function countAvailDays(asOf, weekdays){
     if(!weekdays || weekdays.length === 0) return 0;
     var lookup = {};
@@ -55,7 +67,9 @@
     var end   = new Date(asOf.getFullYear(), asOf.getMonth() + 1, 0); // last day of month
     var count = 0;
     for(var d = new Date(start); d <= end; d.setDate(d.getDate() + 1)){
-      if(lookup[d.getDay()]) count++;
+      if(!lookup[d.getDay()]) continue;
+      if(HOLIDAYS[iso(d)]) continue;  // subtract HOC closure
+      count++;
     }
     return count;
   }

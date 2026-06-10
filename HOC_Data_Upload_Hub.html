@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34v">
+<meta name="hoc-build" content="v6.34z">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -182,12 +182,68 @@ input:focus,select:focus,textarea:focus{border-color:var(--blue)}
         <div class="drop-status" id="status-ls" style="color:var(--text3)">Drop file here or click to browse</div>
       </div>
     </div>
+
+    <!-- Line Clearance (scrap reconciliation — v6.34w) -->
+    <div>
+      <div style="font-size:10px;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em">📊 Line Clearance</div>
+      <div class="drop-zone" id="zone-lc" onclick="document.getElementById('file-lc').click()" ondragover="dragOver(event,'lc')" ondragleave="dragLeave('lc')" ondrop="dropFile(event,'lc')">
+        <input type="file" id="file-lc" accept=".xlsx,.xls,.csv" style="display:none" onchange="loadFile(this.files[0],'lc')">
+        <div class="drop-icon">📊</div>
+        <div class="drop-title">Line_Clearance_PowerBI.xlsx</div>
+        <div class="drop-sub">Per-batch scrap reconciliation · GP vs FASCOR sync · Ext Scrap Value · powers Line Clearance dashboard</div>
+        <div class="drop-status" id="status-lc" style="color:var(--text3)">Drop file here or click to browse</div>
+      </div>
+    </div>
   </div>
 
   <button class="big-btn" id="update-btn" onclick="updateAllDashboards()" disabled>
     ⚡ Update All Dashboards
   </button>
   <button class="clear-btn" onclick="clearAllData()">🗑 Clear All Uploaded Data</button>
+
+  <!-- ── MANUAL KPI ENTRY (v6.34x) ─────────────────────────────────── -->
+  <!--    Daily-update fields for OEE % and Schedule Attainment %.
+          Displayed on index.html status bar and Production Supervisor topbar.
+          No file required — operator types in, hits save. -->
+  <div class="card" style="margin-top:14px">
+    <div class="card-title">
+      📊 Manual KPI Entry
+      <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3);font-size:9px">Daily-update facility OEE % and per-line Schedule Attainment %</span>
+    </div>
+
+    <!-- Last update info -->
+    <div id="kpi-last-update" style="font-size:10px;color:var(--text3);margin-bottom:10px"></div>
+
+    <!-- OEE Section -->
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;flex-wrap:wrap">
+      <div style="font-size:11px;font-weight:700;color:var(--text);min-width:140px">Facility OEE %</div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <input type="number" id="kpi-oee" min="0" max="100" step="0.1" placeholder="—"
+               style="background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font:inherit;font-size:13px;width:90px;text-align:right;font-variant-numeric:tabular-nums">
+        <span style="font-size:13px;color:var(--text2)">%</span>
+      </div>
+      <span style="font-size:9px;color:var(--text3);font-style:italic">Single facility-wide OEE for the day</span>
+    </div>
+
+    <!-- Attainment Section -->
+    <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:8px">Schedule Attainment % — % of batches completed per line</div>
+    <div id="kpi-attainment-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:14px">
+      <!-- Line inputs injected by JS -->
+    </div>
+
+    <!-- Save Button -->
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button id="kpi-save-btn" onclick="saveManualKPIs()"
+              style="background:var(--blue);color:#fff;border:none;border-radius:6px;padding:8px 16px;font:inherit;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer">
+        💾 Save KPI Values
+      </button>
+      <button onclick="clearManualKPIs()"
+              style="background:none;color:var(--text3);border:1px solid var(--border);border-radius:6px;padding:8px 14px;font:inherit;font-size:10px;cursor:pointer">
+        Clear
+      </button>
+      <span id="kpi-save-status" style="font-size:10px;color:var(--text3)"></span>
+    </div>
+  </div>
 
   <!-- ── PASTE SCHEDULE ──────────────────────────────────────────── -->
   <!--    Alternative to file drop: paste cells copied from Excel.
@@ -371,7 +427,7 @@ function dragLeave(zone){ document.getElementById('zone-'+zone).classList.remove
 function dropFile(e,zone){ e.preventDefault(); dragLeave(zone); var f=e.dataTransfer.files[0]; if(f)loadFile(f,zone); }
 
 // ── Loaded file registry ──────────────────────────────────────────────
-var loaded = {pt:null, pd:null, co:null, lb:null, ls:null};
+var loaded = {pt:null, pd:null, co:null, lb:null, ls:null, lc:null};
 
 function loadFile(file, zone) {
   if(!file) return;
@@ -845,7 +901,7 @@ function parseAttainmentPaste(rows, statusEl){
 // ═══════════════════════════════════════════════════════════════════
 
 function checkReady() {
-  document.getElementById('update-btn').disabled = !(loaded.pt || loaded.pd || loaded.co || loaded.lb || loaded.ls);
+  document.getElementById('update-btn').disabled = !(loaded.pt || loaded.pd || loaded.co || loaded.lb || loaded.ls || loaded.lc);
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -1549,6 +1605,153 @@ function updateAllDashboards() {
         }
       }
 
+      // ── Parse Line Clearance (scrap reconciliation) — v6.34w ────────
+      // Schema (Clearance_Fact sheet): 24 typed columns. We only require
+      // Date + Line; everything else is optional/may be null. Sync Issue
+      // is recomputed in JS to avoid trusting stale Excel formulas.
+      // Filters out blank formula rows by requiring Date + Line.
+      if(loaded.lc) {
+        progress('Reading Line Clearance...');
+        var wbLC = loaded.lc.wb;
+        // Prefer 'Clearance_Fact'; fall back to first sheet
+        var lcSheet = wbLC.Sheets['Clearance_Fact'] || wbLC.Sheets[wbLC.SheetNames[0]];
+        if(!lcSheet){
+          progress('⚠ Line Clearance: no sheets found', 'warn');
+        } else {
+          var lcRows = XLSX.utils.sheet_to_json(lcSheet, {defval:null, raw:true});
+          var records = [];
+          var stats = {
+            total_records: 0, total_scrap_units: 0, total_scrap_value: 0,
+            both_populated: 0, synced: 0, mismatched: 0,
+            date_min: null, date_max: null,
+            lines: {}, skus_count: 0
+          };
+          var skuSet = {};
+          lcRows.forEach(function(r){
+            // Skip blank formula rows (no Date or no Line Number)
+            var dateRaw = r['Date'];
+            var lineRaw = r['Line Number'] || r['Line'] || r['Line#'];
+            if(!dateRaw || lineRaw === null || lineRaw === undefined || lineRaw === '') return;
+
+            // Date normalization — SheetJS gives Excel serial, Date obj, or string
+            var dateISO = '';
+            try {
+              if(dateRaw instanceof Date){
+                dateISO = dateRaw.toISOString().slice(0,10);
+              } else if(typeof dateRaw === 'number'){
+                // Excel serial date: days since 1900-01-01 (with the leap year bug)
+                var ms = (dateRaw - 25569) * 86400 * 1000;
+                dateISO = new Date(ms).toISOString().slice(0,10);
+              } else {
+                var d = new Date(dateRaw);
+                if(!isNaN(d.getTime())) dateISO = d.toISOString().slice(0,10);
+              }
+            } catch(e){}
+            if(!dateISO) return;
+
+            // Line: strip non-digits, but preserve 'WEPACKIT' style codes
+            var line = String(lineRaw).trim();
+
+            // Numeric fields — coerce safely
+            function num(v){
+              if(v === null || v === undefined || v === '') return null;
+              var n = parseFloat(v);
+              return isNaN(n) ? null : n;
+            }
+            var gp     = num(r['GP Qty']);
+            var fascor = num(r['FASCOR Qty']);
+            var scrap  = num(r['Quantity Scrapped']) || 0;
+            var stdCost= num(r['Std Cost']) || 0;
+            // Recompute Ext Scrap Value (don't trust source, scrap * stdCost is the spec)
+            var extVal = scrap * stdCost;
+
+            // Recompute Sync Issue (don't trust stale value):
+            // SYNCED if |GP - FASCOR| <= 1, MISMATCH otherwise, "" if either missing
+            var syncIssue = '';
+            var variance  = null;
+            if(gp !== null && fascor !== null){
+              variance = gp - fascor;
+              syncIssue = Math.abs(variance) <= 1 ? 'SYNCED' : 'MISMATCH';
+              stats.both_populated++;
+              if(syncIssue === 'MISMATCH') stats.mismatched++;
+              else stats.synced++;
+            }
+
+            var sku = String(r['SKU'] || '').trim();
+            if(sku) skuSet[sku] = true;
+
+            // Re-derive Day from date (workbook had bad "Quarter" data, don't trust)
+            var dObj = new Date(dateISO + 'T00:00:00');
+            var dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+            var monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            var q = 'Q' + (Math.floor(dObj.getMonth()/3) + 1);
+
+            var rec = {
+              record_id: r['Record ID'] || (records.length + 1),
+              date: dateISO,
+              day: dayNames[dObj.getDay()],
+              week: parseInt(r['Week']) || null,
+              month: monthNames[dObj.getMonth()],
+              quarter: q,
+              year: dObj.getFullYear(),
+              year_week: r['YearWeek'] || (dObj.getFullYear() + '-W' + String(parseInt(r['Week']) || '').padStart(2,'0')),
+              line: line,
+              batch: String(r['Batch Number'] || '').trim(),
+              sku: sku,
+              sku_description: String(r['SKU Description'] || '').trim(),
+              cases_produced: num(r['Cases Produced']),
+              gp_qty: gp,
+              fascor_qty: fascor,
+              sync_issue: syncIssue,
+              sync_variance: variance,
+              physical_clearance: String(r['Physical Line Clearance'] || '').trim(),
+              fascor_clearance: String(r['FASCOR Line Clearance'] || '').trim(),
+              sync_adjustment_qty: num(r['Sync Adjustment Qty']),
+              quantity_scrapped: scrap,
+              std_cost: stdCost,
+              ext_scrap_value: Math.round(extVal * 100) / 100,
+              notes: String(r['Notes'] || '').trim()
+            };
+            records.push(rec);
+
+            // Stats
+            stats.total_records++;
+            stats.total_scrap_units += scrap;
+            stats.total_scrap_value += extVal;
+            if(!stats.date_min || dateISO < stats.date_min) stats.date_min = dateISO;
+            if(!stats.date_max || dateISO > stats.date_max) stats.date_max = dateISO;
+            if(!stats.lines[line]) stats.lines[line] = {records:0, scrap_value:0};
+            stats.lines[line].records++;
+            stats.lines[line].scrap_value += extVal;
+          });
+          stats.skus_count = Object.keys(skuSet).length;
+          stats.total_scrap_value = Math.round(stats.total_scrap_value * 100) / 100;
+
+          // Broadcast to Supabase + localStorage
+          try {
+            localStorage.setItem('hoc_line_clearance_v1', JSON.stringify({
+              records: records, stats: stats, _updated: ts
+            }));
+          } catch(e){
+            progress('⚠ Line Clearance: localStorage full, data not persisted', 'warn');
+          }
+          result.line_clearance = records;
+          result.line_clearance_stats = stats;
+          result.line_clearance_ts = ts;
+
+          var nLines = Object.keys(stats.lines).length;
+          var pctMismatch = stats.both_populated > 0
+            ? Math.round(stats.mismatched / stats.both_populated * 1000) / 10
+            : 0;
+          progress('✓ Line Clearance: ' + records.length + ' records · '
+                   + nLines + ' lines · ' + stats.skus_count + ' SKUs · $'
+                   + stats.total_scrap_value.toLocaleString() + ' total scrap value', 'ok');
+          progress('   Sync check: ' + stats.synced + ' SYNCED + ' + stats.mismatched
+                   + ' MISMATCH of ' + stats.both_populated + ' records with both qtys ('
+                   + pctMismatch + '% mismatch rate)', stats.mismatched > 0 ? 'warn' : 'ok');
+        }
+      }
+
       // ── Parse Planning Data ───────────────────────────────────────
       if(loaded.pd) {
         progress('Reading Planning Data (Vicinity)...');
@@ -1884,6 +2087,7 @@ function updateAllDashboards() {
       if(goals.may_actual) progress('May Cases: ' + goals.may_actual.toLocaleString() + ' actual / ' + goals.may_goal.toLocaleString() + ' goal', 'ok');
       if(result.inventory) progress('Inventory: ' + result.inventory.length.toLocaleString() + ' SKUs · ' + result.inventory.filter(function(i){return i.status==='LOW';}).length + ' LOW', 'ok');
       if(result.line_setup) progress('Line Setup: ' + result.line_setup.length + ' lines · ' + result.line_setup.filter(function(l){return l.active;}).length + ' active', 'ok');
+      if(result.line_clearance) progress('Line Clearance: ' + result.line_clearance.length + ' records · $' + (result.line_clearance_stats.total_scrap_value).toLocaleString() + ' total scrap', 'ok');
       progress('All dashboards on every device will update within 30s ✓', 'ok');
 
       log('ok', 'Upload complete — ' + batches.length + ' batches · ' + (result.inventory||[]).length + ' inventory items');
@@ -1985,6 +2189,168 @@ function clearAllData() {
   document.getElementById('progress-area').style.display='none';
   alert('All data cleared. Dashboards will show empty state until next upload.');
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+// v6.34x — Manual KPI Entry (Facility OEE + Schedule Attainment per line)
+// Storage: localStorage 'hoc_kpi_manual_v1' = {oee, att, oee_goal, att_goal,
+//          lines:{1:..,2:..,...}, _updated}.
+// Schema aligns with existing reader in index.html lines 875-929 — preserves
+// oee_goal/att_goal config and the existing oee/att field names. The 'lines'
+// object and '_updated' timestamp are v6.34x additions.
+// Read by index.html topbar pill and Production Supervisor sync bar.
+// ═══════════════════════════════════════════════════════════════════════
+// Aligned with EXISTING storage key + schema already read by index.html
+// at lines 875-929. We extend (don't replace) by adding a 'lines' object
+// and '_updated' timestamp. The existing 'oee', 'att', 'oee_goal',
+// 'att_goal' fields are preserved so legacy readers keep working.
+var KPI_STORAGE_KEY = 'hoc_kpi_manual_v1';
+var KPI_LINES = [1, 2, 3, 4, 5, 7, 11, 16];
+
+function buildAttainmentGrid(){
+  var grid = document.getElementById('kpi-attainment-grid');
+  if(!grid) return;
+  var html = '';
+  KPI_LINES.forEach(function(l){
+    html += '<div style="display:flex;gap:6px;align-items:center;padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px">';
+    html += '<div style="font-size:10px;font-weight:700;color:var(--text2);min-width:50px">Line ' + l + '</div>';
+    html += '<input type="number" id="kpi-attain-' + l + '" min="0" max="100" step="0.1" placeholder="—"';
+    html += ' style="background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:5px;padding:5px 8px;font:inherit;font-size:12px;width:70px;text-align:right;font-variant-numeric:tabular-nums">';
+    html += '<span style="font-size:11px;color:var(--text2)">%</span>';
+    html += '</div>';
+  });
+  grid.innerHTML = html;
+}
+
+function loadManualKPIs(){
+  try {
+    var raw = localStorage.getItem(KPI_STORAGE_KEY);
+    if(!raw) return null;
+    return JSON.parse(raw);
+  } catch(e){ return null; }
+}
+
+function populateKPIFields(){
+  var data = loadManualKPIs();
+  // OEE (existing field name in schema)
+  var oeeEl = document.getElementById('kpi-oee');
+  if(oeeEl){
+    oeeEl.value = (data && data.oee !== null && data.oee !== undefined) ? data.oee : '';
+  }
+  // Per-line attainment (new v6.34x field)
+  KPI_LINES.forEach(function(l){
+    var el = document.getElementById('kpi-attain-' + l);
+    if(!el) return;
+    el.value = (data && data.lines && data.lines[l] !== undefined && data.lines[l] !== null) ? data.lines[l] : '';
+  });
+  // Last update display
+  var updEl = document.getElementById('kpi-last-update');
+  if(updEl){
+    if(data && data._updated){
+      var d = new Date(data._updated);
+      var hoursOld = (Date.now() - d.getTime()) / 36e5;
+      var tone = hoursOld > 24 ? 'var(--amber)' : 'var(--green)';
+      var label = hoursOld < 1 ? 'just now'
+                : hoursOld < 24 ? Math.round(hoursOld) + 'h ago'
+                : Math.round(hoursOld / 24) + 'd ago';
+      updEl.innerHTML = 'Last saved: <b style="color:' + tone + '">' + d.toLocaleString() + '</b> · ' + label;
+    } else {
+      updEl.innerHTML = '<span style="color:var(--text3)">No values saved yet</span>';
+    }
+  }
+}
+
+function readKPIInput(id){
+  var el = document.getElementById(id);
+  if(!el || el.value === '' || el.value === null) return null;
+  var n = parseFloat(el.value);
+  if(isNaN(n)) return null;
+  // Clamp 0..100
+  if(n < 0) n = 0;
+  if(n > 100) n = 100;
+  return Math.round(n * 10) / 10;  // 1 decimal place
+}
+
+function saveManualKPIs(){
+  // Read currently-stored data so we PRESERVE oee_goal, att_goal, and any
+  // other fields that might have been set by another tool. We only update
+  // the 4 fields we own: oee, lines, att (rolled-up), _updated.
+  var existing = loadManualKPIs() || {};
+
+  var oee = readKPIInput('kpi-oee');
+  var lines = {};
+  var anyLineValue = false;
+  KPI_LINES.forEach(function(l){
+    var v = readKPIInput('kpi-attain-' + l);
+    lines[l] = v;
+    if(v !== null) anyLineValue = true;
+  });
+  if(oee === null && !anyLineValue){
+    setKPIStatus('Nothing to save — enter at least one value.', 'warn');
+    return;
+  }
+  // Roll-up: facility-average attainment from non-null per-line values.
+  // Maintains back-compat with existing readers that consume `att`.
+  var attAvg = null;
+  var lineVals = Object.values(lines).filter(function(v){ return v !== null; });
+  if(lineVals.length){
+    attAvg = Math.round((lineVals.reduce(function(a,b){ return a+b; }, 0) / lineVals.length) * 10) / 10;
+  }
+
+  // Merge with existing — keep oee_goal/att_goal, anything else not ours
+  existing.oee = oee;
+  existing.lines = lines;
+  existing.att = attAvg;
+  existing._updated = new Date().toISOString();
+  // Default goals if never set (matches index.html defaults)
+  if(existing.oee_goal === undefined || existing.oee_goal === null) existing.oee_goal = 60;
+  if(existing.att_goal === undefined || existing.att_goal === null) existing.att_goal = 90;
+
+  try {
+    localStorage.setItem(KPI_STORAGE_KEY, JSON.stringify(existing));
+    populateKPIFields();
+    setKPIStatus('✓ Saved · dashboards will update on next refresh', 'ok');
+  } catch(e){
+    setKPIStatus('✗ Save failed: ' + e.message, 'err');
+  }
+}
+
+function clearManualKPIs(){
+  if(!confirm("Clear all manual KPI values? This removes today's OEE and Schedule Attainment entries but keeps the configured goal targets.")) return;
+  // Preserve goals — only clear the actual values
+  var existing = loadManualKPIs() || {};
+  var preserved = {};
+  if(existing.oee_goal !== undefined) preserved.oee_goal = existing.oee_goal;
+  if(existing.att_goal !== undefined) preserved.att_goal = existing.att_goal;
+  // If nothing to preserve, drop the key entirely
+  if(Object.keys(preserved).length === 0){
+    localStorage.removeItem(KPI_STORAGE_KEY);
+  } else {
+    localStorage.setItem(KPI_STORAGE_KEY, JSON.stringify(preserved));
+  }
+  document.getElementById('kpi-oee').value = '';
+  KPI_LINES.forEach(function(l){
+    var el = document.getElementById('kpi-attain-' + l);
+    if(el) el.value = '';
+  });
+  populateKPIFields();
+  setKPIStatus('Cleared', 'warn');
+}
+
+function setKPIStatus(msg, kind){
+  var el = document.getElementById('kpi-save-status');
+  var color = kind === 'ok' ? 'var(--green)' : kind === 'err' ? 'var(--red)' : 'var(--amber)';
+  el.style.color = color;
+  el.textContent = msg;
+  if(kind === 'ok'){
+    setTimeout(function(){ if(el.textContent === msg) el.textContent = ''; }, 3500);
+  }
+}
+
+// Init manual KPI section
+buildAttainmentGrid();
+populateKPIFields();
+// Refresh the "last saved" display every minute so the "h ago" stays accurate
+setInterval(populateKPIFields, 60000);
 
 // ── Init ──────────────────────────────────────────────────────────────
 renderSyncBar(document.getElementById('sync-bar'));

@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34v">
+<meta name="hoc-build" content="v6.34z">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Production Supervisor</title>
@@ -524,15 +524,59 @@ function initSupabaseRealtime() {
   }, 15000); // Check every 15 seconds
 }
 
-// ── Sync bus bar: show Supabase connection status ─────────────────────
+// ── Sync bus bar: show Supabase connection status + manual KPIs (v6.34x) ──
 function renderSyncBar(el) {
   if (!el) return;
   var now = new Date().toLocaleTimeString('en-US', {hour:'numeric',minute:'2-digit',second:'2-digit'});
+
+  // Read manual KPIs from same key as index.html (hoc_kpi_manual_v1)
+  var oeePill = '';
+  var attPill = '';
+  try {
+    var raw = localStorage.getItem('hoc_kpi_manual_v1');
+    var kpi = raw ? JSON.parse(raw) : null;
+    if(kpi){
+      var oeeGoal = (kpi.oee_goal != null) ? Number(kpi.oee_goal) : 60;
+      var attGoal = (kpi.att_goal != null) ? Number(kpi.att_goal) : 90;
+      // OEE pill
+      if(kpi.oee != null){
+        var oeeVal = Math.round(Number(kpi.oee) * 10) / 10;
+        var oeeColor = oeeVal >= oeeGoal ? 'var(--green)' : 'var(--red)';
+        oeePill = '<span style="color:var(--text3)">·</span>'
+                + '<span style="color:var(--text3)">OEE:</span>'
+                + '<span style="color:' + oeeColor + ';font-weight:700">' + oeeVal + '%</span>';
+      }
+      // Attainment pill: facility avg + worst line side by side
+      var attAvg = (kpi.att != null) ? Number(kpi.att) : null;
+      var worstLine = null, worstVal = null;
+      if(kpi.lines){
+        Object.keys(kpi.lines).forEach(function(l){
+          var v = kpi.lines[l];
+          if(v === null || v === undefined) return;
+          if(worstVal === null || v < worstVal){ worstVal = v; worstLine = l; }
+        });
+      }
+      if(attAvg != null || worstVal != null){
+        attPill = '<span style="color:var(--text3)">·</span>'
+                + '<span style="color:var(--text3)">Att:</span>';
+        if(attAvg != null){
+          var attColor = attAvg >= attGoal ? 'var(--green)' : 'var(--red)';
+          attPill += '<span style="color:' + attColor + ';font-weight:700">' + attAvg + '%</span>';
+        }
+        if(worstVal != null){
+          var worstColor = worstVal >= attGoal ? 'var(--green)' : 'var(--red)';
+          attPill += '<span style="color:var(--text3);font-size:9px">worst:</span>'
+                   + '<span style="color:' + worstColor + ';font-weight:700">L' + worstLine + ' ' + worstVal + '%</span>';
+        }
+      }
+    }
+  } catch(e){ /* missing or invalid — skip */ }
+
   el.innerHTML = 
     '<span style="color:var(--green);font-weight:700">● LIVE</span>' +
     '<span style="color:var(--text3)">Supabase real-time sync active</span>' +
-    '<span style="color:var(--text3)">Last check: ' + now + '</span>' +
-    '<span style="color:var(--text3)">Cross-device sync: 15s</span>';
+    oeePill + attPill +
+    '<span style="color:var(--text3);margin-left:auto">Last check: ' + now + '</span>';
 }
 
 // Start real-time sync on load
@@ -720,25 +764,25 @@ var FORECAST = [{"line":1,"batch":"MAIN063264","desc":"ORI Cocoa Butter Body Lot
 // Replaces the static availhr values below (which were full-month figures
 // assuming a "typical" month with no holidays). Now we compute the remaining
 // working days from today through end of month, multiply by 9.17 hrs/day,
-// and exclude HOLIDAYS_634o (currently Juneteenth Eve + Juneteenth Day).
+// and exclude HOLIDAYS_634o (current HOC 2026 closures, v6.34z list).
 //
 // Per-line patterns are preserved — each line counts only its own working
 // days (e.g., Mon-Thu lines don't count Friday/Saturday).
 // ─────────────────────────────────────────────────────────────────────
 var WORKING_HOURS_PER_DAY_634o = 9.17;
+// HOC 2026 closures (v6.34z). Authoritative list — replace, don't merge.
+// Used by workingDaysRemaining634o() to subtract closures from each line's
+// per-month working day count. Applies plant-wide.
 var HOLIDAYS_634o = {
-  // ISO date strings — add new holidays here as needed
-  '2026-01-01': "New Year's Day",
-  '2026-05-25': 'Memorial Day',
-  '2026-06-18': 'Juneteenth Eve (HOC)',
-  '2026-06-19': 'Juneteenth',
-  '2026-07-03': 'Independence Day (observed)',
-  '2026-07-04': 'Independence Day',
-  '2026-09-07': 'Labor Day',
-  '2026-11-26': 'Thanksgiving',
-  '2026-11-27': 'Day after Thanksgiving',
-  '2026-12-24': 'Christmas Eve',
-  '2026-12-25': 'Christmas Day',
+  '2026-06-18': 'HOC closure',   // Thu
+  '2026-06-20': 'HOC closure',   // Sat
+  '2026-07-02': 'HOC closure',   // Thu
+  '2026-07-04': 'HOC closure',   // Sat — Independence Day
+  '2026-09-05': 'HOC closure',   // Sat
+  '2026-09-07': 'Labor Day',     // Mon
+  '2026-11-26': 'Thanksgiving',  // Thu
+  '2026-11-27': 'Day after Thanksgiving', // Fri
+  '2026-12-25': 'Christmas Day', // Thu
 };
 // Day-of-week sets per pattern (0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat)
 var PATTERN_DAYS_634o = {
@@ -1357,7 +1401,17 @@ function renderCmpdByLine(){
 }
 
 function renderFC(){
-  const AVAIL={1:2200,2:3300,3:3300,4:3300,5:2200,6:2200,8:2200,10:2200,11:3300,14:3300,15:2200,16:0};
+  // v6.34z: Available minutes is now computed live per-line using the line's
+  // work pattern and working days remaining in the current month, minus
+  // HOC closures. Replaces the previous hardcoded AVAIL table — flows
+  // month-to-month, respects the holiday list.
+  function liveAvailMin(ln){
+    var li = LINES.find(function(l){ return l.line === ln; }) || {};
+    var def = LINE_DEFAULTS[ln] || {};
+    var pattern = li.pattern || def.pattern;
+    if(!pattern) return 0;
+    return Math.round(availableHours634o(pattern) * 60);
+  }
   const lns=[...new Set(FORECAST.map(f=>f.line))].sort((a,b)=>a-b);
   let h='';
   lns.forEach(ln=>{
@@ -1365,7 +1419,7 @@ function renderFC(){
     if(fcF==='MUST') rows=rows.filter(f=>f.priority==='MUST RUN');
     else if(fcF==='SHOULD') rows=rows.filter(f=>f.priority==='MUST RUN'||f.priority==='SHOULD RUN');
     if(!rows.length) return;
-    const avail=AVAIL[ln]||0;
+    const avail = liveAvailMin(ln);
     const maxC=rows[rows.length-1].cum_min; const util=avail>0?Math.min(130,Math.round(maxC/avail*100)):0;
     const bc=util>100?'var(--red)':util>80?'var(--amber)':'var(--green)';
     const li=LINES.find(l=>l.line===ln)||{};
