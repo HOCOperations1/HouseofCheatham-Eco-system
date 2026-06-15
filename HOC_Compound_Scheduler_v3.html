@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34ag">
+<meta name="hoc-build" content="v6.34ai">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -752,9 +752,25 @@ function renderBatches(){
   else if(batchFilter==='RUNNING') rows=BATCHES.filter(b=>b.status==='RUNNING'||b.status==='ACTIVE');
   else if(batchFilter.startsWith('COMPOUND')) rows=BATCHES.filter(b=>b.cmpd===batchFilter);
   else if(batchFilter!=='ALL') rows=BATCHES.filter(b=>b.status===batchFilter);
-  document.getElementById('batch-tbody').innerHTML=rows.map(b=>`
+  document.getElementById('batch-tbody').innerHTML=rows.map(b=>{
+    // v6.34ah: Inline QC badge — sourced from HOC_Floor for live cross-dashboard state.
+    var qcInline = '';
+    if(typeof HOC_Floor !== 'undefined'){
+      var fs = HOC_Floor.getState(b.main);
+      if(fs && fs.qc_status){
+        var s = String(fs.qc_status).toUpperCase();
+        if(s === 'HOLD'){
+          qcInline = ' <span style="display:inline-block;font-size:8px;font-weight:700;padding:1px 5px;border-radius:8px;background:rgba(245,158,11,.18);color:var(--amber);border:1px solid rgba(245,158,11,.3);vertical-align:middle" title="QC HOLD' + (fs.qc_hold_reason?' — '+fs.qc_hold_reason:'') + '">QC HOLD</span>';
+        } else if(s === 'REWORK'){
+          qcInline = ' <span style="display:inline-block;font-size:8px;font-weight:700;padding:1px 5px;border-radius:8px;background:rgba(245,158,11,.18);color:var(--amber);border:1px solid rgba(245,158,11,.3);vertical-align:middle" title="QC REWORK' + (fs.qc_hold_reason?' — '+fs.qc_hold_reason:'') + '">REWORK</span>';
+        } else if(s === 'RELEASED'){
+          qcInline = ' <span style="display:inline-block;font-size:8px;font-weight:700;padding:1px 5px;border-radius:8px;background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.3);vertical-align:middle" title="QC RELEASED">QC ✓</span>';
+        }
+      }
+    }
+    return `
     <tr class="${b.status==='COMPLETED'?'done-row':''}" onclick="openDetail('${b.main}');showPage('cmd')" style="cursor:pointer">
-      <td style="font-size:10px;color:var(--text2);font-weight:700">${b.main}</td>
+      <td style="font-size:10px;color:var(--text2);font-weight:700">${b.main}${qcInline}</td>
       <td style="text-align:center;color:var(--blue);font-weight:700">${b.line}</td>
       <td>${b.desc}</td>
       <td style="text-align:center;color:var(--blue);font-weight:700">${b.formula?'F.'+b.formula:'—'}</td>
@@ -765,7 +781,8 @@ function renderBatches(){
       <td style="text-align:center;font-size:10px">${fS(b.cmpddue)}</td>
       <td>${riskBadge(b.risk)}</td>
       <td>${myBadge(b.main)}</td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 function setBF(f){batchFilter=f;renderBatches();}
 
@@ -849,7 +866,10 @@ renderQCHoldStrip();
 
 // Auto-refresh QC strip on floor state changes
 if(typeof HOC_Floor !== 'undefined'){
-  HOC_Floor.onChange(function(){ try { renderQCHoldStrip(); } catch(e){} });
+  HOC_Floor.onChange(function(){
+    try { renderQCHoldStrip(); } catch(e){}
+    try { renderBatches(); } catch(e){}  // v6.34ah: also re-render rows for inline badges
+  });
 }
 
 // ─────────────────────────────────────────────────────────────

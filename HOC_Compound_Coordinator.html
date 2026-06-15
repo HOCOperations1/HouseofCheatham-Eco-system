@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34ag">
+<meta name="hoc-build" content="v6.34ai">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Compound Coordinator</title>
@@ -284,6 +284,8 @@ select:focus,input:focus,textarea:focus{border-color:var(--blue)}
 
 <!-- RAW INVENTORY -->
 <div class="page" id="page-inventory"><div class="content">
+  <!-- v6.34ah: Diagnostic status line — counts + last upload timestamp -->
+  <div id="inv-status" style="font-size:10px;margin-bottom:8px;padding:6px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:5px"></div>
   <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
     <span style="font-size:10px;color:var(--text2);align-self:center">Filter:</span>
     <button class="fb active" id="inv-ALL" onclick="setInv('ALL')">All</button>
@@ -1431,20 +1433,71 @@ function markProceed(){
 }
 
 function renderInventory(){
-  let rows=[...getChemicals()];
-  if(invFilter==='SHORT') rows=rows.filter(c=>c.status==='SHORT');
-  else if(invFilter==='LOW') rows=rows.filter(c=>c.status==='LOW');
-  else if(invFilter==='OK') rows=rows.filter(c=>c.status==='OK');
-  // v6.34af: field name fix — parser writes `descr` + `prod_req` (Vicinity
-  // Interface column conventions). Earlier code looked for `desc`/`req` and
-  // rendered blanks on every row. Read both for safety.
-  document.getElementById('inv-tbody').innerHTML=rows.map((c,i)=>`
+  // v6.34ah: Robustness layer for inventory rendering.
+  //   1. Read quantity fields with multiple possible names (parser evolved
+  //      across versions — old uploads may have `qty`/`req` instead of
+  //      `qoh`/`prod_req`). Tolerate either shape.
+  //   2. Sort: rows with any non-zero quantity first, then alphabetical.
+  //      Default ALL view used to show 220 all-zero SKUs at the top.
+  //   3. Status header line: count loaded + count with activity + last upload.
+  function num(c, names){
+    for(var i = 0; i < names.length; i++){
+      var v = c[names[i]];
+      if(v !== undefined && v !== null && v !== ''){
+        var n = parseFloat(v);
+        if(!isNaN(n)) return n;
+      }
+    }
+    return 0;
+  }
+  function fields(c){
+    return {
+      sku:     c.sku || c.SKU || c.ComponentId || '',
+      descr:   c.descr || c.desc || c.description || c.ComponentDescription || '—',
+      qoh:     num(c, ['qoh', 'qty_on_hand', 'qty', 'quantity', 'on_hand']),
+      req:     num(c, ['prod_req', 'req', 'requirement', 'production']),
+      po:      num(c, ['po_qty', 'po', 'purchase_order', 'on_order']),
+      net:     num(c, ['net']),
+      status:  c.status || (num(c, ['net']) < 0 ? 'LOW' : 'OK')
+    };
+  }
+
+  let rows = [...getChemicals()].map(fields);
+  if(invFilter === 'SHORT') rows = rows.filter(c => c.status === 'SHORT');
+  else if(invFilter === 'LOW') rows = rows.filter(c => c.status === 'LOW');
+  else if(invFilter === 'OK') rows = rows.filter(c => c.status === 'OK');
+
+  // Sort: anything with quantity first (qoh or req or po non-zero), then alphabetical
+  rows.sort(function(a, b){
+    var aActive = (a.qoh || a.req || a.po) ? 1 : 0;
+    var bActive = (b.qoh || b.req || b.po) ? 1 : 0;
+    if(aActive !== bActive) return bActive - aActive;  // active first
+    return String(a.sku).localeCompare(String(b.sku));
+  });
+
+  // Status header
+  var hdr = document.getElementById('inv-status');
+  if(hdr){
+    var allChems = getChemicals();
+    var withActivity = allChems.filter(function(c){
+      var f = fields(c);
+      return f.qoh || f.req || f.po;
+    }).length;
+    var up = null;
+    try { up = JSON.parse(localStorage.getItem('hoc_upload_v1')||'null'); } catch(e){}
+    var ts = up && up.inventory_ts ? new Date(up.inventory_ts).toLocaleString() : 'never';
+    hdr.innerHTML = '<span style="color:var(--text2)">' + allChems.length + ' chemicals loaded</span> · '
+      + '<b style="color:var(--text)">' + withActivity + '</b> <span style="color:var(--text2)">with activity</span> · '
+      + '<span style="color:var(--text3);font-size:9px">last upload: ' + ts + '</span>';
+  }
+
+  document.getElementById('inv-tbody').innerHTML = rows.map((c,i) => `
     <tr style="background:${i%2?'rgba(255,255,255,.01)':'transparent'}">
       <td style="font-size:10px;color:var(--text2)">${c.sku}</td>
-      <td style="font-size:10px">${c.descr||c.desc||'—'}</td>
+      <td style="font-size:10px">${c.descr}</td>
       <td style="text-align:right">${N(c.qoh)}</td>
-      <td style="text-align:right">${N(c.prod_req||c.req||0)}</td>
-      <td style="text-align:right;color:var(--teal)">${N(c.po_qty)}</td>
+      <td style="text-align:right">${N(c.req)}</td>
+      <td style="text-align:right;color:var(--teal)">${N(c.po)}</td>
       <td style="text-align:right" class="${c.net<0?'num-red':c.status==='LOW'?'':'num-grn'}">${N(c.net)}</td>
       <td>${rawBadge(c.status)}</td>
     </tr>`).join('');
