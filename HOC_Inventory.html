@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34an">
+<meta name="hoc-build" content="v6.34ao">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -28,6 +28,10 @@ nav.nav{display:flex;gap:0;border-bottom:1px solid var(--border);background:var(
 .nb{font:inherit;font-size:11px;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--text2);padding:9px 14px;cursor:pointer;letter-spacing:.04em;font-weight:600}
 .nb:hover{color:var(--text)}
 .nb.active{color:var(--blue);border-bottom-color:var(--blue)}
+/* v6.34ao: .fb = filter-button, smaller pill-style for in-tab filters */
+.fb{font:inherit;font-size:10px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;color:var(--text2);padding:4px 10px;cursor:pointer;font-weight:600}
+.fb:hover{color:var(--text);background:rgba(59,130,246,.1)}
+.fb.active{color:var(--blue);border-color:var(--blue);background:rgba(59,130,246,.15)}
 .content{padding:14px 16px;max-width:1800px;margin:0 auto}
 .page{display:none}
 .page.active{display:block}
@@ -82,6 +86,7 @@ button.btn{font:inherit;font-size:11px;font-weight:700;padding:6px 12px;border-r
 .pin-input{font-size:18px !important;letter-spacing:8px;text-align:center;padding:8px !important;width:100%}
 </style>
 <script src="hoc_theme.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -97,47 +102,13 @@ button.btn{font:inherit;font-size:11px;font-weight:700;padding:6px 12px;border-r
 </div>
 
 <nav class="nav">
-  <button class="nb active" onclick="P('overview')">Overview</button>
-  <button class="nb"        onclick="P('tankfarm')">Tank Farm</button>
-  <button class="nb"        onclick="P('mus')">MU Browser</button>
-  <button class="nb"        onclick="P('receive')">Receive PO</button>
-  <button class="nb"        onclick="P('fifo')">FIFO Picker</button>
-  <button class="nb"        onclick="P('trace')">PO ↔ MU Trace</button>
+  <button class="nb active" onclick="P('tankfarm')">Tank Farm</button>
+  <button class="nb"        onclick="P('trends')">Trend Analysis</button>
+  <button class="nb"        onclick="P('demand')">Weekly Material Demand</button>
 </nav>
 
-<!-- ───────── OVERVIEW ───────── -->
-<div class="page active" id="page-overview"><div class="content">
-  <div class="kpi-grid">
-    <div class="kpi"><div class="kl">Tank Readings</div><div class="kv" id="kpi-tanks">—</div><div class="ks" id="kpi-tanks-sub">last 24h</div></div>
-    <div class="kpi"><div class="kl">Stale Tanks</div><div class="kv" id="kpi-stale" style="color:var(--amber)">—</div><div class="ks">no reading &gt;48h</div></div>
-    <div class="kpi"><div class="kl">Active MUs</div><div class="kv" id="kpi-mus">—</div><div class="ks" id="kpi-mus-sub">in inventory</div></div>
-    <div class="kpi"><div class="kl">Expiring Soon</div><div class="kv" id="kpi-expiring" style="color:var(--amber)">—</div><div class="ks">within 30 days</div></div>
-    <div class="kpi"><div class="kl">Expired</div><div class="kv" id="kpi-expired" style="color:var(--red)">—</div><div class="ks">past expiry</div></div>
-    <div class="kpi"><div class="kl">FIFO Overrides</div><div class="kv" id="kpi-overrides" style="color:var(--purple)">—</div><div class="ks">last 30 days</div></div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">Latest activity</div>
-    <div class="tbl-wrap"><table>
-      <thead><tr><th>When</th><th>Type</th><th>Detail</th><th>User</th></tr></thead>
-      <tbody id="activity-tbody"></tbody>
-    </table></div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">Quick actions</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-pri" onclick="P('tankfarm')">📊 Update tank reading</button>
-      <button class="btn btn-ok"  onclick="P('receive')">📦 Receive PO</button>
-      <button class="btn btn-warn" onclick="P('fifo')">🔍 Find oldest MU (FIFO)</button>
-      <button class="btn btn-ghost" onclick="P('mus')">📋 Browse MUs</button>
-      <button class="btn btn-ghost" onclick="P('trace')">🔗 Trace PO ↔ MU</button>
-    </div>
-  </div>
-</div></div>
-
 <!-- ───────── TANK FARM ───────── -->
-<div class="page" id="page-tankfarm"><div class="content">
+<div class="page active" id="page-tankfarm"><div class="content">
   <div class="card">
     <div class="card-title">
       <span>Tank Farm — bulk raw material levels</span>
@@ -168,161 +139,74 @@ button.btn{font:inherit;font-size:11px;font-weight:700;padding:6px 12px;border-r
   </div>
 </div></div>
 
-<!-- ───────── MU BROWSER ───────── -->
-<div class="page" id="page-mus"><div class="content">
-  <div class="card">
-    <div class="card-title">MU Browser — search & filter inventory</div>
-    <div class="row row-4">
-      <div>
-        <div class="field-label">Search (MU#, SKU, PO)</div>
-        <input type="text" id="mu-search" placeholder="e.g. MU-1234 or 7-1056" oninput="renderMUs()">
-      </div>
-      <div>
-        <div class="field-label">Location</div>
-        <select id="mu-loc-filter" onchange="renderMUs()"><option value="">All</option></select>
-      </div>
-      <div>
-        <div class="field-label">Age</div>
-        <select id="mu-age-filter" onchange="renderMUs()">
-          <option value="">All</option>
-          <option value="new">&lt; 30 days</option>
-          <option value="mid">30-90 days</option>
-          <option value="old">&gt; 90 days</option>
-          <option value="expired">Expired</option>
-          <option value="expiring">Expiring &lt; 30 days</option>
-        </select>
-      </div>
-      <div>
-        <div class="field-label">Status</div>
-        <select id="mu-status-filter" onchange="renderMUs()">
-          <option value="">All</option>
-          <option value="available">Available</option>
-          <option value="staged">Staged</option>
-          <option value="consumed">Consumed</option>
-          <option value="quarantined">Quarantined</option>
-        </select>
-      </div>
-    </div>
-  </div>
 
+<!-- ───────── TREND ANALYSIS (v6.34ao) ───────── -->
+<div class="page" id="page-trends"><div class="content">
   <div class="card">
     <div class="card-title">
-      <span>Inventory MUs — <span id="mu-count">0</span> shown</span>
-      <span style="font-size:9px;color:var(--text3)">Click row for details · oldest sorted first (FIFO)</span>
+      <span>Trend Analysis — tank readings over time</span>
+      <span style="margin-left:auto;font-size:10px;color:var(--text3);font-weight:400">
+        Past 30 days · derived from manual readings + Planning_Data uploads
+      </span>
     </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+      <label style="font-size:10px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.06em">Tank:</label>
+      <select id="trend-tank-filter" style="background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:5px;padding:4px 8px;font-size:11px">
+        <option value="">— select a tank to view trend —</option>
+      </select>
+      <span id="trend-summary" style="font-size:10px;color:var(--text3);margin-left:auto"></span>
+    </div>
+    <div style="position:relative;height:340px;background:var(--bg2);border-radius:6px;padding:10px">
+      <canvas id="trend-chart"></canvas>
+    </div>
+    <div id="trend-empty" style="display:none;text-align:center;padding:40px;color:var(--text3);font-size:11px">
+      No reading history yet. Log readings on the Tank Farm tab or upload Planning_Data with the Tank Farm Counts sheet.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">All tanks — most recent readings vs 7-day average</div>
     <div class="tbl-wrap"><table>
       <thead><tr>
-        <th>MU #</th><th>SKU</th><th>Description</th>
-        <th style="text-align:right">Qty</th><th>Location</th>
-        <th>PO #</th><th>Received</th>
-        <th style="text-align:right">Age</th><th>Expires</th>
-        <th>Status</th><th>FIFO</th>
+        <th>Tank</th><th>Material</th>
+        <th style="text-align:right">Latest</th>
+        <th>Unit</th>
+        <th style="text-align:right">7-day avg</th>
+        <th style="text-align:right">vs avg</th>
+        <th>Days since</th>
       </tr></thead>
-      <tbody id="mu-tbody"></tbody>
+      <tbody id="trend-summary-tbody"></tbody>
     </table></div>
   </div>
 </div></div>
 
-<!-- ───────── RECEIVE PO ───────── -->
-<div class="page" id="page-receive"><div class="content">
+<!-- ───────── WEEKLY MATERIAL DEMAND (v6.34ao) ───────── -->
+<div class="page" id="page-demand"><div class="content">
   <div class="card">
-    <div class="card-title">Receive Purchase Order — log incoming materials</div>
-    <p style="font-size:10px;color:var(--text2);margin-bottom:10px;line-height:1.6">
-      Use this when raw materials arrive at the dock. Enter PO# + supplier, then add each line item (SKU, qty, expiry, MU# from supplier label). On save: MUs are created in inventory tagged to this PO for traceability. Print MU labels at the end.
-    </p>
-
-    <div class="row row-3">
-      <div>
-        <div class="field-label">PO Number</div>
-        <input type="text" id="rcv-po" placeholder="e.g. PO-12345" oninput="onReceivePoChange()">
-      </div>
-      <div>
-        <div class="field-label">Supplier</div>
-        <input type="text" id="rcv-supplier" placeholder="Auto-fills from PO if known">
-      </div>
-      <div>
-        <div class="field-label">Receive Date</div>
-        <input type="date" id="rcv-date">
-      </div>
+    <div class="card-title">
+      <span>Weekly Material Demand</span>
+      <span style="margin-left:auto;font-size:10px;color:var(--text3);font-weight:400" id="demand-week-label">— upload Planning_Data —</span>
     </div>
-
-    <div style="margin:10px 0 6px 0;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">Line Items</div>
-    <div id="rcv-lines"></div>
-    <button class="btn btn-ghost" onclick="addReceiveLine()" style="margin-top:6px">+ Add Line</button>
-
-    <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--border);padding-top:10px">
-      <button class="btn btn-ghost" onclick="clearReceiveForm()">Clear</button>
-      <button class="btn btn-ok" onclick="saveReceive()">💾 Save Receipt</button>
-      <button class="btn btn-pri" onclick="saveReceiveAndPrint()">💾 Save & 🖨 Print Labels</button>
+    <div style="font-size:10px;color:var(--text3);margin-bottom:10px">
+      Sourced from <b>Chemical Pulls Req</b> sheet in Planning_Data. Each chemical with its daily requirement for the upcoming 7 days.
+      Rows flagged red when weekly demand exceeds current tank QOH (potential short).
     </div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">Recent receipts</div>
-    <div class="tbl-wrap"><table>
-      <thead><tr><th>Date</th><th>PO#</th><th>Supplier</th><th>Lines</th><th>Total Qty</th><th>Received By</th></tr></thead>
-      <tbody id="recent-recv-tbody"></tbody>
+    <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+      <input type="text" id="demand-search" placeholder="Search SKU or description…" style="flex:1;min-width:160px;background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:5px;padding:5px 9px;font-size:11px" oninput="renderDemand()">
+      <button class="fb" id="demand-filter-all" onclick="setDemandFilter('all')">All</button>
+      <button class="fb active" id="demand-filter-active" onclick="setDemandFilter('active')">With demand only</button>
+      <button class="fb" id="demand-filter-short" onclick="setDemandFilter('short')">Short risk</button>
+    </div>
+    <div class="tbl-wrap"><table id="demand-table">
+      <thead><tr id="demand-header"></tr></thead>
+      <tbody id="demand-tbody"></tbody>
     </table></div>
-  </div>
-</div></div>
-
-<!-- ───────── FIFO PICKER ───────── -->
-<div class="page" id="page-fifo"><div class="content">
-  <div class="card">
-    <div class="card-title">FIFO Picker — find the right MU to pick</div>
-    <p style="font-size:10px;color:var(--text2);margin-bottom:10px;line-height:1.6">
-      Enter SKU + quantity needed. System returns the <strong>oldest available MUs</strong> (FIFO order) totaling the qty. Pick newer stock = supervisor PIN required (override logged for audit). Status: combo of <strong>visual flag + hard-block + supervisor override</strong>.
-    </p>
-
-    <div class="row row-3">
-      <div>
-        <div class="field-label">SKU needed</div>
-        <input type="text" id="fifo-sku" placeholder="e.g. 7-1056" oninput="onFifoSearch()">
-      </div>
-      <div>
-        <div class="field-label">Qty needed</div>
-        <input type="number" id="fifo-qty" placeholder="0" oninput="onFifoSearch()">
-      </div>
-      <div>
-        <div class="field-label">For batch (optional)</div>
-        <input type="text" id="fifo-batch" placeholder="e.g. MAIN063515">
-      </div>
+    <div id="demand-empty" style="display:none;text-align:center;padding:40px;color:var(--text3);font-size:11px">
+      No chemical demand data yet. Upload Planning_Data.xlsx (must include the "Chemical Pulls Req" sheet).
     </div>
-
-    <div id="fifo-result" style="margin-top:10px"></div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">Recent FIFO overrides — audit log</div>
-    <div class="tbl-wrap"><table>
-      <thead><tr><th>When</th><th>Picker</th><th>Supervisor</th><th>SKU</th><th>Should pick</th><th>Picked instead</th><th>Reason</th></tr></thead>
-      <tbody id="override-tbody"></tbody>
-    </table></div>
   </div>
 </div></div>
 
-<!-- ───────── PO ↔ MU TRACE ───────── -->
-<div class="page" id="page-trace"><div class="content">
-  <div class="card">
-    <div class="card-title">PO ↔ MU Trace — full traceability</div>
-    <p style="font-size:10px;color:var(--text2);margin-bottom:10px;line-height:1.6">
-      Recall scenarios: search by PO# to see all MUs from that purchase order, or search by MU# to trace back to the PO + supplier + receive date. Critical for regulatory traceability.
-    </p>
-
-    <div class="row row-2">
-      <div>
-        <div class="field-label">Search by PO #</div>
-        <input type="text" id="trace-po" placeholder="PO-12345" oninput="onTraceSearch('po')">
-      </div>
-      <div>
-        <div class="field-label">Search by MU #</div>
-        <input type="text" id="trace-mu" placeholder="MU-1234" oninput="onTraceSearch('mu')">
-      </div>
-    </div>
-
-    <div id="trace-result" style="margin-top:10px"></div>
-  </div>
-</div></div>
 
 <!-- ───────── FIFO Override Modal ───────── -->
 <div class="modal-bg" id="fifo-modal">
@@ -372,23 +256,10 @@ const HJ = function(){ return {apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,
 // Mixing tanks live in Tank Board. THIS is the upstream raw-material tank farm —
 // bulk chemicals/oils/water tanks that feed pre-batch operations.
 //
-// v6.34j: Tank list is now driven by the Data Upload Hub's parse of the
-// "Tank Farm Counts" tab in the planner's spreadsheet. Calling getRawTanks()
-// returns either the parsed tanks (preferred) or this fallback list.
-const RAW_TANKS_FALLBACK = [
-  {id:'RM-T01', material:'Deionized Water',         capacity_gal:8000, unit_pref:'gal'},
-  {id:'RM-T02', material:'Deionized Water',         capacity_gal:8000, unit_pref:'gal'},
-  {id:'RM-T03', material:'Mineral Oil USP',         capacity_gal:5000, unit_pref:'lbs'},
-  {id:'RM-T04', material:'Coconut Oil',             capacity_gal:3000, unit_pref:'lbs'},
-  {id:'RM-T05', material:'Castor Oil',              capacity_gal:3000, unit_pref:'lbs'},
-  {id:'RM-T06', material:'Olive Oil',               capacity_gal:3000, unit_pref:'lbs'},
-  {id:'RM-T07', material:'Glycerin',                capacity_gal:2500, unit_pref:'lbs'},
-  {id:'RM-T08', material:'Propylene Glycol',        capacity_gal:2500, unit_pref:'lbs'},
-  {id:'RM-T09', material:'Caprylic/Capric Triglyc', capacity_gal:2000, unit_pref:'lbs'},
-];
-
-// v6.34j: Use a getter so the dashboard always picks up the latest parsed tanks
-// from the planner's spreadsheet. Falls back if the planner hasn't uploaded yet.
+// v6.34ao: Hardcoded RAW_TANKS_FALLBACK removed per "no hardcoded data"
+// standing rule. If no upload has happened yet, getRawTanks() returns [].
+// The Tank Farm tab will show an empty-state message until Planning_Data
+// (with the "Tank Farm Counts" sheet) is uploaded.
 function getRawTanks(){
   try {
     var parsed = JSON.parse(localStorage.getItem('hoc_inventory_raw_tanks_v1') || 'null');
@@ -396,10 +267,9 @@ function getRawTanks(){
       return parsed;
     }
   } catch(e){}
-  return RAW_TANKS_FALLBACK;
+  return [];  // empty — no fallback data
 }
 // Backwards-compat: RAW_TANKS as a live property that reads through getRawTanks()
-// (preserves existing code that uses `RAW_TANKS.forEach`, `RAW_TANKS.map`, etc.)
 Object.defineProperty(window, 'RAW_TANKS', {
   get: function(){ return getRawTanks(); }
 });
@@ -471,14 +341,12 @@ function P(id){
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
   const el = document.getElementById('page-'+id);
   if(el) el.classList.add('active');
-  const map={overview:0,tankfarm:1,mus:2,receive:3,fifo:4,trace:5};
+  const map = {tankfarm:0, trends:1, demand:2};  // v6.34ao: new 3-tab layout
   const idx = map[id]; if(idx != null) document.querySelectorAll('.nb')[idx].classList.add('active');
   // page-specific renders
   if(id==='tankfarm'){ renderTanks(); renderTankHistory(); }
-  if(id==='mus'){ renderMUs(); }
-  if(id==='receive'){ if(document.querySelectorAll('#rcv-lines .rcv-line').length===0) addReceiveLine(); renderRecentReceipts(); }
-  if(id==='fifo'){ onFifoSearch(); renderOverrides(); }
-  if(id==='trace'){ document.getElementById('trace-result').innerHTML = ''; }
+  if(id==='trends'){ renderTrends(); }
+  if(id==='demand'){ renderDemand(); }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -664,7 +532,297 @@ function openTankReading(tankId){
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// MU BROWSER
+// TREND ANALYSIS (v6.34ao)
+// ═══════════════════════════════════════════════════════════════════
+// Reads reading history from hoc_inventory_tanks_v1 (last 30 days),
+// groups by tank, renders a Chart.js line chart of readings over time.
+// Also renders a summary table comparing latest reading to 7-day avg.
+
+let _trendChart = null;
+
+function renderTrends(){
+  const tanks = getRawTanks();
+  const readings = load(LS_TANKS, []);
+  const tankFilter = (document.getElementById('trend-tank-filter')||{}).value || '';
+  const emptyEl = document.getElementById('trend-empty');
+  const summaryEl = document.getElementById('trend-summary');
+  if(!tanks.length || !readings.length){
+    if(emptyEl) emptyEl.style.display = 'block';
+    if(summaryEl) summaryEl.textContent = '';
+    // Also clear the summary table
+    const tbody = document.getElementById('trend-summary-tbody');
+    if(tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;font-size:11px">No tank data yet. Upload Planning_Data or log readings on the Tank Farm tab.</td></tr>';
+    return;
+  }
+  if(emptyEl) emptyEl.style.display = 'none';
+
+  // Populate filter dropdown with tank options
+  const sel = document.getElementById('trend-tank-filter');
+  if(sel && sel.options.length <= 1){
+    tanks.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id || t.sku || t.material;
+      opt.textContent = (t.id || '') + ' · ' + (t.material || t.descr || t.sku || '');
+      sel.appendChild(opt);
+    });
+  }
+
+  // Filter readings: last 30 days
+  const now = Date.now();
+  const cutoff = now - 30 * 86400 * 1000;
+  const recent = readings.filter(r => {
+    const ts = new Date(r.ts || r.date || 0).getTime();
+    return ts >= cutoff;
+  });
+
+  // Group by tank
+  const byTank = {};
+  recent.forEach(r => {
+    const k = r.tank_id || r.tank || r.id || 'unknown';
+    if(!byTank[k]) byTank[k] = [];
+    byTank[k].push({ts: new Date(r.ts || r.date), val: parseFloat(r.reading || r.value || r.qty) || 0});
+  });
+  Object.keys(byTank).forEach(k => byTank[k].sort((a,b) => a.ts - b.ts));
+
+  // ── Render chart ──
+  const chartEl = document.getElementById('trend-chart');
+  if(chartEl && typeof Chart !== 'undefined'){
+    if(_trendChart){ try { _trendChart.destroy(); } catch(e){} _trendChart = null; }
+    // Datasets: either one tank if filter is set, or all overlaid
+    let datasets;
+    const palette = ['#3b82f6','#22c55e','#f59e0b','#a855f7','#ef4444','#06b6d4','#ec4899','#84cc16','#f97316','#14b8a6'];
+    if(tankFilter && byTank[tankFilter]){
+      datasets = [{
+        label: tankFilter,
+        data: byTank[tankFilter].map(p => ({x: p.ts, y: p.val})),
+        borderColor: palette[0],
+        backgroundColor: palette[0]+'33',
+        tension: 0.2,
+        pointRadius: 3
+      }];
+    } else {
+      datasets = Object.keys(byTank).slice(0, 10).map((k, i) => ({
+        label: k,
+        data: byTank[k].map(p => ({x: p.ts, y: p.val})),
+        borderColor: palette[i % palette.length],
+        backgroundColor: palette[i % palette.length]+'22',
+        tension: 0.2,
+        pointRadius: 2
+      }));
+    }
+    _trendChart = new Chart(chartEl, {
+      type: 'line',
+      data: { datasets: datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color: '#94a3b8', font: { size: 10 } } },
+          tooltip: { mode: 'index', intersect: false }
+        },
+        scales: {
+          x: {
+            type: 'time',
+            time: { unit: 'day' },
+            ticks: { color: '#64748b', font: { size: 9 } },
+            grid: { color: 'rgba(255,255,255,0.05)' }
+          },
+          y: {
+            ticks: { color: '#64748b', font: { size: 9 } },
+            grid: { color: 'rgba(255,255,255,0.05)' }
+          }
+        }
+      }
+    });
+  }
+  if(summaryEl){
+    summaryEl.textContent = recent.length + ' readings across ' + Object.keys(byTank).length + ' tanks (last 30 days)';
+  }
+
+  // ── Render summary table: latest vs 7-day average per tank ──
+  const tbody = document.getElementById('trend-summary-tbody');
+  if(tbody){
+    const cutoff7 = now - 7 * 86400 * 1000;
+    const rows = tanks.map(t => {
+      const k = t.id || t.sku || t.material;
+      const all = byTank[k] || [];
+      if(!all.length) return { tank: t, latest: null, avg7: null, daysSince: null };
+      const latest = all[all.length - 1];
+      const last7 = all.filter(p => p.ts.getTime() >= cutoff7);
+      const avg7 = last7.length ? (last7.reduce((s,p) => s + p.val, 0) / last7.length) : null;
+      const daysSince = Math.floor((now - latest.ts.getTime()) / 86400000);
+      return { tank: t, latest: latest, avg7: avg7, daysSince: daysSince };
+    });
+    tbody.innerHTML = rows.map(r => {
+      if(!r.latest){
+        return '<tr style="opacity:.5"><td>'+(r.tank.id||'—')+'</td><td>'+(r.tank.material||r.tank.descr||'—')+'</td><td colspan="5" style="text-align:center;color:var(--text3);font-size:10px">no readings</td></tr>';
+      }
+      const diff = (r.avg7 !== null) ? (r.latest.val - r.avg7) : null;
+      const diffStr = diff === null ? '—' :
+        (diff >= 0 ? '+' : '') + diff.toFixed(1);
+      const diffColor = diff === null ? 'var(--text3)' :
+        Math.abs(diff) < 0.01 ? 'var(--text2)' :
+        diff < 0 ? 'var(--amber)' : 'var(--green)';
+      const staleColor = r.daysSince > 2 ? 'var(--amber)' : r.daysSince > 7 ? 'var(--red)' : 'var(--text2)';
+      return '<tr>'
+        + '<td style="font-weight:700">'+(r.tank.id||'—')+'</td>'
+        + '<td style="font-size:10px">'+(r.tank.material||r.tank.descr||'—')+'</td>'
+        + '<td style="text-align:right">'+r.latest.val.toFixed(2)+'</td>'
+        + '<td>'+(r.tank.unit_pref || 'lbs')+'</td>'
+        + '<td style="text-align:right">'+(r.avg7 !== null ? r.avg7.toFixed(2) : '—')+'</td>'
+        + '<td style="text-align:right;color:'+diffColor+';font-weight:600">'+diffStr+'</td>'
+        + '<td style="color:'+staleColor+'">'+r.daysSince+'d ago</td>'
+        + '</tr>';
+    }).join('');
+  }
+}
+
+// Filter change triggers re-render
+document.addEventListener('DOMContentLoaded', function(){
+  var f = document.getElementById('trend-tank-filter');
+  if(f) f.addEventListener('change', renderTrends);
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// WEEKLY MATERIAL DEMAND (v6.34ao)
+// ═══════════════════════════════════════════════════════════════════
+// Reads hoc_chem_pulls_req_v1 (parsed from Planning_Data "Chemical Pulls Req"
+// sheet). Renders a per-chemical table with this week's daily demand,
+// cross-referenced with tank QOH where possible (description match).
+
+let _demandFilter = 'active';  // 'all' | 'active' | 'short'
+
+function setDemandFilter(f){
+  _demandFilter = f;
+  ['all','active','short'].forEach(k => {
+    const b = document.getElementById('demand-filter-'+k);
+    if(b) b.classList.toggle('active', k === f);
+  });
+  renderDemand();
+}
+
+function renderDemand(){
+  const tbody = document.getElementById('demand-tbody');
+  const headerEl = document.getElementById('demand-header');
+  const emptyEl = document.getElementById('demand-empty');
+  const weekLabel = document.getElementById('demand-week-label');
+  if(!tbody || !headerEl) return;
+
+  let data = null;
+  try {
+    data = JSON.parse(localStorage.getItem('hoc_chem_pulls_req_v1') || 'null');
+  } catch(e){}
+  if(!data || !data.chemicals || !data.chemicals.length){
+    if(emptyEl) emptyEl.style.display = 'block';
+    tbody.innerHTML = '';
+    headerEl.innerHTML = '';
+    if(weekLabel) weekLabel.textContent = '— upload Planning_Data —';
+    return;
+  }
+  if(emptyEl) emptyEl.style.display = 'none';
+  if(weekLabel) weekLabel.textContent = data.week_start + ' to ' + data.week_end + ' · ' + data.chemicals.length + ' chemicals';
+
+  // Build header dynamically from day_count
+  const firstChem = data.chemicals.find(c => c.daily && c.daily.length) || data.chemicals[0];
+  const dayHeaders = (firstChem.daily || []).map(d => {
+    const dt = new Date(d.date + 'T12:00:00');
+    const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dt.getDay()];
+    const mmdd = (dt.getMonth()+1) + '/' + dt.getDate();
+    return '<th style="text-align:right;font-size:9px">'+dayName+'<br>'+mmdd+'</th>';
+  }).join('');
+  headerEl.innerHTML =
+    '<th>SKU</th><th>Description</th>'
+    + dayHeaders
+    + '<th style="text-align:right">Total</th>'
+    + '<th style="text-align:right">QOH</th>'
+    + '<th>Risk</th>';
+
+  // Build description → tank QOH map (best-effort)
+  const tanks = getRawTanks();
+  const readings = load(LS_TANKS, []);
+  // Per-tank latest reading
+  const latestByTank = {};
+  readings.forEach(r => {
+    const k = r.tank_id || r.tank || r.id;
+    if(!k) return;
+    const ts = new Date(r.ts || r.date || 0).getTime();
+    if(!latestByTank[k] || latestByTank[k].ts < ts){
+      latestByTank[k] = {ts: ts, val: parseFloat(r.reading || r.value || r.qty) || 0};
+    }
+  });
+  // Description → total QOH across matching tanks
+  function qohForDesc(desc){
+    if(!desc) return null;
+    const needle = String(desc).toLowerCase().trim();
+    if(!needle) return null;
+    let total = 0;
+    let matched = false;
+    tanks.forEach(t => {
+      const tMat = String(t.material || t.descr || '').toLowerCase().trim();
+      if(!tMat) return;
+      // Match if tank material contains the chem desc OR vice versa
+      if(tMat.indexOf(needle) >= 0 || needle.indexOf(tMat) >= 0){
+        matched = true;
+        const reading = latestByTank[t.id || t.sku || t.material];
+        if(reading) total += reading.val;
+      }
+    });
+    return matched ? total : null;
+  }
+
+  // Filter chemicals
+  const search = ((document.getElementById('demand-search')||{}).value || '').toLowerCase().trim();
+  let rows = data.chemicals.filter(c => {
+    if(search && (c.sku + ' ' + (c.desc||'')).toLowerCase().indexOf(search) < 0) return false;
+    return true;
+  });
+  // Enrich with QOH + short flag
+  rows = rows.map(c => {
+    const qoh = qohForDesc(c.desc);
+    const short = qoh !== null && c.total > qoh;
+    return Object.assign({}, c, { qoh: qoh, short: short });
+  });
+  if(_demandFilter === 'active') rows = rows.filter(c => c.total > 0);
+  if(_demandFilter === 'short')  rows = rows.filter(c => c.short);
+  // Sort: short first (red), then by total desc
+  rows.sort((a, b) => {
+    if(a.short !== b.short) return a.short ? -1 : 1;
+    return b.total - a.total;
+  });
+
+  if(!rows.length){
+    tbody.innerHTML = '<tr><td colspan="' + (4 + (firstChem.daily||[]).length) + '" style="text-align:center;padding:20px;color:var(--text3)">No matches.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rows.map(c => {
+    const rowBg = c.short ? 'background:rgba(239,68,68,0.06)' : '';
+    const dayCells = (c.daily || []).map(d => {
+      const v = d.qty || 0;
+      const color = v > 0 ? 'var(--text)' : 'var(--text3)';
+      return '<td style="text-align:right;color:'+color+';font-size:10px">'+(v > 0 ? v.toFixed(1) : '—')+'</td>';
+    }).join('');
+    const qohCell = c.qoh === null
+      ? '<td style="text-align:right;color:var(--text3);font-size:9px">no tank</td>'
+      : '<td style="text-align:right;color:'+(c.short?'var(--red)':'var(--text2)')+'">'+c.qoh.toFixed(1)+'</td>';
+    const riskCell = c.qoh === null
+      ? '<td style="font-size:9px;color:var(--text3)">—</td>'
+      : c.short
+        ? '<td><span style="background:rgba(239,68,68,.15);color:var(--red);font-weight:700;font-size:9px;padding:2px 6px;border-radius:8px">SHORT</span></td>'
+        : '<td><span style="color:var(--green);font-size:10px">✓ OK</span></td>';
+    return '<tr style="'+rowBg+'">'
+      + '<td style="font-size:10px;color:var(--text2);font-weight:600">'+c.sku+'</td>'
+      + '<td style="font-size:10px">'+(c.desc||'—')+'</td>'
+      + dayCells
+      + '<td style="text-align:right;font-weight:700">'+c.total.toFixed(1)+'</td>'
+      + qohCell
+      + riskCell
+      + '</tr>';
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MU BROWSER (legacy — unused in v6.34ao, kept for safety)
 // ═══════════════════════════════════════════════════════════════════
 function renderMUs(){
   let mus = load(LS_MUS, []).slice();
@@ -1145,17 +1303,16 @@ function rebuildFifoModalDom(){
 }
 
 function renderAll(){
-  try { renderOverview(); } catch(e){ console.warn(e); }
-  try { renderTanks(); renderTankHistory(); } catch(e){}
-  try { renderMUs(); } catch(e){}
-  try { renderRecentReceipts(); } catch(e){}
-  try { renderOverrides(); } catch(e){}
+  // v6.34ao: Only call render functions for tabs that exist in the new layout.
+  // Tabs removed: Overview, MU Browser, Receive PO, FIFO Picker, PO↔MU Trace.
+  try { renderTanks(); renderTankHistory(); } catch(e){ console.warn(e); }
+  try { renderTrends(); } catch(e){ console.warn(e); }
+  try { renderDemand(); } catch(e){ console.warn(e); }
 }
 
 // ═══════════════════════════════════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════════════════════════════════
-document.getElementById('rcv-date').value = new Date().toISOString().slice(0,10);
 renderAll();
 pullFromBus();
 setInterval(pullFromBus, 20000);

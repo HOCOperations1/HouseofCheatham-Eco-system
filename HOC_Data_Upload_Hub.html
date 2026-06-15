@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34an">
+<meta name="hoc-build" content="v6.34ao">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -2105,6 +2105,102 @@ function updateAllDashboards() {
           result.tank_farm_ts = ts;
         } else {
           progress('⚠ Tank Farm Counts tab found in ' + tankSheetSource + ' but no tank rows parsed', 'warn');
+        }
+      }
+
+      // ─────────────────────────────────────────────────────────────
+      // v6.34ao: Chemical Pulls Req parser
+      //
+      // The "Chemical Pulls Req" tab in Planning_Data is a pre-computed
+      // weekly forecast of chemical requirements: each row a SKU, each
+      // column a date. Cell value = qty needed that day. This replaces
+      // the impossible "compute BOM × upcoming batches" path since the
+      // planner's workbook has already done that math.
+      //
+      // Data layout (verified from actual file):
+      //   Row 3: headers — col 1=SKU, col 2=Desc, col 3=Total Require,
+      //          col 5..11 = 7 daily date columns, col 13=Total
+      //   Rows 4+: data
+      //
+      // Output: hoc_chem_pulls_req_v1 = {
+      //   chemicals: [{sku, desc, total, daily:[{date, qty}, ...]}, ...],
+      //   week_start: ISO date,
+      //   week_end:   ISO date,
+      //   _updated:   ISO timestamp
+      // }
+      // ─────────────────────────────────────────────────────────────
+      var chemPullsSource = null;
+      var chemPullsSheet = null;
+      if(loaded.pd && loaded.pd.wb.SheetNames.indexOf('Chemical Pulls Req') >= 0){
+        chemPullsSheet = loaded.pd.wb.Sheets['Chemical Pulls Req'];
+        chemPullsSource = 'Planning Data';
+      } else if(loaded.pt && loaded.pt.wb.SheetNames.indexOf('Chemical Pulls Req') >= 0){
+        chemPullsSheet = loaded.pt.wb.Sheets['Chemical Pulls Req'];
+        chemPullsSource = 'Production Tracker';
+      }
+      if(chemPullsSheet){
+        try {
+          // Use sheet_to_json with header:1 to get raw 2D array
+          var cpr = XLSX.utils.sheet_to_json(chemPullsSheet, {header:1, defval:null, raw:true});
+          // Headers at row 3 (index 2). Bail if structure isn't as expected.
+          if(cpr.length < 4){
+            progress('⚠ Chemical Pulls Req: too few rows (' + cpr.length + '), skipping', 'warn');
+          } else {
+            var headerRow = cpr[2] || [];
+            // Find date columns (positions 4-10, 0-indexed)
+            var dateCols = [];
+            for(var ci = 0; ci < headerRow.length; ci++){
+              var hv = headerRow[ci];
+              if(hv instanceof Date){
+                dateCols.push({col: ci, date: hv.toISOString().slice(0,10)});
+              } else if(typeof hv === 'number' && hv > 40000){
+                // Excel serial date
+                var d = new Date((hv - 25569) * 86400 * 1000);
+                if(!isNaN(d.getTime())){
+                  dateCols.push({col: ci, date: d.toISOString().slice(0,10)});
+                }
+              }
+            }
+            if(dateCols.length === 0){
+              progress('⚠ Chemical Pulls Req: no date columns detected, skipping', 'warn');
+            } else {
+              var chemicals = [];
+              for(var ri = 3; ri < cpr.length; ri++){
+                var row = cpr[ri] || [];
+                var sku = String(row[0] || '').trim();
+                if(!sku) continue;
+                var desc = String(row[1] || '').trim();
+                var total = parseFloat(row[2]) || 0;
+                if(total === 0){
+                  // Sometimes total is in last column (col 12, "Total")
+                  var lastTotal = parseFloat(row[12]) || 0;
+                  if(lastTotal > 0) total = lastTotal;
+                }
+                var daily = dateCols.map(function(dc){
+                  return { date: dc.date, qty: parseFloat(row[dc.col]) || 0 };
+                });
+                chemicals.push({ sku: sku, desc: desc, total: total, daily: daily });
+              }
+              var chemPullsData = {
+                chemicals: chemicals,
+                week_start: dateCols[0].date,
+                week_end:   dateCols[dateCols.length - 1].date,
+                day_count:  dateCols.length,
+                _updated:   ts
+              };
+              try {
+                localStorage.setItem('hoc_chem_pulls_req_v1', JSON.stringify(chemPullsData));
+                var shortCount = chemicals.filter(function(c){ return c.total > 0; }).length;
+                progress('✓ Chemical Pulls Req: ' + chemicals.length + ' chemicals · ' + shortCount + ' with demand · ' + dateCols.length + ' days (' + chemPullsData.week_start + ' to ' + chemPullsData.week_end + ')', 'ok');
+              } catch(e){
+                progress('⚠ Chemical Pulls Req: could not save: ' + e.message, 'warn');
+              }
+              result.chem_pulls_req = chemPullsData;
+              result.chem_pulls_req_ts = ts;
+            }
+          }
+        } catch(e){
+          progress('⚠ Chemical Pulls Req: parse failed — ' + e.message, 'warn');
         }
       }
 
