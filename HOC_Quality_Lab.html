@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34ae">
+<meta name="hoc-build" content="v6.34ag">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -97,6 +97,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
 }
 </style>
 <script src="hoc_theme.js"></script>
+<script src="hoc_events.js"></script>
+<script src="hoc_floor.js"></script>
 </head>
 <body>
 
@@ -665,12 +667,24 @@ function getEffectiveBatches(){
 function getQueueBatches(){
   // Batches that are compound-complete and either never tested or last test was HOLD/REJECT and they're back
   var all = getEffectiveBatches();
+  // v6.34ag: Also include batches where floor state says mix_complete = true.
+  // This catches operator clicks in Compound Coordinator that haven't yet
+  // round-tripped through an upload refresh.
+  var floorMixComplete = {};
+  if(typeof HOC_Floor !== 'undefined'){
+    var map = HOC_Floor.getAll();
+    Object.keys(map).forEach(function(k){
+      if(map[k] && map[k].mix_complete) floorMixComplete[k] = true;
+    });
+  }
   return all.filter(function(b){
-    var cmpd = String(b.compound_status||'').toUpperCase();
-    if(cmpd.indexOf('COMPLETE') < 0 && cmpd.indexOf('FILLING') < 0) return false;
     // Skip if currently released
     if(b.qc_disposition === 'RELEASED') return false;
-    return true;
+    // Already known mix-complete via upload OR floor click → queue it
+    var cmpd = String(b.compound_status||'').toUpperCase();
+    if(cmpd.indexOf('COMPLETE') >= 0 || cmpd.indexOf('FILLING') >= 0) return true;
+    if(floorMixComplete[b.batch]) return true;
+    return false;
   }).sort(function(a,b){
     return new Date(a.date||0) - new Date(b.date||0);
   });
@@ -1449,8 +1463,14 @@ window.addEventListener('load', function(){
 window.addEventListener('storage', function(e){
   if(e.key === UPLOAD_KEY){ loadLocal(); renderAll(); }
   if(e.key === FLOOR_KEY ){ loadLocal(); renderAll(); }
+  // v6.34ag: floor-state changes from hoc_floor.js trigger same key
+  if(e.key === 'hoc_floor_v1'){ renderAll(); }
 });
+
+// v6.34ag: Subscribe to in-tab HOC_Floor updates (no storage event in same tab)
+if(typeof HOC_Floor !== 'undefined'){
+  HOC_Floor.onChange(function(){ renderAll(); });
+}
 </script>
-<script src="hoc_events.js"></script>
 </body>
 </html>

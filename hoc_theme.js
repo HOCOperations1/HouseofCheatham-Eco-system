@@ -81,7 +81,20 @@
     '#hoc-theme-toggle:hover{transform:scale(1.1);}' +
     '#hoc-theme-toggle:active{transform:scale(0.95);}' +
     // Make sure floating button stays clickable on every dashboard
-    '#hoc-theme-toggle{pointer-events:auto;}';
+    '#hoc-theme-toggle{pointer-events:auto;}' +
+    // ── Reset button (v6.34af) — sibling of theme toggle ─────────────
+    '#hoc-reset-btn{' +
+      'position:fixed;bottom:8px;left:48px;z-index:9999;' +
+      'width:32px;height:32px;border-radius:50%;border:1px solid var(--border);' +
+      'background:var(--bg2);color:var(--text);' +
+      'font:14px/1 system-ui,sans-serif;cursor:pointer;' +
+      'display:flex;align-items:center;justify-content:center;' +
+      'box-shadow:0 2px 8px rgba(0,0,0,.15);' +
+      'transition:transform .15s ease,background .15s ease;' +
+      'padding:0;pointer-events:auto;' +
+    '}' +
+    '#hoc-reset-btn:hover{transform:scale(1.1);background:rgba(245,158,11,.15);}' +
+    '#hoc-reset-btn:active{transform:scale(0.95);}';
 
   // ── Inject CSS once ────────────────────────────────────────────────
   function injectCSS(){
@@ -139,6 +152,38 @@
     applyTheme(getTheme());
   }
 
+  // ── Reset button (v6.34af) ─────────────────────────────────────────
+  // Behavior: confirm with user, then hard-reload the page. localStorage
+  // (uploads, KPIs, theme prefs, etc.) is PRESERVED. Only in-memory JS
+  // state, expanded drawers, filter selections, etc., are cleared.
+  // This is the "I made a mistake, take me back to a clean view" path.
+  function resetDashboard(){
+    var dashName = document.title || 'this dashboard';
+    var msg = 'Reset ' + dashName + '?\n\n' +
+              'This clears filters, selections, and any unsaved changes on this page.\n' +
+              'Uploaded data and saved settings are preserved.';
+    if(confirm(msg)){
+      // Hard reload — bypasses bfcache so we get a fresh render
+      window.location.reload();
+    }
+  }
+
+  function mountResetBtn(){
+    if(document.getElementById('hoc-reset-btn')) return;
+    if(!document.body){
+      setTimeout(mountResetBtn, 50);
+      return;
+    }
+    var btn = document.createElement('button');
+    btn.id = 'hoc-reset-btn';
+    btn.type = 'button';
+    btn.textContent = '↺';
+    btn.title = 'Reset this view (clear filters & selections)';
+    btn.setAttribute('aria-label', btn.title);
+    btn.addEventListener('click', resetDashboard);
+    document.body.appendChild(btn);
+  }
+
   // ── Cross-tab sync ─────────────────────────────────────────────────
   window.addEventListener('storage', function(e){
     if(e.key === THEME_KEY && e.newValue){
@@ -153,16 +198,21 @@
 
   // Mount the toggle once DOM is parsed enough to have a body
   if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', mountToggle);
+    document.addEventListener('DOMContentLoaded', function(){
+      mountToggle();
+      mountResetBtn();
+    });
   } else {
     mountToggle();
+    mountResetBtn();
   }
 
   // Expose for programmatic access if any dashboard wants it
   window.HOC_THEME = {
     get: getTheme,
     set: setTheme,
-    toggle: toggleTheme
+    toggle: toggleTheme,
+    reset: resetDashboard
   };
 
   // ═══════════════════════════════════════════════════════════════════

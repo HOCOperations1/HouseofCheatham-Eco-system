@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34ae">
+<meta name="hoc-build" content="v6.34ag">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Compound Coordinator</title>
@@ -179,6 +179,24 @@ select:focus,input:focus,textarea:focus{border-color:var(--blue)}
     <div class="card-title"><span id="vd-title">Batch Verification</span>
       <button class="close-btn" onclick="closeVD()">×</button></div>
     <div class="dg" id="vd-info"></div>
+
+    <!-- v6.34ag: Floor state strip — mix complete + QC status visibility -->
+    <div id="vd-floor-strip" style="margin:8px 0;padding:10px 12px;border-radius:6px;display:none">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:11px">
+        <div id="vd-floor-mix" style="font-weight:600"></div>
+        <div id="vd-floor-qc" style="font-weight:600"></div>
+        <div id="vd-floor-ts" style="color:var(--text3);font-size:9px;margin-left:auto"></div>
+      </div>
+      <div id="vd-floor-reason" style="font-size:10px;color:var(--amber);margin-top:4px;display:none"></div>
+    </div>
+
+    <!-- v6.34ag: Mix Complete action button — only shows when eligible -->
+    <div id="vd-mix-action" style="display:none;margin:8px 0">
+      <button class="btn-b" onclick="markMixComplete()" style="background:var(--purple);color:#fff;font-weight:700">
+        🧪 Mark Mix Complete → Send to QC Lab
+      </button>
+      <span style="font-size:9px;color:var(--text3);margin-left:8px">Routes this batch to QC Lab's queue</span>
+    </div>
     <div class="upd-panel">
       <div class="upd-section">Raw Material Verification Checklist</div>
       <div id="vd-checks" style="margin-bottom:10px"></div>
@@ -1189,10 +1207,143 @@ function openVD(id){
     }
   })();
 
+  // v6.34ag: Render floor-state strip + Mix Complete button gating
+  renderFloorStrip(b);
+
   document.getElementById('ver-detail').classList.add('open');
   document.getElementById('ver-detail').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function closeVD(){document.getElementById('ver-detail').classList.remove('open');activeVer=null;}
+
+// ═══════════════════════════════════════════════════════════════════════
+// v6.34ag — Mix Complete handoff to QC Lab
+// ═══════════════════════════════════════════════════════════════════════
+// renderFloorStrip:  reflects current per-batch floor state into the drawer
+// markMixComplete:   confirmed action; writes via HOC_Floor + fires event
+// QC HOLD/REWORK status from QC Lab is read & displayed here as well.
+function renderFloorStrip(b){
+  if(!b) return;
+  var strip = document.getElementById('vd-floor-strip');
+  var mixDiv = document.getElementById('vd-floor-mix');
+  var qcDiv  = document.getElementById('vd-floor-qc');
+  var tsDiv  = document.getElementById('vd-floor-ts');
+  var reasonDiv = document.getElementById('vd-floor-reason');
+  var actionBox = document.getElementById('vd-mix-action');
+  if(!strip || !mixDiv || !qcDiv || !actionBox) return;
+
+  var state = (typeof HOC_Floor !== 'undefined') ? HOC_Floor.getState(b.batch) : null;
+  var mixDone = !!(state && state.mix_complete);
+  var qcStatus = state && state.qc_status ? String(state.qc_status).toUpperCase() : '';
+
+  // Set strip visibility + background
+  var bg = 'var(--bg2)';
+  var border = 'var(--border)';
+  if(qcStatus === 'HOLD' || qcStatus === 'REWORK'){
+    bg = 'rgba(245,158,11,.08)'; border = 'rgba(245,158,11,.3)';
+  } else if(qcStatus === 'RELEASED'){
+    bg = 'rgba(34,197,94,.07)';  border = 'rgba(34,197,94,.3)';
+  } else if(mixDone){
+    bg = 'rgba(168,85,247,.07)';  border = 'rgba(168,85,247,.3)';
+  }
+  strip.style.background = bg;
+  strip.style.border = '1px solid ' + border;
+  strip.style.display = (mixDone || qcStatus) ? 'block' : 'block';
+
+  // Mix-complete label
+  if(mixDone){
+    mixDiv.innerHTML = '<span style="color:var(--purple)">🧪 Mix Complete</span>'
+      + (state.mix_complete_by ? ' <span style="color:var(--text3);font-size:9px">by ' + state.mix_complete_by + '</span>' : '');
+  } else {
+    mixDiv.innerHTML = '<span style="color:var(--text3)">Mix not yet marked complete</span>';
+  }
+
+  // QC status label
+  if(qcStatus === 'RELEASED'){
+    qcDiv.innerHTML = '<span style="color:var(--green)">✓ QC RELEASED</span>';
+  } else if(qcStatus === 'HOLD'){
+    qcDiv.innerHTML = '<span style="color:var(--amber)">⚠ QC HOLD</span>';
+  } else if(qcStatus === 'REWORK'){
+    qcDiv.innerHTML = '<span style="color:var(--amber)">⚙ QC REWORK</span>';
+  } else if(qcStatus === 'QUEUED'){
+    qcDiv.innerHTML = '<span style="color:var(--blue)">→ In QC Queue</span>';
+  } else {
+    qcDiv.innerHTML = '';
+  }
+
+  // Timestamp (most recent)
+  var ts = (state && (state.qc_status_at || state.mix_complete_at || state._updated_at)) || '';
+  if(ts){
+    try { tsDiv.textContent = 'updated ' + new Date(ts).toLocaleString(); }
+    catch(e){ tsDiv.textContent = ''; }
+  } else {
+    tsDiv.textContent = '';
+  }
+
+  // Reason text for HOLD/REWORK
+  if((qcStatus === 'HOLD' || qcStatus === 'REWORK') && state && state.qc_hold_reason){
+    reasonDiv.style.display = 'block';
+    reasonDiv.textContent = 'Reason: ' + state.qc_hold_reason;
+  } else {
+    reasonDiv.style.display = 'none';
+  }
+
+  // Eligibility for Mix Complete button:
+  //   Show ONLY when batch is in active production AND not already mix-complete
+  //   AND not already in QC RELEASED state (the chain has moved on).
+  var status = String(b.fill_status || b.status || '').toUpperCase();
+  var urgency = String(b.urgency || '').toUpperCase();
+  var alreadyDone = status === 'COMPLETED' || urgency === 'DONE';
+  var eligible = !mixDone && !alreadyDone && qcStatus !== 'RELEASED';
+  actionBox.style.display = eligible ? 'block' : 'none';
+}
+
+function markMixComplete(){
+  if(!activeVer) return;
+  var b = activeVer;
+  if(typeof HOC_Floor === 'undefined'){
+    alert('Floor state library not loaded — cannot send to QC. Reload the page.');
+    return;
+  }
+  var msg = 'Mark batch ' + b.batch + ' (F.' + b.formula + ', L' + b.line + ') as MIX COMPLETE?\n\n'
+          + 'This sends the batch to QC Lab\'s queue and notifies all dashboards.\n'
+          + 'Only click when mixing is finished and the batch is ready for QC sampling.\n\n'
+          + 'Click OK to confirm, Cancel to abort.';
+  if(!confirm(msg)) return;
+  // Optional operator name prompt (skippable)
+  var by = prompt('Operator name (optional — leave blank to skip):', '');
+  if(by === null) return;  // user cancelled
+  by = (by || '').trim() || null;
+
+  // Write floor state — local immediately, Supabase best-effort
+  HOC_Floor.update(b.batch, {
+    mix_complete: true,
+    mix_complete_at: new Date().toISOString(),
+    mix_complete_by: by
+  }).then(function(){
+    renderFloorStrip(b);  // re-render the drawer
+  });
+
+  // Fire cross-dashboard event for audit log + push notification surface
+  if(typeof HOC_EVENTS !== 'undefined'){
+    HOC_EVENTS.fire('mix_complete', {
+      batch: b.batch,
+      formula: b.formula,
+      line: b.line,
+      source: 'Compound Coordinator',
+      operator: by,
+      note: 'Mix complete — routed to QC Lab'
+    }, 'info', ['qc_lab','production','compound_scheduler']);
+  }
+}
+
+// Refresh strip if floor state changes elsewhere (e.g., QC Lab marks HOLD)
+if(typeof HOC_Floor !== 'undefined'){
+  HOC_Floor.onChange(function(){
+    if(activeVer){
+      try { renderFloorStrip(activeVer); } catch(e){}
+    }
+  });
+}
 
 function alertTeam(team){
   if(!activeVer)return;
@@ -1284,12 +1435,15 @@ function renderInventory(){
   if(invFilter==='SHORT') rows=rows.filter(c=>c.status==='SHORT');
   else if(invFilter==='LOW') rows=rows.filter(c=>c.status==='LOW');
   else if(invFilter==='OK') rows=rows.filter(c=>c.status==='OK');
+  // v6.34af: field name fix — parser writes `descr` + `prod_req` (Vicinity
+  // Interface column conventions). Earlier code looked for `desc`/`req` and
+  // rendered blanks on every row. Read both for safety.
   document.getElementById('inv-tbody').innerHTML=rows.map((c,i)=>`
     <tr style="background:${i%2?'rgba(255,255,255,.01)':'transparent'}">
       <td style="font-size:10px;color:var(--text2)">${c.sku}</td>
-      <td style="font-size:10px">${c.desc||'—'}</td>
+      <td style="font-size:10px">${c.descr||c.desc||'—'}</td>
       <td style="text-align:right">${N(c.qoh)}</td>
-      <td style="text-align:right">${N(c.req)}</td>
+      <td style="text-align:right">${N(c.prod_req||c.req||0)}</td>
       <td style="text-align:right;color:var(--teal)">${N(c.po_qty)}</td>
       <td style="text-align:right" class="${c.net<0?'num-red':c.status==='LOW'?'':'num-grn'}">${N(c.net)}</td>
       <td>${rawBadge(c.status)}</td>
@@ -1634,6 +1788,7 @@ function clResetAll(){
   location.reload();
 }
 </script><script src="hoc_events.js"></script>
+<script src="hoc_floor.js"></script>
 <script>
 // Auto-update header date placeholder
 (function(){

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34ae">
+<meta name="hoc-build" content="v6.34ag">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -2401,9 +2401,31 @@ function clearLog() {
   renderLog();
 }
 function clearAllData() {
-  if(!confirm('Clear all uploaded data from all dashboards?')) return;
+  // v6.34af: Strengthened confirm for the highest-stakes action in HOC-OES.
+  // Requires the user to TYPE "CLEAR" to proceed — prevents accidental clicks
+  // (the previous OK/Cancel dialog could be misfired by spacebar/enter).
+  var msg = 'CLEAR ALL UPLOADED DATA\n\n' +
+            'This wipes every uploaded file from every dashboard:\n' +
+            '  • Production schedule (batches)\n' +
+            '  • Planning Data (inventory, tank counts)\n' +
+            '  • Line Setup, Line Clearance\n' +
+            '  • Patch OEE, Patch Stops\n\n' +
+            'KPI goals and saved settings are preserved.\n' +
+            'After clearing, all dashboards show empty state until next upload.\n\n' +
+            'Type CLEAR to confirm:';
+  var typed = prompt(msg);
+  if(typed === null) return;  // user hit Cancel
+  if(String(typed).trim().toUpperCase() !== 'CLEAR'){
+    alert('Cancelled — typed value did not match "CLEAR".');
+    return;
+  }
   localStorage.removeItem(DATA_KEY);
   localStorage.removeItem(LOG_KEY);
+  // v6.34af: also clear the Patch + Line keys so dashboards reset cleanly
+  localStorage.removeItem('hoc_patch_oee_v1');
+  localStorage.removeItem('hoc_patch_stops_v1');
+  localStorage.removeItem('hoc_line_setup_v1');
+  localStorage.removeItem('hoc_line_clearance_v1');
   loaded = {pt:null,pd:null};
   document.getElementById('status-pt').textContent='Drop file here or click to browse';
   document.getElementById('status-pd').textContent='Drop file here or click to browse';
@@ -2413,7 +2435,7 @@ function clearAllData() {
   document.getElementById('zone-pd').classList.remove('loaded');
   document.getElementById('update-btn').disabled=true;
   document.getElementById('progress-area').style.display='none';
-  alert('All data cleared. Dashboards will show empty state until next upload.');
+  alert('✓ All data cleared. Dashboards will show empty state until next upload.');
 }
 
 // ═══════════════════════════════════════════════════════════════════════

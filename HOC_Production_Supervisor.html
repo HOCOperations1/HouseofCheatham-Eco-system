@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34ae">
+<meta name="hoc-build" content="v6.34ag">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Production Supervisor</title>
@@ -120,6 +120,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--green)}
 <meta http-equiv="Expires" content="0">
 <script>var HOC_OES_VERSION="1778588401";</script>
 <script src="hoc_theme.js"></script>
+<script src="hoc_floor.js"></script>
 <script src="hoc_attainment.js"></script>
 </head><body>
 
@@ -144,6 +145,12 @@ select:focus,input:focus,textarea:focus{border-color:var(--green)}
 <!-- CMD -->
 <div class="page active" id="page-cmd"><div class="content">
   <div class="sync-bar" id="sync-bar"></div>
+
+  <!-- v6.34ag: QC HOLD/REWORK strip — sourced from HOC_Floor -->
+  <div id="qc-hold-strip" style="display:none;margin:0 0 10px;padding:8px 12px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:6px">
+    <div style="font-size:9px;font-weight:700;color:var(--amber);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">⚠ QC Action Required</div>
+    <div id="qc-hold-list" style="font-size:11px;color:var(--text)"></div>
+  </div>
   <div id="alert-area"></div>
   <div class="kpi-grid" id="cmd-kpis"></div>
   <div class="card">
@@ -1166,6 +1173,33 @@ function renderAll(){
   renderLineTable();renderCmpdByLine();
   renderLineCards();renderBatches();renderSyncList();
   publishLineStatus();
+  renderQCHoldStrip();  // v6.34ag: QC HOLD/REWORK awareness
+}
+
+// v6.34ag: Render QC HOLD strip — sourced from HOC_Floor
+function renderQCHoldStrip(){
+  var strip = document.getElementById('qc-hold-strip');
+  var list  = document.getElementById('qc-hold-list');
+  if(!strip || !list) return;
+  if(typeof HOC_Floor === 'undefined'){ strip.style.display = 'none'; return; }
+  var map = HOC_Floor.getAll();
+  var holds = Object.keys(map).filter(function(k){
+    var s = map[k] && map[k].qc_status ? String(map[k].qc_status).toUpperCase() : '';
+    return s === 'HOLD' || s === 'REWORK';
+  });
+  if(!holds.length){ strip.style.display = 'none'; return; }
+  strip.style.display = 'block';
+  list.innerHTML = holds.map(function(k){
+    var s = map[k];
+    var status = String(s.qc_status).toUpperCase();
+    var reason = s.qc_hold_reason ? ' — ' + s.qc_hold_reason : '';
+    return '<div style="margin:2px 0"><b>' + k + '</b> <span style="color:var(--amber);font-weight:700">' + status + '</span><span style="color:var(--text2)">' + reason + '</span></div>';
+  }).join('');
+}
+
+// Subscribe to floor state changes so the strip updates live
+if(typeof HOC_Floor !== 'undefined'){
+  HOC_Floor.onChange(function(){ try { renderQCHoldStrip(); } catch(e){} });
 }
 
 // Publish line status for Compound Scheduler / Compound Coordinator to read
