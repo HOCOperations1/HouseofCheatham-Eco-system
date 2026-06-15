@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34ak">
+<meta name="hoc-build" content="v6.34am">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Compound Coordinator</title>
@@ -123,6 +123,8 @@ select:focus,input:focus,textarea:focus{border-color:var(--blue)}
 .check-label{font-size:10px;flex:1;color:var(--text)}
 .check-val{font-size:10px;font-weight:700;min-width:80px;text-align:right}
 </style><script src="hoc_theme.js"></script>
+<script src="hoc_events.js"></script>
+<script src="hoc_floor.js"></script>
 </head><body>
 
 <div class="topbar">
@@ -1840,8 +1842,7 @@ function clResetAll(){
   localStorage.removeItem(clTodayKey());
   location.reload();
 }
-</script><script src="hoc_events.js"></script>
-<script src="hoc_floor.js"></script>
+</script>
 <script>
 // Auto-update header date placeholder
 (function(){

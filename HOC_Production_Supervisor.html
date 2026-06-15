@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34ak">
+<meta name="hoc-build" content="v6.34am">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Production Supervisor</title>
@@ -103,6 +103,22 @@ textarea{width:100%;resize:vertical;min-height:46px;margin-top:4px}
 .fc-lhdr-r{font-size:9px;color:var(--text3);display:flex;gap:10px}
 .fc-bar{height:4px;border-radius:2px;margin:2px 0;overflow:hidden;background:rgba(255,255,255,.08)}
 .fc-bar-fill{height:100%;border-radius:2px}
+.fc-line-page{display:block}
+/* v6.34am: When printing Capacity Forecast via PDF button, give each */
+/* production line its own page. Scoped to body.hoc-printing-pdf so it */
+/* only activates from the universal PDF button, not other prints.    */
+/* Tip: choose Landscape orientation in the browser print dialog for  */
+/* the cleanest output (10-column table fits without horizontal squish). */
+@media print{
+  body.hoc-printing-pdf .fc-line-page{
+    page-break-after:always;
+    break-after:page;
+  }
+  body.hoc-printing-pdf .fc-line-page:last-child{
+    page-break-after:auto;
+    break-after:auto;
+  }
+}
 .exp-step{font-size:10px;color:var(--text2);margin-bottom:6px;padding:7px 10px;background:var(--bg2);border-radius:6px;border-left:3px solid}
 .nb.active{color:var(--green);border-bottom-color:var(--green)}
 .logo{background:var(--green);color:#052E16}
@@ -1599,7 +1615,7 @@ function renderFC(){
     const li=LINES.find(l=>l.line===ln)||{};
     const must=rows.filter(r=>r.priority==='MUST RUN').length;
     const should=rows.filter(r=>r.priority==='SHOULD RUN').length;
-    h+=`<div class="fc-lhdr"><div class="fc-lhdr-l">Line ${ln} · ${li.pattern||''} · Avail ${N(avail)} min</div>
+    h+=`<div class="fc-line-page"><div class="fc-lhdr"><div class="fc-lhdr-l">Line ${ln} · ${li.pattern||''} · Avail ${N(avail)} min</div>
       <div class="fc-lhdr-r"><span style="color:var(--red)">${must} MUST</span><span style="color:var(--amber)">${should} SHOULD</span><span>Load ${util}%</span><span>OEE ${pct(li.oee||0)}</span>${sigBadge(li.signal||'')}</div>
     </div><div class="fc-bar"><div class="fc-bar-fill" style="width:${Math.min(100,util)}%;background:${bc}"></div></div>
     <div class="tbl-wrap" style="margin-bottom:4px"><table>
@@ -1618,7 +1634,7 @@ function renderFC(){
         <td>${fD(f.cmpddue)}</td><td style="text-align:right">${N(f.planea)}</td>
       </tr>`;
     });
-    h+='</tbody></table></div>';
+    h+='</tbody></table></div></div>';
   });
   document.getElementById('fc-content').innerHTML=h||'<div class="t3" style="padding:20px">No batches for filter.</div>';
 }
