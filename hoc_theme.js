@@ -94,7 +94,64 @@
       'padding:0;pointer-events:auto;' +
     '}' +
     '#hoc-reset-btn:hover{transform:scale(1.1);background:rgba(245,158,11,.15);}' +
-    '#hoc-reset-btn:active{transform:scale(0.95);}';
+    '#hoc-reset-btn:active{transform:scale(0.95);}' +
+    // ── PDF Export button (v6.34ak) — third in the floating row ──────
+    '#hoc-pdf-btn{' +
+      'position:fixed;bottom:8px;left:88px;z-index:9999;' +
+      'width:32px;height:32px;border-radius:50%;border:1px solid var(--border);' +
+      'background:var(--bg2);color:var(--text);' +
+      'font:13px/1 system-ui,sans-serif;cursor:pointer;' +
+      'display:flex;align-items:center;justify-content:center;' +
+      'box-shadow:0 2px 8px rgba(0,0,0,.15);' +
+      'transition:transform .15s ease,background .15s ease;' +
+      'padding:0;pointer-events:auto;' +
+    '}' +
+    '#hoc-pdf-btn:hover{transform:scale(1.1);background:rgba(59,130,246,.15);}' +
+    '#hoc-pdf-btn:active{transform:scale(0.95);}' +
+    // ── Print-only header/footer divs (visible only when printing) ───
+    '.hoc-print-header,.hoc-print-footer{display:none;}' +
+    // ── Print media rules (v6.34ak) ──────────────────────────────────
+    // Goal: clean, readable PDF when the user uses the floating PDF button.
+    // These rules are GATED to body.hoc-printing-pdf so we don't interfere
+    // with existing per-dashboard print outputs (5S red tags, inventory
+    // labels, placards, etc.) which use their own scoped print CSS.
+    '@media print{' +
+      'body.hoc-printing-pdf{' +
+        // Force backgrounds to render (Chrome/Edge strips them by default)
+        '-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;color-adjust:exact !important;' +
+        'background:#fff !important;color:#000 !important;font-size:10pt;' +
+      '}' +
+      'body.hoc-printing-pdf *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;color-adjust:exact !important;}' +
+      // Hide the floating buttons themselves whenever printing
+      '#hoc-theme-toggle,#hoc-reset-btn,#hoc-pdf-btn{display:none !important;}' +
+      // PDF mode only: hide operational chrome
+      'body.hoc-printing-pdf .topbar,' +
+      'body.hoc-printing-pdf nav.nav,' +
+      'body.hoc-printing-pdf .sync-bar,' +
+      'body.hoc-printing-pdf #sync-bar,' +
+      'body.hoc-printing-pdf #badges,' +
+      'body.hoc-printing-pdf .badges{display:none !important;}' +
+      // PDF mode: show the print-only header + footer
+      'body.hoc-printing-pdf .hoc-print-header{display:block !important;padding-bottom:8px;border-bottom:1px solid #aaa;margin-bottom:12px;font-family:system-ui,sans-serif;}' +
+      'body.hoc-printing-pdf .hoc-print-header .h-title{font-size:14px;font-weight:700;color:#000;}' +
+      'body.hoc-printing-pdf .hoc-print-header .h-meta{font-size:9px;color:#555;margin-top:2px;}' +
+      'body.hoc-printing-pdf .hoc-print-footer{display:block !important;text-align:center;font-size:8px;color:#666;font-family:system-ui,sans-serif;padding-top:4px;border-top:1px solid #ccc;margin-top:12px;}' +
+      // PDF mode: page margins + page numbers (Chrome/Edge only)
+      'body.hoc-printing-pdf{margin:0;}' +
+      // Don't split cards/rows across pages
+      'body.hoc-printing-pdf .card,' +
+      'body.hoc-printing-pdf .lc,' +
+      'body.hoc-printing-pdf .kpi,' +
+      'body.hoc-printing-pdf tr{page-break-inside:avoid;break-inside:avoid;}' +
+      // Tables: print-friendly borders
+      'body.hoc-printing-pdf table{border-collapse:collapse;width:100%;}' +
+      'body.hoc-printing-pdf th,body.hoc-printing-pdf td{border:1px solid #ccc;padding:3px 5px;font-size:9pt;}' +
+      'body.hoc-printing-pdf thead{display:table-header-group;}' +
+      // Hide inactive pages (multi-tab dashboards)
+      'body.hoc-printing-pdf .page:not(.active){display:none !important;}' +
+    '}' +
+    // Page geometry / numbers — applied when our flag is set
+    '@media print{@page{margin:0.6in 0.5in 0.7in 0.5in;@bottom-right{content:"Page " counter(page) " of " counter(pages);font:9px system-ui;color:#666;}}}';
 
   // ── Inject CSS once ────────────────────────────────────────────────
   function injectCSS(){
@@ -184,6 +241,97 @@
     document.body.appendChild(btn);
   }
 
+  // ── PDF Export (v6.34ak) ───────────────────────────────────────────
+  // Approach: triggers window.print() with a print-only stylesheet that
+  // hides operational chrome and adds an HOC header/footer. User selects
+  // "Save as PDF" in the browser's print dialog. Filename hint comes from
+  // document.title — works in Chrome/Edge, ignored by Safari/Firefox.
+  //
+  // Active tab only: only the currently-visible <div class="page active">
+  // is printed. Users wanting other tabs in the same PDF need to switch
+  // tabs and export again, or use a future proper-PDF builder per dashboard.
+  function exportPDF(){
+    // 1. Build a dashboard name + date for the header and filename hint
+    var dashName = document.title || 'HOC-OES';
+    // Strip common suffixes/prefixes the title might have
+    dashName = dashName
+      .replace(/^HOC[\-_ ]?OES\s*[\|\-—·]\s*/i, '')   // leading "HOC-OES · "
+      .replace(/\s*[\|\-—·]\s*HOC[\-_ ]?OES\s*$/i, '') // trailing " · HOC-OES"
+      .trim();
+    if(!dashName) dashName = 'HOC-OES Dashboard';
+    var now = new Date();
+    var dateStr = now.toLocaleDateString('en-US', {
+      year:'numeric', month:'short', day:'numeric'
+    });
+    var timeStr = now.toLocaleTimeString('en-US', {
+      hour:'numeric', minute:'2-digit'
+    });
+    // Filename hint for Chrome/Edge: changes document.title temporarily
+    var origTitle = document.title;
+    var fileTag = dashName.replace(/[^a-zA-Z0-9]+/g, '_') + '_' +
+                  now.toISOString().slice(0,10);
+    document.title = fileTag;
+
+    // 2. Inject print-only header + footer (removed after print)
+    var header = document.createElement('div');
+    header.className = 'hoc-print-header';
+    header.id = '__hoc_print_header';
+    header.innerHTML =
+      '<div class="h-title">House of Cheatham · ' + escapeHTML(dashName) + '</div>' +
+      '<div class="h-meta">Generated ' + escapeHTML(dateStr) + ' at ' + escapeHTML(timeStr) + ' · HOC-OES v6.34ak</div>';
+    document.body.insertBefore(header, document.body.firstChild);
+
+    var footer = document.createElement('div');
+    footer.className = 'hoc-print-footer';
+    footer.id = '__hoc_print_footer';
+    footer.innerHTML = 'House of Cheatham — Confidential · ' + escapeHTML(dateStr);
+    document.body.appendChild(footer);
+
+    // 3. Trigger print. Browsers show their save-as-PDF dialog.
+    document.body.classList.add('hoc-printing-pdf');
+    var cleanup = function(){
+      document.title = origTitle;
+      document.body.classList.remove('hoc-printing-pdf');
+      var h = document.getElementById('__hoc_print_header');
+      var f = document.getElementById('__hoc_print_footer');
+      if(h && h.parentNode) h.parentNode.removeChild(h);
+      if(f && f.parentNode) f.parentNode.removeChild(f);
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
+    // Some browsers (older Safari) don't fire afterprint reliably — also
+    // schedule a fallback cleanup so the page returns to normal even if
+    // afterprint is skipped.
+    setTimeout(function(){
+      if(document.body.classList.contains('hoc-printing-pdf')) cleanup();
+    }, 5000);
+    window.print();
+  }
+
+  function escapeHTML(s){
+    return String(s||'')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function mountPDFBtn(){
+    if(document.getElementById('hoc-pdf-btn')) return;
+    if(!document.body){
+      setTimeout(mountPDFBtn, 50);
+      return;
+    }
+    var btn = document.createElement('button');
+    btn.id = 'hoc-pdf-btn';
+    btn.type = 'button';
+    btn.textContent = '📄';
+    btn.title = 'Export this view to PDF (uses browser print dialog)';
+    btn.setAttribute('aria-label', btn.title);
+    btn.addEventListener('click', exportPDF);
+    document.body.appendChild(btn);
+  }
+
   // ── Cross-tab sync ─────────────────────────────────────────────────
   window.addEventListener('storage', function(e){
     if(e.key === THEME_KEY && e.newValue){
@@ -201,10 +349,12 @@
     document.addEventListener('DOMContentLoaded', function(){
       mountToggle();
       mountResetBtn();
+      mountPDFBtn();
     });
   } else {
     mountToggle();
     mountResetBtn();
+    mountPDFBtn();
   }
 
   // Expose for programmatic access if any dashboard wants it
@@ -212,7 +362,8 @@
     get: getTheme,
     set: setTheme,
     toggle: toggleTheme,
-    reset: resetDashboard
+    reset: resetDashboard,
+    exportPDF: exportPDF
   };
 
   // ═══════════════════════════════════════════════════════════════════

@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34ai">
+<meta name="hoc-build" content="v6.34ak">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Production Supervisor</title>
@@ -834,9 +834,30 @@ function computeForecast(){
         cum += mins;
         var fits = (availMin > 0) ? (cum <= availMin) : true;
         // Derive priority from status (workbook convention)
+        // v6.34aj: Priority now derived from DATE PROXIMITY, not status string.
+        //   Status from parser is only 'COMPLETED'/'RUNNING'/'NOT STARTED',
+        //   so the old status==='SCHEDULED'/'OVERDUE' checks never matched.
+        //   That bucketed everything as MUST RUN (running) or NEXT WEEK (default).
+        //   Now: any past date OR currently RUNNING → MUST RUN.
+        //   This-week dates → SHOULD RUN. Future dates → NEXT WEEK.
         var prio = 'NEXT WEEK';
-        if(status === 'RUNNING' || status === 'OVERDUE') prio = 'MUST RUN';
-        else if(status === 'SCHEDULED') prio = 'SHOULD RUN';
+        var batchDate = null;
+        try { if(b.date) batchDate = new Date(b.date + 'T12:00:00'); } catch(e){}
+        var today = new Date(); today.setHours(0,0,0,0);
+        var endOfWeek = new Date(today);
+        endOfWeek.setDate(endOfWeek.getDate() + (6 - today.getDay()));  // Sat = end of this week
+        endOfWeek.setHours(23,59,59,999);
+
+        if(status === 'RUNNING'){
+          prio = 'MUST RUN';
+        } else if(batchDate && batchDate < today){
+          // Past-dated and not running yet = overdue → MUST RUN
+          prio = 'MUST RUN';
+        } else if(batchDate && batchDate <= endOfWeek){
+          // This week (today through Saturday) → SHOULD RUN
+          prio = 'SHOULD RUN';
+        }
+        // else NEXT WEEK (default)
         rows.push({
           line: ln,
           batch: b.batch,
