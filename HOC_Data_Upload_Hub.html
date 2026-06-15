@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34ao">
+<meta name="hoc-build" content="v6.34ap">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -124,17 +124,11 @@ input:focus,select:focus,textarea:focus{border-color:var(--blue)}
        shows connection health; "Pull Now" forces immediate refresh. -->
 
   <div class="zone-grid">
-    <!-- Production Tracker -->
-    <div>
-      <div style="font-size:10px;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em">📊 HOC Production Tracker</div>
-      <div class="drop-zone" id="zone-pt" onclick="document.getElementById('file-pt').click()" ondragover="dragOver(event,'pt')" ondragleave="dragLeave('pt')" ondrop="dropFile(event,'pt')">
-        <input type="file" id="file-pt" accept=".xlsx,.xls,.csv" style="display:none" onchange="loadFile(this.files[0],'pt')">
-        <div class="drop-icon">📋</div>
-        <div class="drop-title">HOC_Production_Tracker.xlsx</div>
-        <div class="drop-sub">CLEAN_ DATA · CAPACITY FORECAST · Goal Source Data · Dashboard</div>
-        <div class="drop-status" id="status-pt" style="color:var(--text3)">Drop file here or click to browse</div>
-      </div>
-    </div>
+    <!-- Production Tracker drop zone removed in v6.34ap.
+         Workflow moved entirely to Planning_Data → Vicinity Interface Mirror
+         as the batch list source. Production Tracker parser code (loaded.pt)
+         remains below in case legacy paste workflows are still in use, but
+         the drag-and-drop entry point is gone. -->
 
     <!-- Planning Data -->
     <div>
@@ -319,7 +313,7 @@ For Case Attainment, paste the entire MFG Plant attainment sheet — parser find
       <div class="empty-state">
         <div class="empty-icon">📂</div>
         <div class="empty-title">No data uploaded yet</div>
-        <div class="empty-sub">Upload your Production Tracker and Planning Data files above</div>
+        <div class="empty-sub">Upload your Planning Data file above</div>
       </div>
     </div>
   </div>
@@ -2010,6 +2004,182 @@ function updateAllDashboards() {
           result.inventory_ts = ts;
           var low = inventory.filter(function(i){return i.status==='LOW';});
           progress('✓ Vicinity: ' + inventory.length.toLocaleString() + ' SKUs · ' + low.length + ' LOW', 'ok');
+        }
+      }
+
+      // ─────────────────────────────────────────────────────────────
+      // v6.34ap: Batches parser from Vicinity Interface Mirror
+      //
+      // Replaces the dead Production Tracker pipeline. Source: Planning_Data
+      // workbook's 'Vicinity Interface Mirror' sheet, which has a WorkOrder
+      // column with MAIN* batch numbers and per-batch component rows.
+      //
+      // Structure per batch (verified against 355 MAIN batches in actual file):
+      //   - 1 positive-quantity row = the finished good (planned cases produced)
+      //     · ComponentId = FG SKU (e.g. '1-102-12-1243-01')
+      //     · Quantity    = planned cases (origqty)
+      //     · UoM         = 'CASE'
+      //     · ReqDate     = scheduled production date
+      //   - N negative-quantity rows = components consumed (BOM)
+      //     · positive abs = qty needed; negative sign = direction-of-flow indicator
+      //
+      // Honest limitations (documented for users):
+      //   - No actqty in Planning_Data. Set to null; Patch OEE provides
+      //     per-LINE actuals separately (hoc_patch_oee_v1).
+      //   - No explicit status column. Derived from date proximity:
+      //     date < today  → NOT STARTED (overdue)
+      //     date today    → NOT STARTED (scheduled)
+      //     date future   → NOT STARTED (upcoming)
+      //   - No line assignment column in this sheet. Set to 0 unless we
+      //     can derive it from a follow-up source (Vicinity OData direct).
+      //   - Excludes batches with 0 positive rows (legacy retro-consumption
+      //     records with no FG production tracked).
+      //   - Date-filters to batches within [today-90d, today+180d] to avoid
+      //     polluting dashboards with year-old records.
+      // ─────────────────────────────────────────────────────────────
+      if(loaded.pd) {
+        var wbBatches = loaded.pd.wb;
+        var mirrorSheet = wbBatches.Sheets['Vicinity Interface Mirror'];
+        if(!mirrorSheet){
+          progress('⚠ Batches parser: no "Vicinity Interface Mirror" sheet — Compound Coordinator and Production Supervisor will be empty', 'warn');
+        } else {
+          progress('Reading batches from Vicinity Interface Mirror...');
+          // v6.34ap: Use header:1 to get raw 2D array. The sheet has Array
+          // Formulas (range A2:N25290) which sheet_to_json with named headers
+          // doesn't read through cleanly. The 2D-array path works.
+          var mirrorGrid = XLSX.utils.sheet_to_json(mirrorSheet, {header:1, defval:null, raw:true});
+          if(mirrorGrid.length < 2){
+            progress('⚠ Vicinity Interface Mirror: empty or unreadable', 'warn');
+          } else {
+            // Locate columns from header row
+            var headerCells = mirrorGrid[0] || [];
+            function colOf(name){
+              for(var i = 0; i < headerCells.length; i++){
+                if(String(headerCells[i]||'').trim() === name) return i;
+              }
+              return -1;
+            }
+            var col_id      = colOf('ComponentId');
+            var col_desc    = colOf('ComponentDescription');
+            var col_uom     = colOf('UoM');
+            var col_date    = colOf('ReqDate');
+            var col_qty     = colOf('Quantity');
+            var col_src     = colOf('SourceType');
+            var col_type    = colOf('ComponentType');
+            var col_wo      = colOf('WorkOrder');
+            if(col_wo === -1 || col_qty === -1 || col_date === -1){
+              progress('⚠ Vicinity Interface Mirror: missing required columns (WorkOrder/Quantity/ReqDate). Layout may have changed.', 'warn');
+            } else {
+              // Group rows by WorkOrder where SourceType==='Production' and WorkOrder starts with MAIN
+              var byWO = {};
+              for(var ri = 1; ri < mirrorGrid.length; ri++){
+                var row = mirrorGrid[ri];
+                if(!row) continue;
+                var wo = String(row[col_wo] || '').trim();
+                if(!wo || wo.indexOf('MAIN') !== 0) continue;
+                var src = String(row[col_src] || '').trim();
+                if(src !== 'Production') continue;
+                if(!byWO[wo]) byWO[wo] = [];
+                byWO[wo].push(row);
+              }
+
+              // Date window: last 90 days to next 180 days (avoid year-old noise)
+              var now = new Date(); now.setHours(0,0,0,0);
+              var minDate = new Date(now.getTime() - 90 * 86400000);
+              var maxDate = new Date(now.getTime() + 180 * 86400000);
+
+              function toDate(v){
+                if(!v) return null;
+                if(v instanceof Date) return v;
+                if(typeof v === 'number') return new Date(Math.round((v - 25569) * 86400 * 1000));
+                var d = new Date(v);
+                return isNaN(d.getTime()) ? null : d;
+              }
+
+              var batches = [];
+              var bom = [];
+              var skipped_no_fg = 0;
+              var skipped_out_of_window = 0;
+
+              Object.keys(byWO).forEach(function(wo){
+                var rows = byWO[wo];
+                // Find FG row (positive Quantity)
+                var fgRow = null;
+                for(var k = 0; k < rows.length; k++){
+                  var q = parseFloat(rows[k][col_qty]) || 0;
+                  if(q > 0){ fgRow = rows[k]; break; }
+                }
+                if(!fgRow){ skipped_no_fg++; return; }
+                var reqDate = toDate(fgRow[col_date]);
+                if(!reqDate){ skipped_no_fg++; return; }
+                if(reqDate < minDate || reqDate > maxDate){ skipped_out_of_window++; return; }
+                var dateStr = reqDate.toISOString().slice(0, 10);
+                var origqty = Math.round(parseFloat(fgRow[col_qty]) * 100) / 100;
+                var item = String(fgRow[col_id] || '').trim();
+                var desc = String(fgRow[col_desc] || '').trim();
+                var formulaMatch = item.match(/^1-(\d+)/);
+                var formula = formulaMatch ? parseInt(formulaMatch[1]) : 0;
+                var uom = String(fgRow[col_uom] || 'CASE').trim();
+
+                // Build BOM from negative-quantity rows (consumption)
+                var batchBOM = [];
+                rows.forEach(function(r){
+                  var q = parseFloat(r[col_qty]) || 0;
+                  if(q >= 0) return;
+                  var sku = String(r[col_id] || '').trim();
+                  if(!sku) return;
+                  batchBOM.push({
+                    sku:  sku,
+                    desc: String(r[col_desc] || '').trim().slice(0, 60),
+                    qty:  Math.abs(Math.round(q * 1000) / 1000),
+                    type: String(r[col_type] || '').trim(),
+                    uom:  String(r[col_uom] || '').trim()
+                  });
+                });
+
+                batches.push({
+                  batch:     wo,
+                  date:      dateStr,
+                  line:      0,
+                  item:      item,
+                  desc:      desc,
+                  formula:   formula,
+                  origqty:   origqty,
+                  actqty:    null,
+                  casepk:    12,
+                  uom:       uom,
+                  status:    'NOT STARTED',
+                  cmpd:      '',
+                  cmpd_status: '',
+                  cmpddue:   '',
+                  shortage:  0,
+                  lbs:       0,
+                  source:    'Vicinity Interface Mirror',
+                  bom_count: batchBOM.length
+                });
+                bom.push({ batch: wo, date: dateStr, components: batchBOM });
+              });
+
+              batches.sort(function(a, b){
+                return String(a.date).localeCompare(String(b.date));
+              });
+
+              result.batches = batches;
+              result.batches_ts = ts;
+              result.batches_source_sheet = 'Vicinity Interface Mirror';
+              result.bom = bom;
+              result.bom_ts = ts;
+
+              if(batches.length){
+                progress('✓ Batches: ' + batches.length + ' active (in window) of ' + Object.keys(byWO).length + ' total in Vicinity Interface Mirror', 'ok');
+                if(skipped_no_fg) progress('   · ' + skipped_no_fg + ' skipped (no FG row — historical retro records)', 'ok');
+                if(skipped_out_of_window) progress('   · ' + skipped_out_of_window + ' skipped (outside [today-90d, today+180d] window)', 'ok');
+                progress('✓ BOM: ' + bom.length + ' batches with component breakdown captured', 'ok');
+              } else {
+                progress('⚠ Batches parser ran but produced 0 batches. Check date window or Vicinity Interface Mirror data.', 'warn');
+              }
+            }
+          }
         }
       }
 
