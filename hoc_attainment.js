@@ -33,14 +33,27 @@
 
   // Compute actual_cases / planned_cases × 100, rounded to 1 decimal.
   // Returns null if no batches with origqty > 0 (can't compute meaningfully).
+  //
+  // v6.34as fix: SKIP batches where actqty is null/undefined/empty rather
+  // than counting them as 0 toward the actual numerator. A null actqty
+  // means "we don't know what actually happened yet" — typically not-yet-
+  // started or running batches. Counting them as 0 made attainment crater
+  // to 0% whenever the upload's batch window included any future-dated
+  // schedule rows. Now: attainment reflects only batches where we have
+  // a real actual value to compare against.
   function compute(batches){
     var planned = 0, actual = 0;
     var count = 0;
     for(var i = 0; i < batches.length; i++){
       var b = batches[i];
       var orig = parseFloat(b.origqty) || 0;
-      var act  = parseFloat(b.actqty)  || 0;
       if(orig <= 0) continue;  // skip batches with no plan
+      // v6.34as: skip if actqty is null/undefined/empty (unknown actual)
+      if(b.actqty === null || b.actqty === undefined || b.actqty === ''){
+        continue;
+      }
+      var act = parseFloat(b.actqty);
+      if(isNaN(act)) continue;
       planned += orig;
       actual  += act;
       count++;

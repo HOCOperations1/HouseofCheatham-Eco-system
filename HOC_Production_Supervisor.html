@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34ar">
+<meta name="hoc-build" content="v6.34as">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Production Supervisor</title>
@@ -1038,26 +1038,15 @@ function computeLines(){
     //         std minutes for batches missing rem_min (e.g., not-yet-started
     //         batches from old uploads). Completed batches are already
     //         skipped by the status check below.
-    var now = new Date();
-    var curMonth = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+    // v6.34as fix: REMOVED current-month filter. Production Tracker uploads
+    //         often have batches dated across multiple months (e.g., 158
+    //         batches in May, 2 in June). The month filter dropped ~95% of
+    //         batches and made Rem Hrs near-zero on every line. Rem Hrs is
+    //         now "total remaining workload on this line across all loaded
+    //         batches" — which is what users actually want.
     var remmin = 0;
     lineBatches.forEach(function(b){
       if(b.status === 'COMPLETED') return;
-      // Match by batch date in current month (b.date is ISO 'YYYY-MM-DD' or 'M/D/YYYY')
-      var batchMonth = '';
-      if(b.date){
-        var ds = String(b.date);
-        if(ds.indexOf('-')>0){
-          batchMonth = ds.slice(0,7);
-        } else if(ds.indexOf('/')>0){
-          var parts = ds.split('/');
-          if(parts.length >= 3){
-            var mm = parseInt(parts[0])||0, yy = parseInt(parts[2])||0;
-            batchMonth = (yy<100?2000+yy:yy)+'-'+String(mm).padStart(2,'0');
-          }
-        }
-      }
-      if(batchMonth !== curMonth) return;
       // rem_min is the actual remaining minutes; only fall back to full std
       // (b.minutes) when rem_min is genuinely absent (legacy data without it).
       var rm = b.rem_min;
