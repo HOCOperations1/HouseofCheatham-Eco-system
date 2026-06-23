@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34at">
+<meta name="hoc-build" content="v6.34au">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1985,13 +1985,25 @@ function updateAllDashboards() {
         var vicSheet = wb2.Sheets['Vicinity Interface'] || wb2.Sheets['Vicinity Interface Mirror'];
         if(vicSheet) {
           var vrows = XLSX.utils.sheet_to_json(vicSheet, {defval:''});
+          // v6.34au: Whitespace-tolerant field accessor. Vicinity Interface
+          // exports with " Quantity " (leading + trailing spaces) on at least
+          // one column header. Without trimming key names, parseFloat returned
+          // 0 across all 550 chemicals — making Raw Inventory look empty even
+          // though Planning_Data had real qty/prod_req/po data.
+          function f(row, name){
+            if(row[name] !== undefined) return row[name];
+            for(var k in row){
+              if(k.trim() === name) return row[k];
+            }
+            return undefined;
+          }
           var byComp = {};
           vrows.forEach(function(r) {
-            var sku = String(r['ComponentId']||'').trim();
+            var sku = String(f(r, 'ComponentId')||'').trim();
             if(!sku) return;
-            if(!byComp[sku]) byComp[sku] = {sku:sku, descr:String(r['ComponentDescription']||'').trim().slice(0,60), qoh:0, prod_req:0, po_qty:0};
-            var qty = parseFloat(r['Quantity']||0)||0;
-            var src = String(r['SourceType']||'').trim();
+            if(!byComp[sku]) byComp[sku] = {sku:sku, descr:String(f(r, 'ComponentDescription')||'').trim().slice(0,60), qoh:0, prod_req:0, po_qty:0};
+            var qty = parseFloat(f(r, 'Quantity')||0)||0;
+            var src = String(f(r, 'SourceType')||'').trim();
             if(src==='QOH') byComp[sku].qoh += qty;
             else if(src==='Production'||src==='Planned Production') byComp[sku].prod_req += qty;
             else if(src.includes('PO')||src.includes('Purchase')||src.includes('Order')) byComp[sku].po_qty += qty;
@@ -2009,7 +2021,8 @@ function updateAllDashboards() {
           result.inventory = inventory;
           result.inventory_ts = ts;
           var low = inventory.filter(function(i){return i.status==='LOW';});
-          progress('✓ Vicinity: ' + inventory.length.toLocaleString() + ' SKUs · ' + low.length + ' LOW', 'ok');
+          var withActivity = inventory.filter(function(i){return i.qoh>0||i.prod_req!==0||i.po_qty>0;}).length;
+          progress('✓ Vicinity: ' + inventory.length.toLocaleString() + ' SKUs · ' + withActivity + ' with activity · ' + low.length + ' LOW', 'ok');
         }
       }
 
