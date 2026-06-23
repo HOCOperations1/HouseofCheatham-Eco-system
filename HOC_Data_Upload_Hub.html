@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34av">
+<meta name="hoc-build" content="v6.34aw">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -2060,6 +2060,18 @@ function updateAllDashboards() {
         var wbBatches = loaded.pd.wb;
         var mirrorSheet = wbBatches.Sheets['Vicinity Interface Mirror'];
 
+        // v6.34aw: BOM extraction NO LONGER gated by ptAlreadyHasBatches.
+        // BOM is a separate data type from the batch list — the right design
+        // is: PT supplies the schedule (line/status/actqty), Planning_Data
+        // always supplies the BOM (component requirements per batch).
+        // They join by batch number. Without this lift, BOM was never
+        // captured when uploading PT — which broke the placard auto-populate
+        // and any other BOM-aware features.
+        //
+        // BOM extraction is now its own block that runs whenever Planning_Data
+        // is loaded and has the Vicinity Interface Mirror sheet, regardless
+        // of whether PT supplied the batch list.
+
         // v6.34aq: PRECEDENCE FIX. If the PT parser (paste or upload) already
         // populated result.batches, those records have richer fields (line,
         // status, actqty, compound status). DO NOT overwrite them with the
@@ -2067,38 +2079,82 @@ function updateAllDashboards() {
         // and no actuals. PD batches parser is now a FALLBACK that only
         // runs when no PT-derived batches are present.
         var ptAlreadyHasBatches = Array.isArray(result.batches) && result.batches.length > 0;
-        if(ptAlreadyHasBatches){
-          progress('ℹ Batches already loaded from Production Schedule (' + result.batches.length + ') — skipping Vicinity Interface Mirror fallback', 'ok');
-        } else if(!mirrorSheet){
-          progress('⚠ Batches parser: no "Vicinity Interface Mirror" sheet — Compound Coordinator and Production Supervisor will be empty', 'warn');
-        } else {
-          progress('Reading batches from Vicinity Interface Mirror (no Production Schedule loaded)...');
-          // v6.34ap: Use header:1 to get raw 2D array. The sheet has Array
-          // Formulas (range A2:N25290) which sheet_to_json with named headers
-          // doesn't read through cleanly. The 2D-array path works.
-          var mirrorGrid = XLSX.utils.sheet_to_json(mirrorSheet, {header:1, defval:null, raw:true});
-          if(mirrorGrid.length < 2){
-            progress('⚠ Vicinity Interface Mirror: empty or unreadable', 'warn');
-          } else {
-            // Locate columns from header row
+
+        // ── Shared: parse the Mirror grid once, used by both batches + BOM ──
+        var mirrorGrid = null;
+        var col_id = -1, col_desc = -1, col_uom = -1, col_date = -1;
+        var col_qty = -1, col_src = -1, col_type = -1, col_wo = -1;
+        var mirrorReady = false;
+        if(mirrorSheet){
+          mirrorGrid = XLSX.utils.sheet_to_json(mirrorSheet, {header:1, defval:null, raw:true});
+          if(mirrorGrid.length >= 2){
             var headerCells = mirrorGrid[0] || [];
-            function colOf(name){
+            function colOfA(name){
               for(var i = 0; i < headerCells.length; i++){
                 if(String(headerCells[i]||'').trim() === name) return i;
               }
               return -1;
             }
-            var col_id      = colOf('ComponentId');
-            var col_desc    = colOf('ComponentDescription');
-            var col_uom     = colOf('UoM');
-            var col_date    = colOf('ReqDate');
-            var col_qty     = colOf('Quantity');
-            var col_src     = colOf('SourceType');
-            var col_type    = colOf('ComponentType');
-            var col_wo      = colOf('WorkOrder');
-            if(col_wo === -1 || col_qty === -1 || col_date === -1){
-              progress('⚠ Vicinity Interface Mirror: missing required columns (WorkOrder/Quantity/ReqDate). Layout may have changed.', 'warn');
-            } else {
+            col_id   = colOfA('ComponentId');
+            col_desc = colOfA('ComponentDescription');
+            col_uom  = colOfA('UoM');
+            col_date = colOfA('ReqDate');
+            col_qty  = colOfA('Quantity');
+            col_src  = colOfA('SourceType');
+            col_type = colOfA('ComponentType');
+            col_wo   = colOfA('WorkOrder');
+            mirrorReady = (col_wo !== -1 && col_qty !== -1);
+          }
+        }
+
+        // ── BOM extraction (ALWAYS runs when Mirror sheet exists) ──
+        // Builds a per-batch component breakdown. Joins to whatever batch
+        // list ends up in result.batches by batch number.
+        if(mirrorReady){
+          var bomByWO = {};
+          for(var ri = 1; ri < mirrorGrid.length; ri++){
+            var row = mirrorGrid[ri];
+            if(!row) continue;
+            var wo = String(row[col_wo] || '').trim();
+            if(!wo || wo.indexOf('MAIN') !== 0) continue;
+            var src = String(row[col_src] || '').trim();
+            if(src !== 'Production') continue;
+            var q = parseFloat(row[col_qty]) || 0;
+            if(q >= 0) continue;  // BOM = consumption rows (negative)
+            var sku = String(row[col_id] || '').trim();
+            if(!sku) continue;
+            if(!bomByWO[wo]) bomByWO[wo] = [];
+            bomByWO[wo].push({
+              sku:  sku,
+              desc: String(row[col_desc] || '').trim().slice(0, 60),
+              qty:  Math.abs(Math.round(q * 1000) / 1000),
+              type: String(row[col_type] || '').trim(),
+              uom:  String(row[col_uom] || '').trim()
+            });
+          }
+          var bom = Object.keys(bomByWO).map(function(wo){
+            return { batch: wo, components: bomByWO[wo] };
+          });
+          result.bom = bom;
+          result.bom_ts = ts;
+          progress('✓ BOM: ' + bom.length + ' batches with component breakdown captured from Planning_Data', 'ok');
+        } else if(mirrorSheet && !mirrorReady){
+          progress('⚠ BOM: Vicinity Interface Mirror present but missing required columns', 'warn');
+        }
+
+        // ── Batches parser (fallback when PT didn't supply them) ──
+        if(ptAlreadyHasBatches){
+          progress('ℹ Batches already loaded from Production Schedule (' + result.batches.length + ') — using Production Tracker for schedule/status, Planning_Data for BOM only', 'ok');
+        } else if(!mirrorSheet){
+          progress('⚠ Batches parser: no "Vicinity Interface Mirror" sheet — Compound Coordinator and Production Supervisor will be empty', 'warn');
+        } else if(!mirrorReady){
+          progress('⚠ Vicinity Interface Mirror: missing required columns (WorkOrder/Quantity/ReqDate). Layout may have changed.', 'warn');
+        } else {
+          progress('Reading batches from Vicinity Interface Mirror (no Production Schedule loaded)...');
+          // v6.34aw: column lookup + grid parse moved to shared pre-block above.
+          // This block now just does the batch-list construction.
+          {
+            {
               // Group rows by WorkOrder where SourceType==='Production' and WorkOrder starts with MAIN
               var byWO = {};
               for(var ri = 1; ri < mirrorGrid.length; ri++){
@@ -2126,7 +2182,6 @@ function updateAllDashboards() {
               }
 
               var batches = [];
-              var bom = [];
               var skipped_no_fg = 0;
               var skipped_out_of_window = 0;
 
@@ -2149,21 +2204,12 @@ function updateAllDashboards() {
                 var formulaMatch = item.match(/^1-(\d+)/);
                 var formula = formulaMatch ? parseInt(formulaMatch[1]) : 0;
                 var uom = String(fgRow[col_uom] || 'CASE').trim();
-
-                // Build BOM from negative-quantity rows (consumption)
-                var batchBOM = [];
+                // v6.34aw: BOM is now built in the shared pre-block; just
+                // count consumption rows for the bom_count field.
+                var bomCount = 0;
                 rows.forEach(function(r){
                   var q = parseFloat(r[col_qty]) || 0;
-                  if(q >= 0) return;
-                  var sku = String(r[col_id] || '').trim();
-                  if(!sku) return;
-                  batchBOM.push({
-                    sku:  sku,
-                    desc: String(r[col_desc] || '').trim().slice(0, 60),
-                    qty:  Math.abs(Math.round(q * 1000) / 1000),
-                    type: String(r[col_type] || '').trim(),
-                    uom:  String(r[col_uom] || '').trim()
-                  });
+                  if(q < 0) bomCount++;
                 });
 
                 batches.push({
@@ -2184,9 +2230,8 @@ function updateAllDashboards() {
                   shortage:  0,
                   lbs:       0,
                   source:    'Vicinity Interface Mirror',
-                  bom_count: batchBOM.length
+                  bom_count: bomCount
                 });
-                bom.push({ batch: wo, date: dateStr, components: batchBOM });
               });
 
               batches.sort(function(a, b){
@@ -2196,14 +2241,11 @@ function updateAllDashboards() {
               result.batches = batches;
               result.batches_ts = ts;
               result.batches_source_sheet = 'Vicinity Interface Mirror';
-              result.bom = bom;
-              result.bom_ts = ts;
 
               if(batches.length){
                 progress('✓ Batches: ' + batches.length + ' active (in window) of ' + Object.keys(byWO).length + ' total in Vicinity Interface Mirror', 'ok');
                 if(skipped_no_fg) progress('   · ' + skipped_no_fg + ' skipped (no FG row — historical retro records)', 'ok');
                 if(skipped_out_of_window) progress('   · ' + skipped_out_of_window + ' skipped (outside [today-90d, today+180d] window)', 'ok');
-                progress('✓ BOM: ' + bom.length + ' batches with component breakdown captured', 'ok');
               } else {
                 progress('⚠ Batches parser ran but produced 0 batches. Check date window or Vicinity Interface Mirror data.', 'warn');
               }
