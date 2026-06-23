@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34as">
+<meta name="hoc-build" content="v6.34at">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Production Supervisor</title>
@@ -1790,7 +1790,15 @@ function renderLineSum(){
     var utilPct = (r.utilization * 100).toFixed(1) + '%';
     html += '<tr>';
     html += '<td><b>' + r.line + '</b></td>';
-    html += '<td>' + (r.pattern || '—') + '</td>';
+    // v6.34at: Show provenance — yellow dot if pattern came from defaults
+    // (Line_Setup.xlsx not uploaded, or row had unknown pattern string).
+    var provenance = '';
+    if(r.from_default){
+      provenance = ' <span title="No Line Setup upload — using default pattern. Upload Line_Setup.xlsx in Data Upload Hub for line-specific values." style="color:var(--amber);font-size:9px">●</span>';
+    } else if(r.patched_weekdays){
+      provenance = ' <span title="Uploaded pattern wasn\'t recognized — using default weekdays. Check Line_Setup pattern field." style="color:var(--amber);font-size:9px">●</span>';
+    }
+    html += '<td>' + (r.pattern || '—') + provenance + '</td>';
     html += '<td class="num">' + r.avail_hours.toFixed(1) + '</td>';
     html += '<td class="num">' + r.remaining_batches + (r.overdue_batches ? ' <span style="color:var(--red);font-size:9px">(' + r.overdue_batches + ' overdue)</span>' : '') + '</td>';
     html += '<td class="num">' + r.total_remaining_hrs.toFixed(1) + '</td>';
