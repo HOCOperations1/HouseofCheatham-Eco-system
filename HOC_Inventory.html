@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34au">
+<meta name="hoc-build" content="v6.34av">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -419,6 +419,48 @@ function renderTanks(){
   const tanks = load(LS_TANKS, []);
   const now = Date.now();
   const grid = document.getElementById('tank-grid');
+
+  // v6.34av: Diagnostic + freshness indicator above the grid.
+  // Shows whether tanks came from a fresh upload or stale data.
+  var diagEl = document.getElementById('tank-grid-diag');
+  if(!diagEl){
+    diagEl = document.createElement('div');
+    diagEl.id = 'tank-grid-diag';
+    diagEl.style.cssText = 'font-size:10px;margin-bottom:8px;padding:6px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:5px';
+    grid.parentNode.insertBefore(diagEl, grid);
+  }
+  // Find the most recent planning_data reading timestamp
+  var lastPD = null;
+  tanks.forEach(function(r){
+    if(r.source === 'planning_data'){
+      var ts = new Date(r.ts).getTime();
+      if(!lastPD || ts > lastPD) lastPD = ts;
+    }
+  });
+  var rawList = getRawTanks();
+  if(rawList.length === 0){
+    diagEl.innerHTML = '<span style="color:var(--amber);font-weight:700">⚠ No tank data loaded.</span> '
+      + '<span style="color:var(--text2)">Upload Planning_Data.xlsx in Data Upload Hub — the "Tank Farm Counts" sheet populates this view.</span>';
+  } else if(lastPD === null){
+    diagEl.innerHTML = '<span style="color:var(--amber);font-weight:700">' + rawList.length + ' tanks loaded</span> · '
+      + '<span style="color:var(--text2)">no Planning_Data readings yet — only manual entries. Re-upload Planning_Data to refresh.</span>';
+  } else {
+    var ageH = Math.round((now - lastPD) / 3600000);
+    var ageStr = ageH < 1 ? 'just now' : ageH < 24 ? ageH + 'h ago' : Math.round(ageH/24) + 'd ago';
+    var ageColor = ageH > 48 ? 'var(--amber)' : 'var(--text2)';
+    diagEl.innerHTML = '<span style="color:var(--text)">' + rawList.length + ' tanks loaded</span> · '
+      + '<span style="color:' + ageColor + '">Planning_Data refreshed ' + ageStr + '</span>'
+      + (ageH > 48 ? ' <span style="color:var(--amber)">(re-upload to refresh)</span>' : '');
+  }
+
+  if(rawList.length === 0){
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text3);font-size:11px">No tanks in master list. Upload Planning_Data to populate.</div>';
+    // Still clear the history filter
+    var emptyFilterSel = document.getElementById('tank-history-filter');
+    if(emptyFilterSel) emptyFilterSel.innerHTML = '<option value="">— no tanks loaded —</option>';
+    return;
+  }
+
   grid.innerHTML = RAW_TANKS.map(t => {
     const readings = tanks.filter(r => r.tank_id === t.id).sort((a,b)=>b.ts.localeCompare(a.ts));
     const latest = readings[0];
@@ -433,8 +475,17 @@ function renderTanks(){
     const barColor = pctFull < 20 ? 'var(--red)' : pctFull < 40 ? 'var(--amber)' : 'var(--blue)';
     const staleBadge = stale && latest ? '<span class="pill p-amb" style="margin-left:5px">STALE</span>' : '';
     const noReadingBadge = !latest ? '<span class="pill p-red" style="margin-left:5px">NO DATA</span>' : '';
+    // v6.34av: source indicator dot
+    var sourceDot = '';
+    if(latest){
+      if(latest.source === 'planning_data'){
+        sourceDot = '<span title="From Planning_Data upload" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--blue);margin-right:4px;vertical-align:middle"></span>';
+      } else {
+        sourceDot = '<span title="Manual reading" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:4px;vertical-align:middle"></span>';
+      }
+    }
     return `<div class="tank-card" onclick="openTankReading('${t.id}')">
-      <div class="tank-id">${t.id}${staleBadge}${noReadingBadge}</div>
+      <div class="tank-id">${sourceDot}${t.id}${staleBadge}${noReadingBadge}</div>
       <div class="tank-material">${t.material}</div>
       <div style="font-size:18px;font-weight:700;margin-bottom:4px;color:${barColor}">${valueDisplay}</div>
       <div class="tank-level-bar"><div class="tank-level-fill" style="width:${Math.min(pctFull,100)}%;background:${barColor}"></div></div>
