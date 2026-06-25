@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34aw">
+<meta name="hoc-build" content="v6.34ax">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Production Coordinator</title>
@@ -1163,9 +1163,14 @@ function onPlacardBatchSelect(){
       bomEntry.components.forEach(function(c){
         var sku = String(c.sku||'').trim();
         if(!sku) return;
-        // Packaging filter: keep 7-* and 9-*, skip 8-* (chemicals) and any others
+        // v6.34aw: Packaging filter = 7-* (bottles/caps/shippers) + 9-* (labels/films)
+        // v6.34ax: Added 2-* (semi-finished bulk goods) per Material Handler workflow —
+        //          these need to be staged for downstream batches (e.g., bulk shampoo
+        //          staged before a packeting batch). Quantities can be very large
+        //          (hundreds of thousands of EACH) and are shown as-is from BOM.
+        // 8-* chemicals remain excluded (dispensed by Compound, not staged).
         var first = sku.charAt(0);
-        if(first !== '7' && first !== '9'){
+        if(first !== '2' && first !== '7' && first !== '9'){
           bomFiltered++;
           return;
         }
@@ -1208,13 +1213,13 @@ function onPlacardBatchSelect(){
   }
   if(autoItems.length){
     diagEl.innerHTML = '<span style="color:var(--green);font-weight:700">✓ ' + autoItems.length + ' items auto-loaded from Planning_Data BOM</span>'
-      + ' <span style="color:var(--text3)">· packaging only (7-* + 9-*)</span>'
+      + ' <span style="color:var(--text3)">· packaging + semi-finished (2-* / 7-* / 9-*)</span>'
       + (bomFiltered > 0 ? ' <span style="color:var(--text3)">· ' + bomFiltered + ' chemicals (8-*) excluded</span>' : '')
       + (autoItems.length > 10 ? ' <span style="color:var(--amber);font-weight:700">· ⚠ ' + autoItems.length + ' exceeds SOP max of 10 — remove items or split across placards</span>' : '')
       + ' <span style="color:var(--text3)">· Material Handler verifies qty during pick</span>';
   } else if(bomTotal > 0){
     // BOM existed but everything got filtered out
-    diagEl.innerHTML = '<span style="color:var(--amber);font-weight:700">⚠ BOM has ' + bomTotal + ' components but none are 7-* or 9-* (packaging)</span>'
+    diagEl.innerHTML = '<span style="color:var(--amber);font-weight:700">⚠ BOM has ' + bomTotal + ' components but none are 2-* / 7-* / 9-* (packaging or semi-finished)</span>'
       + ' <span style="color:var(--text2)">· add items manually</span>';
   } else {
     diagEl.innerHTML = '<span style="color:var(--text2)">No BOM data found for this batch in Planning_Data.</span>'
