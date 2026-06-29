@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34az">
+<meta name="hoc-build" content="v6.34ba">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -133,6 +133,18 @@ input:focus,select:focus,textarea:focus{border-color:var(--blue)}
         <div class="drop-title">HOC_Production_Tracker.xlsx</div>
         <div class="drop-sub">CLEAN_ DATA · CAPACITY FORECAST · Goal Source Data · Dashboard</div>
         <div class="drop-status" id="status-pt" style="color:var(--text3)">Drop file here or click to browse</div>
+      </div>
+    </div>
+
+    <!-- Next Month Preview (v6.34ba) -->
+    <div>
+      <div style="font-size:10px;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em">🗓️ Next Month Production Tracker</div>
+      <div class="drop-zone" id="zone-nmp" onclick="document.getElementById('file-nmp').click()" ondragover="dragOver(event,'nmp')" ondragleave="dragLeave('nmp')" ondrop="dropFile(event,'nmp')">
+        <input type="file" id="file-nmp" accept=".xlsx,.xls,.csv" style="display:none" onchange="loadFile(this.files[0],'nmp')">
+        <div class="drop-icon">📅</div>
+        <div class="drop-title">HOC_Production_Tracker_NextMonth.xlsx</div>
+        <div class="drop-sub">Same format as Production Tracker · feeds Next Month Preview only · isolated from current-month dashboards</div>
+        <div class="drop-status" id="status-nmp" style="color:var(--text3)">Drop file here or click to browse</div>
       </div>
     </div>
 
@@ -453,7 +465,7 @@ function dragLeave(zone){ document.getElementById('zone-'+zone).classList.remove
 function dropFile(e,zone){ e.preventDefault(); dragLeave(zone); var f=e.dataTransfer.files[0]; if(f)loadFile(f,zone); }
 
 // ── Loaded file registry ──────────────────────────────────────────────
-var loaded = {pt:null, pd:null, co:null, lb:null, ls:null, lc:null, po:null, ps:null};
+var loaded = {pt:null, pd:null, nmp:null, co:null, lb:null, ls:null, lc:null, po:null, ps:null};
 
 function loadFile(file, zone) {
   if(!file) return;
@@ -927,7 +939,7 @@ function parseAttainmentPaste(rows, statusEl){
 // ═══════════════════════════════════════════════════════════════════
 
 function checkReady() {
-  document.getElementById('update-btn').disabled = !(loaded.pt || loaded.pd || loaded.co || loaded.lb || loaded.ls || loaded.lc || loaded.po || loaded.ps);
+  document.getElementById('update-btn').disabled = !(loaded.pt || loaded.pd || loaded.nmp || loaded.co || loaded.lb || loaded.ls || loaded.lc || loaded.po || loaded.ps);
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -1385,6 +1397,99 @@ function updateAllDashboards() {
           });
           result.capacity = capacity;
           progress('✓ Capacity metrics loaded', 'ok');
+        }
+      }
+
+      // ── Parse Next Month Production Tracker (v6.34ba) ────────────────
+      //
+      // Independent from PT — writes to hoc_next_month_v1 only. The NMP
+      // dashboard reads from there; current-month dashboards do not.
+      // Same file format as Production Tracker (CLEAN_ DATA sheet,
+      // same columns) — the only difference is the date range and
+      // where the parsed batches end up.
+      //
+      // Honest scope: NMP parser extracts batches only — no KPI rollup,
+      // no capacity forecast metrics. Those are current-month concepts
+      // that don't apply to a forward-looking preview.
+      // ──────────────────────────────────────────────────────────────────
+      if(loaded.nmp) {
+        progress('Reading Next Month Production Tracker...');
+        var wbNMP = loaded.nmp.wb;
+        var nmpSheet = null;
+        var nmpSheetUsed = '';
+        if(wbNMP.Sheets['CLEAN_ DATA'])      { nmpSheet = wbNMP.Sheets['CLEAN_ DATA'];  nmpSheetUsed = 'CLEAN_ DATA'; }
+        else if(wbNMP.Sheets['CLEAN_DATA'])  { nmpSheet = wbNMP.Sheets['CLEAN_DATA'];   nmpSheetUsed = 'CLEAN_DATA'; }
+        else {
+          // Try month-named sheets (June 2026, July 2026...)
+          var monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+          for(var mi = 0; mi < wbNMP.SheetNames.length; mi++){
+            var sn = wbNMP.SheetNames[mi];
+            for(var mj = 0; mj < monthNames.length; mj++){
+              if(sn.indexOf(monthNames[mj]) >= 0){
+                nmpSheet = wbNMP.Sheets[sn];
+                nmpSheetUsed = sn;
+                break;
+              }
+            }
+            if(nmpSheet) break;
+          }
+        }
+        if(!nmpSheet){
+          progress('⚠ NMP: no "CLEAN_ DATA" or month-named sheet found', 'warn');
+        } else {
+          var nmpRows = XLSX.utils.sheet_to_json(nmpSheet, {defval:'', raw:true});
+          // Default headers at row 1; if month-named, may need header detection.
+          // For now: trust whatever sheet_to_json returns. If column names
+          // don't match, the rows just won't produce batches.
+          var nmpBatches = [];
+          nmpRows.forEach(function(r){
+            var batch = String(r['Batch']||r['BATCH']||'').trim();
+            if(!batch || batch.indexOf('MAIN') !== 0) return;
+            // Same field mapping as PT parser
+            var dateStr = (function(){
+              var v = r['Date']||r['DATE']||r['Scheduled Date']||r['ScheduledDate'];
+              if(!v) return '';
+              if(v instanceof Date) return v.toISOString().slice(0,10);
+              if(typeof v === 'number'){
+                var _d = new Date(Math.round((v-25569)*86400*1000));
+                return _d.toISOString().slice(0,10);
+              }
+              return String(v).trim();
+            })();
+            nmpBatches.push({
+              batch:    batch,
+              date:     dateStr,
+              line:     parseInt(String(r['Line']||r['LINE']||0))||0,
+              item:     String(r['Item']||r['ITEM']||'').trim(),
+              desc:     String(r['Description']||r['DESCRIPTION']||r['Desc']||'').trim(),
+              formula:  parseInt(r['Formula']||r['FORMULA']||0)||0,
+              origqty:  parseFloat(r['Orginial Qty- DO  NOT CHANGE']||r['Original Qty']||r['ORIGQTY']||0)||0,
+              actqty:   parseFloat(r['Actual Qty']||r['ACTQTY']||0)||0,
+              casepk:   parseInt(r['Case Pack']||r['CASEPK']||12)||12,
+              uom:      String(r['UoM']||r['UOM']||'CASE').trim(),
+              status:   String(r['Clean Status']||r['Status']||r['STATUS']||'NOT STARTED').trim().toUpperCase(),
+              cmpd:     String(r['Compound_Status']||r['Compound Status']||'').trim(),
+              cmpd_status: String(r['Compound_Status']||r['Compound Status']||'').trim(),
+              cmpddue:  String(r['Compound_Due_By']||r['Compound Due By']||'').trim(),
+              minutes:  parseFloat(r['Minutes']||r['MINUTES']||0)||0,
+              source:   'nmp_upload'
+            });
+          });
+          if(nmpBatches.length){
+            var nmpPayload = {
+              batches: nmpBatches,
+              source_sheet: nmpSheetUsed,
+              _updated: ts
+            };
+            try {
+              localStorage.setItem('hoc_next_month_v1', JSON.stringify(nmpPayload));
+              progress('✓ NMP: ' + nmpBatches.length + ' batches stored in hoc_next_month_v1 (isolated from current-month dashboards)', 'ok');
+            } catch(e){
+              progress('⚠ NMP: could not save to localStorage: ' + e.message, 'warn');
+            }
+          } else {
+            progress('⚠ NMP: no MAIN batches found in ' + nmpSheetUsed, 'warn');
+          }
         }
       }
 
@@ -2774,11 +2879,13 @@ function clearAllData() {
   localStorage.removeItem('hoc_line_clearance_v1');
   // v6.34aq: also clear new keys + BOM
   localStorage.removeItem('hoc_chem_pulls_req_v1');
-  loaded = {pt:null,pd:null,co:null,lb:null,ls:null,lc:null,po:null,ps:null};
+  // v6.34ba: also clear NMP isolated storage
+  localStorage.removeItem('hoc_next_month_v1');
+  loaded = {pt:null,pd:null,nmp:null,co:null,lb:null,ls:null,lc:null,po:null,ps:null};
   // v6.34aq: Defensive DOM access. zone-pt was removed in v6.34ap; previous
   // version threw TypeError trying to set its textContent, which silently
   // broke the rest of this function. Now: only touch elements that exist.
-  ['pt','pd','co','lb','ls','lc','po','ps'].forEach(function(z){
+  ['pt','pd','nmp','co','lb','ls','lc','po','ps'].forEach(function(z){
     var st = document.getElementById('status-'+z);
     var zn = document.getElementById('zone-'+z);
     if(st){ st.textContent='Drop file here or click to browse'; st.style.color='var(--text3)'; }

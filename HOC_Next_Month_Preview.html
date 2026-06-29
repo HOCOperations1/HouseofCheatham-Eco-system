@@ -26,7 +26,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="hoc-oes-version" content="v6.34az">
+<meta name="hoc-oes-version" content="v6.34ba">
 <title>Next Month Preview · HOC-OES</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
@@ -201,22 +201,45 @@ function toDateObj(s){
 }
 
 function render(){
-  // 1. Load data
+  // 1. Load data — v6.34ba: prefer the dedicated NMP upload storage when
+  //    available. Falls back to filtering hoc_upload_v1 by next-month dates
+  //    if no dedicated upload exists. The two sources are independent:
+  //    a dedicated NMP upload doesn't merge with current-month data.
+  var nmpStore = null;
+  try { nmpStore = JSON.parse(localStorage.getItem('hoc_next_month_v1')||'null'); } catch(e){}
   var up = null;
   try { up = JSON.parse(localStorage.getItem('hoc_upload_v1')||'null'); } catch(e){}
-  var allBatches = (up && Array.isArray(up.batches)) ? up.batches : [];
 
   // 2. Compute next month window
   var rng = nextMonthRange();
   var monthName = monthLabel(rng.start);
   document.getElementById('brand-sub').textContent = monthName;
 
-  // 3. Filter to batches with date in next month
-  var batches = allBatches.filter(function(b){
-    var d = toDateObj(b.date);
-    if(!d) return false;
-    return d >= rng.start && d <= rng.end;
-  });
+  // 3. Determine source + populate batches
+  var batches = [];
+  var sourceLabel = '';
+  var allBatchesCount = 0;
+  var sourceTs = '';
+  if(nmpStore && Array.isArray(nmpStore.batches) && nmpStore.batches.length > 0){
+    // Dedicated NMP upload — use it directly, no date filter (the file IS
+    // the next-month schedule). If the file happens to contain batches
+    // outside the next-month window, surface them all — the planner
+    // intentionally uploaded them as "next month preview" data.
+    batches = nmpStore.batches.slice();
+    sourceLabel = 'dedicated NMP upload';
+    sourceTs = nmpStore._updated ? new Date(nmpStore._updated).toLocaleString() : 'unknown';
+    allBatchesCount = nmpStore.batches.length;
+  } else if(up && Array.isArray(up.batches)){
+    // Fallback: filter the current-month upload's batches by date
+    allBatchesCount = up.batches.length;
+    batches = up.batches.filter(function(b){
+      var d = toDateObj(b.date);
+      if(!d) return false;
+      return d >= rng.start && d <= rng.end;
+    });
+    sourceLabel = 'filtered from current upload';
+    sourceTs = up.batches_ts ? new Date(up.batches_ts).toLocaleString() : 'unknown';
+  }
 
   // Sort by date asc
   batches.sort(function(a, b){
@@ -225,20 +248,19 @@ function render(){
 
   // 4. Diagnostic strip
   var diagEl = document.getElementById('diag');
-  if(!up){
+  if(!nmpStore && !up){
     diagEl.innerHTML = '<span style="color:var(--amber);font-weight:700">⚠ No upload data found.</span> '
-      + '<span style="color:var(--text2)">Upload Production Tracker or Planning_Data in Data Upload Hub first.</span>';
-  } else if(allBatches.length === 0){
-    diagEl.innerHTML = '<span style="color:var(--amber);font-weight:700">⚠ No batches in current upload.</span> '
-      + '<span style="color:var(--text2)">Upload includes inventory/tanks but no batch list.</span>';
+      + '<span style="color:var(--text2)">Upload Production Tracker, Planning_Data, or a dedicated Next Month Tracker in Data Upload Hub first.</span>';
   } else if(batches.length === 0){
     diagEl.innerHTML = '<span style="color:var(--text)">No batches scheduled for ' + monthName + '.</span> '
-      + '<span style="color:var(--text3)">This view will surface batches when next month\'s schedule becomes available in Production Tracker or Planning_Data. '
-      + 'Total batches in current upload: ' + allBatches.length + '.</span>';
+      + '<span style="color:var(--text3)">Upload a dedicated Next Month Production Tracker in Data Upload Hub, or wait for next month\'s schedule to land in your regular upload. '
+      + (allBatchesCount > 0 ? 'Total batches in current data: ' + allBatchesCount + '.' : '') + '</span>';
+  } else if(nmpStore && nmpStore.batches.length > 0){
+    diagEl.innerHTML = '<span style="color:var(--green);font-weight:700">' + batches.length + ' batches from dedicated NMP upload</span> · '
+      + '<span style="color:var(--text3)">isolated from current-month dashboards · uploaded: ' + sourceTs + '</span>';
   } else {
-    var uploadTs = up.batches_ts ? new Date(up.batches_ts).toLocaleString() : 'unknown';
     diagEl.innerHTML = '<span style="color:var(--green);font-weight:700">' + batches.length + ' batches scheduled for ' + monthName + '</span> · '
-      + '<span style="color:var(--text3)">filtered from ' + allBatches.length + ' total · upload: ' + uploadTs + '</span>';
+      + '<span style="color:var(--text3)">' + sourceLabel + ' (' + allBatchesCount + ' total) · upload: ' + sourceTs + '</span>';
   }
 
   // 5. KPIs
@@ -342,7 +364,7 @@ function render(){
 
 // Re-render when upload data changes in another tab
 window.addEventListener('storage', function(e){
-  if(e.key === 'hoc_upload_v1') render();
+  if(e.key === 'hoc_upload_v1' || e.key === 'hoc_next_month_v1') render();
 });
 
 render();
