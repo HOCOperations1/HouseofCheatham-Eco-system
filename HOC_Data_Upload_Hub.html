@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34ba">
+<meta name="hoc-build" content="v6.34bb">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -298,6 +298,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--blue)}
       <span style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-right:2px">target:</span>
       <button class="nb" id="paste-target-auto" data-target="auto" style="background:rgba(59,130,246,.12);color:var(--blue);border:1px solid rgba(59,130,246,.25);padding:5px 10px;border-radius:6px">🤖 Auto-detect</button>
       <button class="nb" id="paste-target-pt"  data-target="pt" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border)">📊 Production Schedule</button>
+      <button class="nb" id="paste-target-nmp" data-target="nmp" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border)">🗓️ Next Month</button>
       <button class="nb" id="paste-target-pd"  data-target="pd" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border)">🏭 Planning Data (Vicinity)</button>
       <button class="nb" id="paste-target-att" data-target="att" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border)">📈 Case Attainment</button>
     </div>
@@ -306,6 +307,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--blue)}
 The parser will skip the KPI rollup at the top and find the batch table automatically.
 
 For Planning Data, paste from the 'Vicinity Interface' sheet — same idea, header row anywhere in the paste is fine.
+
+For Next Month: click the 🗓️ Next Month target button FIRST, then paste. Auto-detect can't tell next-month data apart from current-month — both look the same. The button tells the parser which storage to write to.
 
 For Case Attainment, paste the entire MFG Plant attainment sheet — parser finds Plant total + per-line blocks + monthly trend automatically." style="width:100%;min-height:120px;padding:10px;font-family:ui-monospace,monospace;font-size:10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);resize:vertical;line-height:1.4"></textarea>
     <div style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap">
@@ -506,7 +509,7 @@ var PASTE_TARGET = 'auto';
 
 function setPasteTarget(t){
   PASTE_TARGET = t;
-  ['pt','pd','att','auto'].forEach(function(k){
+  ['pt','nmp','pd','att','auto'].forEach(function(k){
     var b = document.getElementById('paste-target-'+k);
     if(!b) return;
     if(k===t){
@@ -525,7 +528,7 @@ function setPasteTarget(t){
 // this script tag is at end of body, so all referenced DOM exists already.
 // Also retries on next tick for safety.
 function _wirePickers(){
-  ['pt','pd','att','auto'].forEach(function(k){
+  ['pt','nmp','pd','att','auto'].forEach(function(k){
     var b = document.getElementById('paste-target-'+k);
     if(b && !b._wired){
       b.addEventListener('click', function(){ setPasteTarget(k); });
@@ -614,6 +617,16 @@ function parsePaste(){
     var monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
     var d = new Date();
     sheetName = monthNames[d.getMonth()] + ' ' + d.getFullYear();
+  } else if(target === 'nmp'){
+    // v6.34bb: NMP paste — name the sheet after NEXT month so the parser
+    // recognizes it as month-named (not 'CLEAN_ DATA'). The NMP parser
+    // accepts both via month-name fallback.
+    var monthNames2 = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    var d2 = new Date();
+    var nextM = d2.getMonth() + 1;
+    var nextY = d2.getFullYear();
+    if(nextM > 11){ nextM = 0; nextY++; }
+    sheetName = monthNames2[nextM] + ' ' + nextY;
   } else if(target === 'att'){
     // Attainment data is parsed inline — different path entirely
     return parseAttainmentPaste(rows, statusEl);
@@ -639,7 +652,9 @@ function parsePaste(){
 
     statusEl.style.color = 'var(--green)';
     statusEl.textContent = '✓ Loaded ' + rows.length.toLocaleString() + ' rows as ' +
-                           (target==='pt'?'Production Schedule':'Planning Data') +
+                           (target==='pt'  ? 'Production Schedule' :
+                            target==='nmp' ? 'Next Month Schedule' :
+                                             'Planning Data') +
                            '. Click "Update All Dashboards" to broadcast.';
     log('info', 'Paste loaded: ' + rows.length + ' rows → ' + target + ' (' + sheetName + ')');
     checkReady();
