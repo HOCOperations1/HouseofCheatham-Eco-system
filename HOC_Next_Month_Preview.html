@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<!--
+  v6.34ay — Next Month Preview
+  ============================
+  Standalone dashboard. Surfaces upcoming-month batches without touching
+  the current-month dashboards (per explicit scope: "doesn't interfere").
+
+  Data source:
+    hoc_upload_v1.batches → filtered to batches whose date falls in the
+    calendar next month (e.g., today=2026-06-29 → shows all 2026-07-* batches).
+
+  Layout:
+    - Header KPI strip: total batches, total cases, est hours, # lines used
+    - Per-line summary cards
+    - Batch list table sorted by date asc
+
+  Honest limitations documented in the UI:
+    - Status field is whatever the parser wrote (typically NOT STARTED for
+      future-dated batches). No live status here — this is a planning preview.
+    - Hours estimate uses b.minutes if present, else fallback formula.
+      Diagnostic strip notes which source.
+    - Patch OEE per-line numbers don't apply to a future month (showing
+      historical actuals would be misleading).
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="hoc-oes-version" content="v6.34ay">
+<title>Next Month Preview · HOC-OES</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg:#0B0E17;--bg2:#111520;--bg3:#161C28;
+    --text:#E6E9F0;--text2:#94A3B8;--text3:#64748B;
+    --border:rgba(255,255,255,.08);
+    --blue:#3b82f6;--green:#22c55e;--amber:#f59e0b;--red:#ef4444;--purple:#a855f7;--teal:#06b6d4;
+  }
+  body[data-theme="light"]{
+    --bg:#F5F6F8;--bg2:#FFFFFF;--bg3:#EEF1F5;
+    --text:#0F172A;--text2:#475569;--text3:#94A3B8;
+    --border:rgba(0,0,0,.08);
+  }
+  body{font-family:ui-monospace,monospace;background:var(--bg);color:var(--text);font-size:11px;min-height:100vh}
+  a{color:var(--blue);text-decoration:none}
+  .topbar{display:flex;align-items:center;gap:10px;padding:8px 16px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:8px}
+  .logo{font-size:14px;font-weight:700;letter-spacing:.05em;color:var(--blue);background:rgba(59,130,246,.12);padding:4px 8px;border-radius:6px}
+  .brand-name{font-size:12px;font-weight:700;color:var(--text)}
+  .brand-sub{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+  .pill{display:inline-block;font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:var(--bg3);color:var(--text2)}
+  .pill-blue{background:rgba(59,130,246,.15);color:var(--blue)}
+  .pill-green{background:rgba(34,197,94,.15);color:var(--green)}
+  .pill-amber{background:rgba(245,158,11,.15);color:var(--amber)}
+  .pill-purple{background:rgba(168,85,247,.15);color:var(--purple)}
+  .content{padding:14px;max-width:1400px;margin:0 auto}
+  .card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+  .card-title{font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:10px}
+  .kpi{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+  .kpi-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+  .kpi-value{font-size:20px;font-weight:700;color:var(--text);margin-top:4px}
+  .kpi-sub{font-size:9px;color:var(--text3);margin-top:2px}
+  .line-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+  .line-card{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px}
+  .line-title{font-size:13px;font-weight:700;color:var(--blue);margin-bottom:6px}
+  .line-stat{display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-top:3px}
+  .line-stat b{color:var(--text)}
+  .tbl-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:8px}
+  table{width:100%;border-collapse:collapse;font-size:10px}
+  th,td{padding:6px 10px;text-align:left;border-bottom:1px solid var(--border)}
+  th{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;font-weight:700;background:var(--bg3);position:sticky;top:0}
+  tr:hover td{background:rgba(59,130,246,.04)}
+  td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .empty-state{text-align:center;padding:40px 20px;color:var(--text3);font-size:11px}
+  .diag{font-size:10px;padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;margin-bottom:10px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <a href="index.html" style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text2);text-decoration:none;font-size:9px;font-weight:700;flex-shrink:0">← HOC-OES</a>
+    <div class="logo">NMP</div>
+    <div>
+      <div class="brand-name">Next Month Preview</div>
+      <div class="brand-sub" id="brand-sub">—</div>
+    </div>
+  </div>
+</div>
+
+<div class="content">
+
+  <div id="diag" class="diag"></div>
+
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-label">Batches</div>
+      <div class="kpi-value" id="kpi-batches">—</div>
+      <div class="kpi-sub" id="kpi-batches-sub">scheduled next month</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Total Cases</div>
+      <div class="kpi-value" id="kpi-cases">—</div>
+      <div class="kpi-sub">planned production</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Est. Hours</div>
+      <div class="kpi-value" id="kpi-hours">—</div>
+      <div class="kpi-sub" id="kpi-hours-sub">workload across all lines</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Lines Used</div>
+      <div class="kpi-value" id="kpi-lines">—</div>
+      <div class="kpi-sub" id="kpi-lines-sub">with at least 1 batch</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Date Range</div>
+      <div class="kpi-value" id="kpi-range" style="font-size:13px">—</div>
+      <div class="kpi-sub" id="kpi-range-sub">first → last batch</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Per-Line Summary</div>
+    <div class="line-grid" id="line-cards"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">
+      <span>Batch List · sorted by date</span>
+      <span id="batch-count" style="font-size:10px;color:var(--text3);font-weight:400;margin-left:auto"></span>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Batch</th>
+            <th>Date</th>
+            <th>Line</th>
+            <th>Item</th>
+            <th>Description</th>
+            <th class="num">Cases</th>
+            <th class="num">Est. Hrs</th>
+          </tr>
+        </thead>
+        <tbody id="batch-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script src="hoc_theme.js"></script>
+<script>
+// ───────────────────────────────────────────────────────────────────
+// Next Month Preview — v6.34ay
+//
+// Pure read-only view. Does not write any storage, does not affect
+// other dashboards. Re-renders on hoc_upload_v1 storage events so
+// new uploads in another tab reflect here automatically.
+// ───────────────────────────────────────────────────────────────────
+
+function fmt(n){
+  if(n === null || n === undefined) return '—';
+  if(typeof n !== 'number') return String(n);
+  return n.toLocaleString();
+}
+function fmtHr(min){
+  if(!min || min <= 0) return '—';
+  return (min/60).toFixed(1);
+}
+function nextMonthRange(){
+  var now = new Date();
+  var startY = now.getFullYear();
+  var startM = now.getMonth() + 1;  // 0-indexed → +1 to get next month
+  if(startM > 11){ startM = 0; startY++; }
+  var start = new Date(startY, startM, 1);
+  var end = new Date(startY, startM + 1, 0, 23, 59, 59);  // last day of next month
+  return { start: start, end: end };
+}
+function monthLabel(d){
+  return d.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+}
+function toDateObj(s){
+  if(!s) return null;
+  if(s instanceof Date) return s;
+  // ISO date string
+  var d = new Date(s);
+  if(!isNaN(d.getTime())) return d;
+  // Try M/D/YYYY
+  var parts = String(s).split('/');
+  if(parts.length === 3){
+    var mm = parseInt(parts[0]) || 0;
+    var dd = parseInt(parts[1]) || 0;
+    var yy = parseInt(parts[2]) || 0;
+    if(yy < 100) yy = 2000 + yy;
+    return new Date(yy, mm-1, dd);
+  }
+  return null;
+}
+
+function render(){
+  // 1. Load data
+  var up = null;
+  try { up = JSON.parse(localStorage.getItem('hoc_upload_v1')||'null'); } catch(e){}
+  var allBatches = (up && Array.isArray(up.batches)) ? up.batches : [];
+
+  // 2. Compute next month window
+  var rng = nextMonthRange();
+  var monthName = monthLabel(rng.start);
+  document.getElementById('brand-sub').textContent = monthName;
+
+  // 3. Filter to batches with date in next month
+  var batches = allBatches.filter(function(b){
+    var d = toDateObj(b.date);
+    if(!d) return false;
+    return d >= rng.start && d <= rng.end;
+  });
+
+  // Sort by date asc
+  batches.sort(function(a, b){
+    return String(a.date).localeCompare(String(b.date));
+  });
+
+  // 4. Diagnostic strip
+  var diagEl = document.getElementById('diag');
+  if(!up){
+    diagEl.innerHTML = '<span style="color:var(--amber);font-weight:700">⚠ No upload data found.</span> '
+      + '<span style="color:var(--text2)">Upload Production Tracker or Planning_Data in Data Upload Hub first.</span>';
+  } else if(allBatches.length === 0){
+    diagEl.innerHTML = '<span style="color:var(--amber);font-weight:700">⚠ No batches in current upload.</span> '
+      + '<span style="color:var(--text2)">Upload includes inventory/tanks but no batch list.</span>';
+  } else if(batches.length === 0){
+    diagEl.innerHTML = '<span style="color:var(--text)">No batches scheduled for ' + monthName + '.</span> '
+      + '<span style="color:var(--text3)">This view will surface batches when next month\'s schedule becomes available in Production Tracker or Planning_Data. '
+      + 'Total batches in current upload: ' + allBatches.length + '.</span>';
+  } else {
+    var uploadTs = up.batches_ts ? new Date(up.batches_ts).toLocaleString() : 'unknown';
+    diagEl.innerHTML = '<span style="color:var(--green);font-weight:700">' + batches.length + ' batches scheduled for ' + monthName + '</span> · '
+      + '<span style="color:var(--text3)">filtered from ' + allBatches.length + ' total · upload: ' + uploadTs + '</span>';
+  }
+
+  // 5. KPIs
+  var totalCases = 0;
+  var totalMinutes = 0;
+  var byLine = {};
+  var minDate = null, maxDate = null;
+  var hasMinutesField = false;
+  batches.forEach(function(b){
+    var cases = parseFloat(b.origqty) || 0;
+    totalCases += cases;
+    var mins = parseFloat(b.minutes) || 0;
+    if(mins > 0) hasMinutesField = true;
+    // If no minutes field, estimate at 60 cases per minute (conservative)
+    if(mins <= 0) mins = cases / 60;
+    totalMinutes += mins;
+    var ln = parseInt(b.line) || 0;
+    if(!byLine[ln]) byLine[ln] = { batches:0, cases:0, minutes:0 };
+    byLine[ln].batches++;
+    byLine[ln].cases += cases;
+    byLine[ln].minutes += mins;
+    var d = toDateObj(b.date);
+    if(d){
+      if(!minDate || d < minDate) minDate = d;
+      if(!maxDate || d > maxDate) maxDate = d;
+    }
+  });
+
+  document.getElementById('kpi-batches').textContent = batches.length ? fmt(batches.length) : '—';
+  document.getElementById('kpi-cases').textContent   = batches.length ? fmt(Math.round(totalCases)) : '—';
+  document.getElementById('kpi-hours').textContent   = batches.length ? (totalMinutes/60).toFixed(0) : '—';
+  document.getElementById('kpi-hours-sub').textContent = hasMinutesField
+    ? 'workload across all lines'
+    : 'estimated (no minutes field)';
+  document.getElementById('kpi-lines').textContent   = Object.keys(byLine).filter(function(l){return parseInt(l)>0;}).length || '—';
+  if(batches.length === 0){
+    document.getElementById('kpi-lines-sub').textContent = '—';
+  } else if(byLine[0] && byLine[0].batches > 0){
+    document.getElementById('kpi-lines-sub').textContent = byLine[0].batches + ' batches w/ line=0 (unassigned)';
+  } else {
+    document.getElementById('kpi-lines-sub').textContent = 'with at least 1 batch';
+  }
+  if(minDate && maxDate){
+    var f = function(d){ return (d.getMonth()+1) + '/' + d.getDate(); };
+    document.getElementById('kpi-range').textContent = f(minDate) + ' → ' + f(maxDate);
+  } else {
+    document.getElementById('kpi-range').textContent = '—';
+  }
+
+  // 6. Per-line summary cards
+  var lineCards = document.getElementById('line-cards');
+  if(Object.keys(byLine).length === 0){
+    lineCards.innerHTML = '<div class="empty-state" style="grid-column:1/-1">No batches.</div>';
+  } else {
+    var sortedLines = Object.keys(byLine).sort(function(a,b){
+      var na = parseInt(a), nb = parseInt(b);
+      if(na === 0) return 1;  // line=0 (unassigned) goes last
+      if(nb === 0) return -1;
+      return na - nb;
+    });
+    lineCards.innerHTML = sortedLines.map(function(ln){
+      var d = byLine[ln];
+      var lineLabel = (parseInt(ln) === 0) ? 'Unassigned' : 'Line ' + ln;
+      var lineColor = (parseInt(ln) === 0) ? 'var(--amber)' : 'var(--blue)';
+      return '<div class="line-card">'
+        + '<div class="line-title" style="color:' + lineColor + '">' + lineLabel + '</div>'
+        + '<div class="line-stat"><span>Batches</span><b>' + d.batches + '</b></div>'
+        + '<div class="line-stat"><span>Cases</span><b>' + fmt(Math.round(d.cases)) + '</b></div>'
+        + '<div class="line-stat"><span>Est. Hours</span><b>' + (d.minutes/60).toFixed(1) + '</b></div>'
+        + '</div>';
+    }).join('');
+  }
+
+  // 7. Batch list
+  var batchCount = document.getElementById('batch-count');
+  batchCount.textContent = batches.length ? batches.length + ' batches' : '';
+
+  var tbody = document.getElementById('batch-tbody');
+  if(batches.length === 0){
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No batches scheduled for ' + monthName + '.</td></tr>';
+  } else {
+    tbody.innerHTML = batches.map(function(b){
+      var cases = parseFloat(b.origqty) || 0;
+      var mins  = parseFloat(b.minutes) || (cases / 60);
+      var line  = parseInt(b.line) || 0;
+      var lineCell = line > 0
+        ? '<span class="pill pill-blue">L' + line + '</span>'
+        : '<span class="pill pill-amber">—</span>';
+      return '<tr>'
+        + '<td><b>' + (b.batch || '') + '</b></td>'
+        + '<td>' + (b.date || '') + '</td>'
+        + '<td>' + lineCell + '</td>'
+        + '<td style="font-size:9px;color:var(--text3)">' + (b.item || '') + '</td>'
+        + '<td>' + (b.desc || '') + '</td>'
+        + '<td class="num">' + fmt(Math.round(cases)) + '</td>'
+        + '<td class="num">' + fmtHr(mins) + '</td>'
+        + '</tr>';
+    }).join('');
+  }
+}
+
+// Re-render when upload data changes in another tab
+window.addEventListener('storage', function(e){
+  if(e.key === 'hoc_upload_v1') render();
+});
+
+render();
+</script>
+
+</body>
+</html>
