@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34ay">
+<meta name="hoc-build" content="v6.34az">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -2298,8 +2298,17 @@ function updateAllDashboards() {
           var inUse = parseFloat(row[23]) || 0;
           var cycle = parseFloat(row[24]) || 0;
           var delta = parseFloat(row[25]) || 0;
-          var effective = cycle > 0 ? cycle : gp;
-          var pctFull = gp > 0 ? Math.min(100, Math.round((effective / gp) * 100)) : 100;
+          // v6.34az: Use GP as the tank reading value. Daily Cycle Count
+          // in Planning_Data has been confirmed stale (not updated daily
+          // as the name suggests), so we treat GP (Great Plains system
+          // of record) as the authoritative current quantity.
+          // Cycle + delta still captured in the notes/metadata for trend
+          // analysis and as audit context, but the reading VALUE = GP.
+          var effective = gp;
+          var pctFull = 100;  // GP is the system-of-record level; without
+          // a separate capacity figure we display it at 100% by default.
+          // (Future enhancement: pull capacity from a separate config if
+          // operators want a "% full" gauge.)
           parsedTanks.push({
             id: itemId,
             material: desc,
@@ -2313,7 +2322,7 @@ function updateAllDashboards() {
             unit: 'lbs',
             pct_full: pctFull,
             user: 'Planning Data',
-            notes: 'GP='+gp.toFixed(0)+' · cycle='+cycle.toFixed(0)+' · delta='+delta.toFixed(0),
+            notes: 'GP='+gp.toFixed(0)+' (cycle='+cycle.toFixed(0)+' stale · delta='+delta.toFixed(0)+')',
             ts: ts,
             source: 'planning_data',
             gp: gp,
