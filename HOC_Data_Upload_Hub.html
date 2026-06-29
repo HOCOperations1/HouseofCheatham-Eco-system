@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34bb">
+<meta name="hoc-build" content="v6.34bc">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1261,19 +1261,40 @@ function updateAllDashboards() {
             if(v === null || v === undefined) return 0;
             return parseFloat(String(v).replace(/,/g,'').replace(/[^0-9.\-]/g,'')) || 0;
           };
-          var planCases = _parseNum(sched[3]);   // D3 = planned cases
-          var doneCases = _parseNum(sched[6]);   // G3 = completed cases (running total)
-          // Sanity guards: don't write nonsense.
-          if(planCases >= 1000){
-            result.goals = result.goals || {may_actual:0, may_goal:0, may_bal:0, oee_act:0, oee_goal:60, att_act:0, att_goal:90, oee_by_line:{}, att_by_line:{}};
-            result.goals.may_actual = Math.round(doneCases);
-            result.goals.may_goal   = Math.round(planCases);
-            result.goals.may_bal    = Math.round(planCases - doneCases);
-            result.goals_ts = ts;
-            result.goals_source = 'monthly_master_rollup_D3_G3';
-            progress('✓ KPIs (D3='+planCases.toLocaleString()+' G3='+doneCases.toLocaleString()+' from Scheduled row)', 'ok');
+          // v6.34bc: Verify this is the monthly-master rollup format BEFORE
+          // reading D3/G3. The rollup format has labels like "SCHEDULED" or
+          // "COMPLETED" in column A of the top rows; a pasted batch table
+          // has "MAIN..." values there instead. Without this guard, paste
+          // flow was scraping the THIRD BATCH ROW as if it were the KPI
+          // summary, producing wrong "goal" numbers (random batch's qty).
+          var row3LabelA = String((sched[0]||'')).trim().toUpperCase();
+          var row3LabelB = String((rawAll[1]||[])[0]||'').trim().toUpperCase();  // row 2 col A
+          var looksLikeRollup = (
+            row3LabelA === 'SCHEDULED' || row3LabelB === 'SCHEDULED' ||
+            row3LabelA === 'PLANNED'   || row3LabelB === 'PLANNED'   ||
+            row3LabelA.indexOf('SCHEDUL') === 0 || row3LabelB.indexOf('SCHEDUL') === 0
+          );
+          // Extra safety: also skip if row 3 col A looks like a batch number
+          // (MAIN*). Real rollups never have batch numbers in this position.
+          var row3LooksLikeBatch = row3LabelA.indexOf('MAIN') === 0;
+
+          if(!looksLikeRollup || row3LooksLikeBatch){
+            progress('ℹ Skipping D3/G3 KPI scrape — sheet does not look like monthly-master rollup format (row 3 col A = "' + (row3LabelA||'(empty)').slice(0,30) + '"). Goals will come from Goal Source Data sheet if present.', 'ok');
           } else {
-            progress('⚠ MTD rollup: D3='+planCases+' below 1000 — skipping (raw D3='+JSON.stringify(sched[3])+' G3='+JSON.stringify(sched[6])+')', 'warn');
+            var planCases = _parseNum(sched[3]);   // D3 = planned cases
+            var doneCases = _parseNum(sched[6]);   // G3 = completed cases (running total)
+            // Sanity guards: don't write nonsense.
+            if(planCases >= 1000){
+              result.goals = result.goals || {may_actual:0, may_goal:0, may_bal:0, oee_act:0, oee_goal:60, att_act:0, att_goal:90, oee_by_line:{}, att_by_line:{}};
+              result.goals.may_actual = Math.round(doneCases);
+              result.goals.may_goal   = Math.round(planCases);
+              result.goals.may_bal    = Math.round(planCases - doneCases);
+              result.goals_ts = ts;
+              result.goals_source = 'monthly_master_rollup_D3_G3';
+              progress('✓ KPIs (D3='+planCases.toLocaleString()+' G3='+doneCases.toLocaleString()+' from Scheduled row)', 'ok');
+            } else {
+              progress('⚠ MTD rollup: D3='+planCases+' below 1000 — skipping (raw D3='+JSON.stringify(sched[3])+' G3='+JSON.stringify(sched[6])+')', 'warn');
+            }
           }
         }
 
