@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34bc">
+<meta name="hoc-build" content="v6.34be">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1434,6 +1434,29 @@ function updateAllDashboards() {
           result.capacity = capacity;
           progress('✓ Capacity metrics loaded', 'ok');
         }
+
+        // v6.34be: DIAGNOSTIC — when goals stayed empty (no current-month
+        // row in Goal Source Data), surface a clear message so the user
+        // knows why case-count KPI tiles show empty/dashes rather than
+        // real numbers.
+        //
+        // Honest reason we DON'T auto-derive from batches: the planner's
+        // Goal Source Data row is authoritative and often reflects a
+        // narrower scope than the raw sum of scheduled batches (which may
+        // include re-runs, repacks, split runs, mid-month adds). Deriving
+        // from batches would show 5-7x the planner's numbers — technically
+        // "the sum" but semantically wrong. Better to show empty and
+        // prompt the planner to update Goal Source Data.
+        var goalsAreEmpty = (
+          Array.isArray(result.batches) && result.batches.length > 0 &&
+          (!result.goals || (!result.goals.may_actual && !result.goals.may_goal))
+        );
+        if(goalsAreEmpty){
+          var _now = new Date();
+          var _monthName = ['January','February','March','April','May','June','July','August','September','October','November','December'][_now.getMonth()];
+          var _monthShort = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][_now.getMonth()];
+          progress('⚠ Goals are empty for ' + _monthName + ' ' + _now.getFullYear() + '. Goal Source Data has no "' + _monthShort + ' ' + _now.getFullYear() + '" row yet. Case-count KPI tiles will show "—". Add a row to Goal Source Data with the planner\'s monthly targets to populate them.', 'warn');
+        }
       }
 
       // ── Parse Next Month Production Tracker (v6.34ba) ────────────────
@@ -2766,6 +2789,41 @@ function updateAllDashboards() {
       }
 
       // ── Write to localStorage ─────────────────────────────────────
+      // v6.34bd: PRESERVE PD-sourced fields across non-PD uploads.
+      //
+      // Bug being fixed: each updateAllDashboards() built `result` from
+      // scratch and overwrote hoc_upload_v1 wholesale. So an upload that
+      // didn't include Planning_Data wiped the previously-persisted
+      // inventory, bom, and chem_pulls_req — breaking placard auto-populate,
+      // Raw Inventory, and Weekly Material Demand on every subsequent PT-only
+      // upload.
+      //
+      // Rule: fields sourced from Planning_Data (inventory, bom,
+      // chem_pulls_req, tank counts) survive if no PD was uploaded this
+      // session. Fields sourced from PT (batches, goals, capacity) get
+      // rewritten every upload — they reflect the current schedule.
+      if(!loaded.pd){
+        try {
+          var prev = JSON.parse(localStorage.getItem(DATA_KEY) || '{}');
+          // Only preserve fields not already populated by this session
+          if(!result.inventory && prev.inventory){
+            result.inventory = prev.inventory;
+            result.inventory_ts = prev.inventory_ts;
+            progress('ℹ Preserved inventory from prior PD upload (' + prev.inventory.length + ' SKUs)', 'ok');
+          }
+          if(!result.bom && prev.bom){
+            result.bom = prev.bom;
+            result.bom_ts = prev.bom_ts;
+            progress('ℹ Preserved BOM from prior PD upload (' + prev.bom.length + ' batches) — placard auto-populate will keep working', 'ok');
+          }
+          if(!result.chem_pulls_req && prev.chem_pulls_req){
+            result.chem_pulls_req = prev.chem_pulls_req;
+            result.chem_pulls_req_ts = prev.chem_pulls_req_ts;
+          }
+        } catch(mergeErr){
+          log('warn', 'Could not merge prior PD fields: ' + mergeErr.message);
+        }
+      }
       result._updated = ts;
       localStorage.setItem(DATA_KEY, JSON.stringify(result));
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34bc">
+<meta name="hoc-build" content="v6.34be">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Production Supervisor</title>
@@ -1442,6 +1442,16 @@ function renderKPIs(){
     });
   }
   var caseBalance = monthCompletedCases - monthPlannedCases;
+  // v6.34be: Distinguish "truly zero" (no data source) from "computed zero".
+  // If goals are empty AND no batches were dated this month, show em-dash
+  // instead of "0" so users don't misread it as "zero cases produced."
+  var caseCountsHaveNoSource = (
+    monthPlannedCases === 0 && monthCompletedCases === 0 && caseSource === 'computed from batches'
+  );
+  var monthCompletedDisplay = caseCountsHaveNoSource ? '—' : N(Math.round(monthCompletedCases));
+  var monthPlannedDisplay   = caseCountsHaveNoSource ? '—' : N(Math.round(monthPlannedCases));
+  var caseBalanceDisplay    = caseCountsHaveNoSource ? '—' : ((caseBalance>=0?'+':'')+N(Math.round(caseBalance)));
+  var caseSourceDisplay     = caseCountsHaveNoSource ? 'No goal or batches yet' : caseSource;
 
   // ── Goal/Targets ───────────────────────────────────────────────────────
   var oeeGoal = 60; // default % until live patch
@@ -1523,14 +1533,14 @@ function renderKPIs(){
   var gapColor = plantGapHr < 0 ? 'var(--red)' : plantGapHr < plantAvailHr*0.10 ? 'var(--amber)' : 'var(--green)';
 
   document.getElementById('cmd-kpis').innerHTML=[
-    {l:_monthLabel634h()+' Cases',     v:N(Math.round(monthCompletedCases)), s:caseSource, c:'var(--green)'},
-    {l:'Case Balance',  v:(caseBalance>=0?'+':'')+N(Math.round(caseBalance)), s:'vs goal', c:caseBalance>=0?'var(--green)':'var(--red)'},
+    {l:_monthLabel634h()+' Cases',     v:monthCompletedDisplay, s:caseSourceDisplay, c:'var(--green)'},
+    {l:'Case Balance',  v:caseBalanceDisplay, s:'vs goal', c:caseBalance>=0?'var(--green)':'var(--red)'},
     {l:'Open Batches',  v:ns,  s:'Not started · '+_monthLabel634h(),  c:'var(--text)'},
     {l:'Running Now',   v:run, s:'Active on floor',    c:'var(--blue)'},
     {l:'Completed',     v:done,s:'This month',         c:'var(--green)'},
     {l:'OEE',           v:oeeDisplay, s:oeeSubtitle,   c:oeeColor},
     {l:'Attainment',    v:attDisplay, s:attSubtitle,   c:attColor},
-    {l:'Case Goal',     v:N(Math.round(monthPlannedCases)), s:_monthLabel634h()+' target', c:'var(--text)'},
+    {l:'Case Goal',     v:monthPlannedDisplay, s:_monthLabel634h()+' target', c:'var(--text)'},
     {l:'Available Hrs', v:N(Math.round(plantAvailHr*10)/10)+'h', s:avTooltip, c:'var(--blue)'},
     {l:'Gap Hrs',       v:(plantGapHr>=0?'+':'')+N(Math.round(plantGapHr*10)/10)+'h', s:gapSub, c:gapColor},
   ].map(k=>`<div class="kpi"><div class="kl">${k.l}</div><div class="kv" style="color:${k.c}">${k.v}</div><div class="ks">${k.s}</div></div>`).join('');
