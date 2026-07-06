@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34bf">
+<meta name="hoc-build" content="v6.34bh">
 
 <meta charset="UTF-8">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -130,7 +130,7 @@ html,body{min-height:100%;background:var(--bg);color:var(--text)}
 
 <script>
 // v6.34h: Version stamp + badge. Bump on every deploy.
-var HOC_OES_VERSION = 'v6.34bf-20260706';
+var HOC_OES_VERSION = 'v6.34bh-20260706';
 var HOC_OES_BUILD_TS = '1779870500';
 if(localStorage.getItem('hoc_oes_version') !== HOC_OES_VERSION){
   localStorage.setItem('hoc_oes_version', HOC_OES_VERSION);
@@ -163,7 +163,7 @@ if(localStorage.getItem('hoc_oes_version') !== HOC_OES_VERSION){
   <div class="tb-logo">HC</div>
   <div>
     <div class="tb-title">HOC-OES</div>
-    <div class="tb-sub">House of Cheatham Operational Ecosystem · <span id="hoc-month-year">May 2026</span> · <span id="ver-badge" style="background:rgba(34,197,94,.15);color:#22C55E;padding:1px 6px;border-radius:4px;font-weight:700;font-family:ui-monospace;font-size:9px;letter-spacing:.05em">v6.34bf</span> · <a href="reset.html" style="color:#8899AA;font-size:9px;text-decoration:underline;margin-left:6px">reset cache</a></div>
+    <div class="tb-sub">House of Cheatham Operational Ecosystem · <span id="hoc-month-year">May 2026</span> · <span id="ver-badge" style="background:rgba(34,197,94,.15);color:#22C55E;padding:1px 6px;border-radius:4px;font-weight:700;font-family:ui-monospace;font-size:9px;letter-spacing:.05em">v6.34bh</span> · <a href="reset.html" style="color:#8899AA;font-size:9px;text-decoration:underline;margin-left:6px">reset cache</a></div>
   </div>
   <div class="tb-right">
     <div class="sync-pill" onclick="toggleSync()">
@@ -214,10 +214,7 @@ if(localStorage.getItem('hoc_oes_version') !== HOC_OES_VERSION){
           <div style="font-size:12px;font-weight:700;color:#A78BFA;margin-bottom:4px">📊 LEADERSHIP</div>
           <div style="font-size:11px;color:var(--text2)">Start with <b>Control Tower</b> — KPIs, risks, pipeline flow, all in one</div>
         </a>
-        <a href="HOC_Sales_Dashboard.html" style="background:rgba(236,72,153,.1);border:1px solid rgba(236,72,153,.3);border-radius:8px;padding:12px;text-decoration:none;color:var(--text);transition:background .15s" onmouseover="this.style.background='rgba(236,72,153,.2)'" onmouseout="this.style.background='rgba(236,72,153,.1)'">
-          <div style="font-size:12px;font-weight:700;color:#F472B6;margin-bottom:4px">💼 SALES / ACCOUNT MGMT</div>
-          <div style="font-size:11px;color:var(--text2)">Start with <b>Sales Dashboard</b> — customer orders, fill rate, at-risk orders</div>
-        </a>
+        
       </div>
 
       <div style="background:rgba(16,185,129,.06);border-left:3px solid #10B981;padding:10px 14px;border-radius:4px;margin-bottom:14px">
@@ -454,24 +451,7 @@ if(localStorage.getItem('hoc_oes_version') !== HOC_OES_VERSION){
       <div class="tc-arrow">›</div>
     </a>
 
-    <a href="HOC_Line_Clearance.html" class="tool-card" style="border-color:#A855F722;text-decoration:none;border-width:2px" onmouseover="this.style.borderColor='#A855F788'" onmouseout="this.style.borderColor='#A855F722'">
-      <div class="tc-logo" style="background:#A855F722;color:#A855F7;border:1px solid #A855F744">📊</div>
-      <div class="tc-body">
-        <div class="tc-name" style="color:#A855F7">Line Clearance</div>
-        <div class="tc-desc">Scrap reconciliation · GP vs FASCOR sync · Ext Scrap Value · By line / week / SKU</div>
-      </div>
-      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:#A855F722;color:#A855F7;border:1px solid #A855F744">NEW</span>
-      <div class="tc-arrow">›</div>
-    </a>
-    <a href="HOC_Finance.html" class="tool-card" style="border-color:#FBBF2422;text-decoration:none;border-width:2px" onmouseover="this.style.borderColor='#FBBF2488'" onmouseout="this.style.borderColor='#FBBF2422'">
-      <div class="tc-logo" style="background:#FBBF2422;color:#FBBF24;border:1px solid #FBBF2444">$</div>
-      <div class="tc-body">
-        <div class="tc-name" style="color:#FBBF24">Finance</div>
-        <div class="tc-desc">Material cost · Labor variance · Scrap $ · Monthly P&amp;L rollup · Cost config</div>
-      </div>
-      <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:#FBBF2422;color:#FBBF24;border:1px solid #FBBF2444">NEW</span>
-      <div class="tc-arrow">›</div>
-    </a>
+    
   </div>
 
   <!-- MANAGEMENT TOOLS -->
@@ -498,24 +478,8 @@ if(localStorage.getItem('hoc_oes_version') !== HOC_OES_VERSION){
       <div class="tc-arrow">›</div>
     </a>
   <div class="tool-grid">
-<a href="HOC_Demand_Planning_Hub.html" class="tool-card" style="border-color:#3B82F622;text-decoration:none;" onmouseover="this.style.borderColor='#3B82F666'" onmouseout="this.style.borderColor='#3B82F622'">
-      <div class="tc-logo" style="background:#3B82F622;color:#3B82F6;border:1px solid #3B82F644">DP</div>
-      <div class="tc-body">
-        <div class="tc-name" style="color:#3B82F6">Demand & Planning Hub</div>
-        <div class="tc-desc">Capacity · schedule · material risk · OEE</div>
-      </div>
-      
-      <div class="tc-arrow">›</div>
-    </a>
-<a href="HOC_Sales_Dashboard.html" class="tool-card" style="border-color:#EC489922;text-decoration:none;" onmouseover="this.style.borderColor='#EC489966'" onmouseout="this.style.borderColor='#EC489922'">
-      <div class="tc-logo" style="background:#EC489922;color:#EC4899;border:1px solid #EC489944">SL</div>
-      <div class="tc-body">
-        <div class="tc-name" style="color:#EC4899">Sales &amp; Customer View</div>
-        <div class="tc-desc">Customer orders · fill rate · at-risk · ship pipeline</div>
-      </div>
-      
-      <div class="tc-arrow">›</div>
-    </a>
+
+
 <a href="HOC_Event_Engine.html" class="tool-card" style="border-color:#EF444422;text-decoration:none;" onmouseover="this.style.borderColor='#EF444466'" onmouseout="this.style.borderColor='#EF444422'">
       <div class="tc-logo" style="background:#EF444422;color:#EF4444;border:1px solid #EF444444">EE</div>
       <div class="tc-body">
@@ -534,42 +498,7 @@ if(localStorage.getItem('hoc_oes_version') !== HOC_OES_VERSION){
       
       <div class="tc-arrow">›</div>
     </a>
-<a href="HOC_Procurement_Dashboard.html" class="tool-card" style="border-color:#10B98122;text-decoration:none;" onmouseover="this.style.borderColor='#10B98166'" onmouseout="this.style.borderColor='#10B98122'">
-      <div class="tc-logo" style="background:#10B98122;color:#10B981;border:1px solid #10B98144">PR</div>
-      <div class="tc-body">
-        <div class="tc-name" style="color:#10B981">Procurement</div>
-        <div class="tc-desc">POs · shortages · expedite queue</div>
-      </div>
-      
-      <div class="tc-arrow">›</div>
-    </a>
-<a href="HOC_Schedule_Reforecast.html" class="tool-card" style="border-color:#8B5CF622;text-decoration:none;" onmouseover="this.style.borderColor='#8B5CF666'" onmouseout="this.style.borderColor='#8B5CF622'">
-      <div class="tc-logo" style="background:#8B5CF622;color:#8B5CF6;border:1px solid #8B5CF644">RF</div>
-      <div class="tc-body">
-        <div class="tc-name" style="color:#8B5CF6">Schedule Reforecast</div>
-        <div class="tc-desc">Capacity recalc · what-if · gap analysis</div>
-      </div>
-      
-      <div class="tc-arrow">›</div>
-    </a>
-<a href="HOC_Continuous_Improvement.html" class="tool-card" style="border-color:#F59E0B22;text-decoration:none;" onmouseover="this.style.borderColor='#F59E0B66'" onmouseout="this.style.borderColor='#F59E0B22'">
-      <div class="tc-logo" style="background:#F59E0B22;color:#F59E0B;border:1px solid #F59E0B44">CI</div>
-      <div class="tc-body">
-        <div class="tc-name" style="color:#F59E0B">CI & Maintenance</div>
-        <div class="tc-desc">Yield · OEE trends · downtime · WOs</div>
-      </div>
-      
-      <div class="tc-arrow">›</div>
-    </a>
-<a href="HOC_Maintenance_Dashboard.html" class="tool-card" style="border-color:#F59E0B22;text-decoration:none;" onmouseover="this.style.borderColor='#F59E0B66'" onmouseout="this.style.borderColor='#F59E0B22'">
-      <div class="tc-logo" style="background:#F59E0B22;color:#F59E0B;border:1px solid #F59E0B44">MT</div>
-      <div class="tc-body">
-        <div class="tc-name" style="color:#F59E0B">Maintenance Dashboard</div>
-        <div class="tc-desc">Equipment status · work orders · PM</div>
-      </div>
-      
-      <div class="tc-arrow">›</div>
-    </a>
+
 
     <a href="HOC_Changeover_Dashboard.html" class="tool-card" style="border-color:#EF444422;text-decoration:none;" onmouseover="this.style.borderColor='#EF444466'" onmouseout="this.style.borderColor='#EF444422'">
       <div class="tc-logo" style="background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;border:1px solid #EF444444">CO</div>
@@ -1367,7 +1296,6 @@ setInterval(function(){
       <span style="font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;background:rgba(59,130,246,.12);color:#3B82F6;border:1px solid rgba(59,130,246,.25);flex-shrink:0">Power BI ↗</span>
     </a>
   </div>
-
 
 
 </div>

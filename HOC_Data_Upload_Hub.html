@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34bf">
+<meta name="hoc-build" content="v6.34bh">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -196,17 +196,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--blue)}
       </div>
     </div>
 
-    <!-- Line Clearance (scrap reconciliation — v6.34w) -->
-    <div>
-      <div style="font-size:10px;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em">📊 Line Clearance</div>
-      <div class="drop-zone" id="zone-lc" onclick="document.getElementById('file-lc').click()" ondragover="dragOver(event,'lc')" ondragleave="dragLeave('lc')" ondrop="dropFile(event,'lc')">
-        <input type="file" id="file-lc" accept=".xlsx,.xls,.csv" style="display:none" onchange="loadFile(this.files[0],'lc')">
-        <div class="drop-icon">📊</div>
-        <div class="drop-title">Line_Clearance_PowerBI.xlsx</div>
-        <div class="drop-sub">Per-batch scrap reconciliation · GP vs FASCOR sync · Ext Scrap Value · powers Line Clearance dashboard</div>
-        <div class="drop-status" id="status-lc" style="color:var(--text3)">Drop file here or click to browse</div>
-      </div>
-    </div>
+    <!-- Line Clearance drop zone removed in v6.34bg -->
 
     <!-- Patch OEE Efficiency (per-schedule production records — v6.34ad) -->
     <div>
@@ -468,7 +458,7 @@ function dragLeave(zone){ document.getElementById('zone-'+zone).classList.remove
 function dropFile(e,zone){ e.preventDefault(); dragLeave(zone); var f=e.dataTransfer.files[0]; if(f)loadFile(f,zone); }
 
 // ── Loaded file registry ──────────────────────────────────────────────
-var loaded = {pt:null, pd:null, nmp:null, co:null, lb:null, ls:null, lc:null, po:null, ps:null};
+var loaded = {pt:null, pd:null, nmp:null, co:null, lb:null, ls:null, po:null, ps:null};
 
 function loadFile(file, zone) {
   if(!file) return;
@@ -954,7 +944,7 @@ function parseAttainmentPaste(rows, statusEl){
 // ═══════════════════════════════════════════════════════════════════
 
 function checkReady() {
-  document.getElementById('update-btn').disabled = !(loaded.pt || loaded.pd || loaded.nmp || loaded.co || loaded.lb || loaded.ls || loaded.lc || loaded.po || loaded.ps);
+  document.getElementById('update-btn').disabled = !(loaded.pt || loaded.pd || loaded.nmp || loaded.co || loaded.lb || loaded.ls || loaded.po || loaded.ps);
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -1802,152 +1792,7 @@ function updateAllDashboards() {
         }
       }
 
-      // ── Parse Line Clearance (scrap reconciliation) — v6.34w ────────
-      // Schema (Clearance_Fact sheet): 24 typed columns. We only require
-      // Date + Line; everything else is optional/may be null. Sync Issue
-      // is recomputed in JS to avoid trusting stale Excel formulas.
-      // Filters out blank formula rows by requiring Date + Line.
-      if(loaded.lc) {
-        progress('Reading Line Clearance...');
-        var wbLC = loaded.lc.wb;
-        // Prefer 'Clearance_Fact'; fall back to first sheet
-        var lcSheet = wbLC.Sheets['Clearance_Fact'] || wbLC.Sheets[wbLC.SheetNames[0]];
-        if(!lcSheet){
-          progress('⚠ Line Clearance: no sheets found', 'warn');
-        } else {
-          var lcRows = XLSX.utils.sheet_to_json(lcSheet, {defval:null, raw:true});
-          var records = [];
-          var stats = {
-            total_records: 0, total_scrap_units: 0, total_scrap_value: 0,
-            both_populated: 0, synced: 0, mismatched: 0,
-            date_min: null, date_max: null,
-            lines: {}, skus_count: 0
-          };
-          var skuSet = {};
-          lcRows.forEach(function(r){
-            // Skip blank formula rows (no Date or no Line Number)
-            var dateRaw = r['Date'];
-            var lineRaw = r['Line Number'] || r['Line'] || r['Line#'];
-            if(!dateRaw || lineRaw === null || lineRaw === undefined || lineRaw === '') return;
-
-            // Date normalization — SheetJS gives Excel serial, Date obj, or string
-            var dateISO = '';
-            try {
-              if(dateRaw instanceof Date){
-                dateISO = dateRaw.toISOString().slice(0,10);
-              } else if(typeof dateRaw === 'number'){
-                // Excel serial date: days since 1900-01-01 (with the leap year bug)
-                var ms = (dateRaw - 25569) * 86400 * 1000;
-                dateISO = new Date(ms).toISOString().slice(0,10);
-              } else {
-                var d = new Date(dateRaw);
-                if(!isNaN(d.getTime())) dateISO = d.toISOString().slice(0,10);
-              }
-            } catch(e){}
-            if(!dateISO) return;
-
-            // Line: strip non-digits, but preserve 'WEPACKIT' style codes
-            var line = String(lineRaw).trim();
-
-            // Numeric fields — coerce safely
-            function num(v){
-              if(v === null || v === undefined || v === '') return null;
-              var n = parseFloat(v);
-              return isNaN(n) ? null : n;
-            }
-            var gp     = num(r['GP Qty']);
-            var fascor = num(r['FASCOR Qty']);
-            var scrap  = num(r['Quantity Scrapped']) || 0;
-            var stdCost= num(r['Std Cost']) || 0;
-            // Recompute Ext Scrap Value (don't trust source, scrap * stdCost is the spec)
-            var extVal = scrap * stdCost;
-
-            // Recompute Sync Issue (don't trust stale value):
-            // SYNCED if |GP - FASCOR| <= 1, MISMATCH otherwise, "" if either missing
-            var syncIssue = '';
-            var variance  = null;
-            if(gp !== null && fascor !== null){
-              variance = gp - fascor;
-              syncIssue = Math.abs(variance) <= 1 ? 'SYNCED' : 'MISMATCH';
-              stats.both_populated++;
-              if(syncIssue === 'MISMATCH') stats.mismatched++;
-              else stats.synced++;
-            }
-
-            var sku = String(r['SKU'] || '').trim();
-            if(sku) skuSet[sku] = true;
-
-            // Re-derive Day from date (workbook had bad "Quarter" data, don't trust)
-            var dObj = new Date(dateISO + 'T00:00:00');
-            var dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-            var monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-            var q = 'Q' + (Math.floor(dObj.getMonth()/3) + 1);
-
-            var rec = {
-              record_id: r['Record ID'] || (records.length + 1),
-              date: dateISO,
-              day: dayNames[dObj.getDay()],
-              week: parseInt(r['Week']) || null,
-              month: monthNames[dObj.getMonth()],
-              quarter: q,
-              year: dObj.getFullYear(),
-              year_week: r['YearWeek'] || (dObj.getFullYear() + '-W' + String(parseInt(r['Week']) || '').padStart(2,'0')),
-              line: line,
-              batch: String(r['Batch Number'] || '').trim(),
-              sku: sku,
-              sku_description: String(r['SKU Description'] || '').trim(),
-              cases_produced: num(r['Cases Produced']),
-              gp_qty: gp,
-              fascor_qty: fascor,
-              sync_issue: syncIssue,
-              sync_variance: variance,
-              physical_clearance: String(r['Physical Line Clearance'] || '').trim(),
-              fascor_clearance: String(r['FASCOR Line Clearance'] || '').trim(),
-              sync_adjustment_qty: num(r['Sync Adjustment Qty']),
-              quantity_scrapped: scrap,
-              std_cost: stdCost,
-              ext_scrap_value: Math.round(extVal * 100) / 100,
-              notes: String(r['Notes'] || '').trim()
-            };
-            records.push(rec);
-
-            // Stats
-            stats.total_records++;
-            stats.total_scrap_units += scrap;
-            stats.total_scrap_value += extVal;
-            if(!stats.date_min || dateISO < stats.date_min) stats.date_min = dateISO;
-            if(!stats.date_max || dateISO > stats.date_max) stats.date_max = dateISO;
-            if(!stats.lines[line]) stats.lines[line] = {records:0, scrap_value:0};
-            stats.lines[line].records++;
-            stats.lines[line].scrap_value += extVal;
-          });
-          stats.skus_count = Object.keys(skuSet).length;
-          stats.total_scrap_value = Math.round(stats.total_scrap_value * 100) / 100;
-
-          // Broadcast to Supabase + localStorage
-          try {
-            localStorage.setItem('hoc_line_clearance_v1', JSON.stringify({
-              records: records, stats: stats, _updated: ts
-            }));
-          } catch(e){
-            progress('⚠ Line Clearance: localStorage full, data not persisted', 'warn');
-          }
-          result.line_clearance = records;
-          result.line_clearance_stats = stats;
-          result.line_clearance_ts = ts;
-
-          var nLines = Object.keys(stats.lines).length;
-          var pctMismatch = stats.both_populated > 0
-            ? Math.round(stats.mismatched / stats.both_populated * 1000) / 10
-            : 0;
-          progress('✓ Line Clearance: ' + records.length + ' records · '
-                   + nLines + ' lines · ' + stats.skus_count + ' SKUs · $'
-                   + stats.total_scrap_value.toLocaleString() + ' total scrap value', 'ok');
-          progress('   Sync check: ' + stats.synced + ' SYNCED + ' + stats.mismatched
-                   + ' MISMATCH of ' + stats.both_populated + ' records with both qtys ('
-                   + pctMismatch + '% mismatch rate)', stats.mismatched > 0 ? 'warn' : 'ok');
-        }
-      }
+      // Line Clearance parser removed in v6.34bg (dashboard removed)
 
       // ── Parse Patch OEE Efficiency Report (v6.34ad) ─────────────────
       // Source: EfficiencyReport sheet, one row per schedule run.
@@ -2858,7 +2703,6 @@ function updateAllDashboards() {
       if(goals.may_actual) progress('May Cases: ' + goals.may_actual.toLocaleString() + ' actual / ' + goals.may_goal.toLocaleString() + ' goal', 'ok');
       if(result.inventory) progress('Inventory: ' + result.inventory.length.toLocaleString() + ' SKUs · ' + result.inventory.filter(function(i){return i.status==='LOW';}).length + ' LOW', 'ok');
       if(result.line_setup) progress('Line Setup: ' + result.line_setup.length + ' lines · ' + result.line_setup.filter(function(l){return l.active;}).length + ' active', 'ok');
-      if(result.line_clearance) progress('Line Clearance: ' + result.line_clearance.length + ' records · $' + (result.line_clearance_stats.total_scrap_value).toLocaleString() + ' total scrap', 'ok');
       progress('All dashboards on every device will update within 30s ✓', 'ok');
 
       log('ok', 'Upload complete — ' + batches.length + ' batches · ' + (result.inventory||[]).length + ' inventory items');
@@ -2953,7 +2797,7 @@ function clearAllData() {
             'This wipes every uploaded file from every dashboard:\n' +
             '  • Production schedule (batches)\n' +
             '  • Planning Data (inventory, tank counts)\n' +
-            '  • Line Setup, Line Clearance\n' +
+            '  • Line Setup, Changeover Tracker\n' +
             '  • Patch OEE, Patch Stops\n\n' +
             'KPI goals and saved settings are preserved.\n' +
             'After clearing, all dashboards show empty state until next upload.\n\n' +
@@ -2971,15 +2815,19 @@ function clearAllData() {
   localStorage.removeItem('hoc_patch_stops_v1');
   localStorage.removeItem('hoc_line_setup_v1');
   localStorage.removeItem('hoc_line_clearance_v1');
+  // v6.34bh: cleanup for keys left behind by removed dashboards
+  localStorage.removeItem('hoc_finance_cfg_v1');
+  localStorage.removeItem('hoc_maintenance_v1');
+  localStorage.removeItem('hoc_pos_v1');
   // v6.34aq: also clear new keys + BOM
   localStorage.removeItem('hoc_chem_pulls_req_v1');
   // v6.34ba: also clear NMP isolated storage
   localStorage.removeItem('hoc_next_month_v1');
-  loaded = {pt:null,pd:null,nmp:null,co:null,lb:null,ls:null,lc:null,po:null,ps:null};
+  loaded = {pt:null,pd:null,nmp:null,co:null,lb:null,ls:null,po:null,ps:null};
   // v6.34aq: Defensive DOM access. zone-pt was removed in v6.34ap; previous
   // version threw TypeError trying to set its textContent, which silently
   // broke the rest of this function. Now: only touch elements that exist.
-  ['pt','pd','nmp','co','lb','ls','lc','po','ps'].forEach(function(z){
+  ['pt','pd','nmp','co','lb','ls','po','ps'].forEach(function(z){
     var st = document.getElementById('status-'+z);
     var zn = document.getElementById('zone-'+z);
     if(st){ st.textContent='Drop file here or click to browse'; st.style.color='var(--text3)'; }

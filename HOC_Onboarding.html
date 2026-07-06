@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34bf">
+<meta name="hoc-build" content="v6.34bh">
 
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC OES — Onboarding & Operations</title>
@@ -177,7 +177,6 @@ strong{color:var(--text);font-weight:600}
     <div class="nav-item" data-target="role-fg"><span class="ic">📦</span><span class="lab">FG / Warehouse</span></div>
     <div class="nav-item" data-target="role-leadership"><span class="ic">📊</span><span class="lab">Leadership</span></div>
     <div class="nav-item" data-target="role-tank"><span class="ic">🏭</span><span class="lab">Compound Manager</span></div>
-    <div class="nav-item" data-target="role-sales"><span class="ic">💼</span><span class="lab">Sales / Account Mgmt</span></div>
 
     <div class="nav-title">How-To Guides</div>
     <div class="nav-item" data-target="howto-upload"><span class="ic">📤</span><span class="lab">Daily Upload</span></div>
@@ -245,11 +244,6 @@ strong{color:var(--text);font-weight:600}
       <div class="rl">📋 PROD COORDINATOR</div>
       <div class="rt">Production Coordinator</div>
       <div class="rd">Component check · staging placards · alerts</div>
-    </div>
-    <div class="role-card pink" onclick="go('role-sales')">
-      <div class="rl">💼 SALES</div>
-      <div class="rt">Sales / Account Mgmt</div>
-      <div class="rd">Customer orders · fill rate · at-risk · ship pipeline</div>
     </div>
   </div>
 
@@ -965,100 +959,6 @@ strong{color:var(--text);font-weight:600}
     <tr><td>FASCOR scan-gun integration</td><td>Material handler still uses the scan gun manually per LG-010-00. We don't have a FASCOR API yet.</td></tr>
   </table>
 </div>
-
-<!-- ════════════════════ ROLE: SALES ════════════════════ -->
-<div id="sec-role-sales" class="section">
-  <div class="h1">💼 Sales / Account Management Guide</div>
-  <div class="h1-sub">Your job is keeping customers informed and ahead of issues. Your primary dashboard is <a href="HOC_Sales_Dashboard.html">Sales &amp; Customer View</a> — it translates production data into customer-facing terms.</div>
-
-  <div class="callout">
-    <strong>What this dashboard does for you</strong>
-    Takes the raw production schedule (compound, fill, QC, FG) and reorganizes it by <em>customer</em> instead of by line. So instead of "L10 has 15 batches running," you see "AJ has 8,400 cases planned this month, 60% fill rate so far, 3 orders at risk."
-  </div>
-
-  <div class="h2">Your daily 5-minute routine</div>
-
-  <div class="step">
-    <div class="step-num">1</div>
-    <div class="step-body">
-      <div class="step-title">Open Sales &amp; Customer View</div>
-      <div class="step-desc">From index hub → pink "Sales &amp; Customer View" card. Or direct URL: <code>HOC_Sales_Dashboard.html</code>.</div>
-    </div>
-  </div>
-
-  <div class="step">
-    <div class="step-num">2</div>
-    <div class="step-body">
-      <div class="step-title">Scan the 7 KPI tiles at top</div>
-      <div class="step-desc"><strong>Active Customers</strong>, <strong>Cases Shipped</strong>, <strong>Cases Planned</strong>, <strong>Fill Rate</strong>, <strong>In Production</strong>, <strong>Completed</strong>, <strong>At-Risk Orders</strong>. The At-Risk number is the one you most want to be low. If it's red, you have proactive calls to make.</div>
-    </div>
-  </div>
-
-  <div class="step">
-    <div class="step-num">3</div>
-    <div class="step-body">
-      <div class="step-title">Review "Top Customers This Month"</div>
-      <div class="step-desc">Top 5 by case volume. Each row shows planned, shipped, fill %, at-risk count. Fill % under 80% = red — that's a customer who's frustrated. Click any row to filter the Orders tab to that customer.</div>
-    </div>
-  </div>
-
-  <div class="step">
-    <div class="step-num">4</div>
-    <div class="step-body">
-      <div class="step-title">Check "At-Risk Orders"</div>
-      <div class="step-desc">Shows which customers have orders in trouble. Click <strong>"View all risks"</strong> to see the full at-risk list with "what to tell the customer" text for each one.</div>
-    </div>
-  </div>
-
-  <div class="step">
-    <div class="step-num">5</div>
-    <div class="step-body">
-      <div class="step-title">Glance at the 6-month trend</div>
-      <div class="step-desc">Cases shipped per month, last 6 months. Flat or rising = good. Sharp drop = ask why (lost customer? capacity issue?).</div>
-    </div>
-  </div>
-
-  <div class="h2">Customer detail view</div>
-  <p>On the <strong>Customers</strong> tab, every customer has a card showing batches, planned cases, fill %, and at-risk count. Click any card to open the detail modal — full batch list for that customer with status pills and dates.</p>
-  <p>Use this when you're about to call a customer. "I see you have 8 batches scheduled this month, 5 are complete, 2 are running now, 1 is on QC hold for review — I'll have an update on that one by tomorrow."</p>
-
-  <div class="h2">Order pipeline</div>
-  <p>The <strong>Order Pipeline</strong> tab is your full order book for the month. Filter by customer, status, or month. Most useful for:</p>
-  <ul style="margin:8px 0 12px 20px;color:var(--text2);font-size:12.5px;line-height:1.7">
-    <li>Pulling a customer's full order list before a meeting</li>
-    <li>Spotting orders that haven't started yet (Status = NOT STARTED)</li>
-    <li>Confirming what's ready to ship today (Status = COMPLETED)</li>
-  </ul>
-
-  <div class="h2">At-risk orders</div>
-  <p>The <strong>At-Risk</strong> tab shows everything that's behind, on hold, or hasn't started yet. Each row has a "What To Tell Customer" hint:</p>
-  <table class="tbl">
-    <tr><th>Status</th><th>What to tell customer</th></tr>
-    <tr><td>COMPOUND OVERDUE</td><td>"Production delayed; new ETA pending"</td></tr>
-    <tr><td>COMPOUND CRITICAL</td><td>"On critical path; risk to ship date"</td></tr>
-    <tr><td>QC HOLD</td><td>"Quality review in progress"</td></tr>
-    <tr><td>NOT STARTED</td><td>"Scheduled but not yet started"</td></tr>
-  </table>
-
-  <div class="h2">How customer is determined</div>
-  <p>HOC OES doesn't have an explicit "customer" field — it derives the customer from the batch description. So <code>"AJ Quench Lv-In Cnd, 12 oz, 12ea"</code> → customer = <strong>AJ (African Pride)</strong>. <code>"Hair Mayo 1.5oz packet"</code> → customer = <strong>Hair Mayo</strong>.</p>
-  <p>If you see "Unknown" customers in the list, that means the description didn't match any of the known brand patterns. Tell the planner so we can add that brand to the recognition list.</p>
-
-  <div class="h2">What you can't do (yet)</div>
-  <table class="tbl">
-    <tr><th>Need</th><th>Where to get it instead</th></tr>
-    <tr><td>Customer-level revenue $</td><td>Vicinity ERP (HOC OES tracks cases, not dollars)</td></tr>
-    <tr><td>Shipping address / lot history</td><td>FasTrak WMS</td></tr>
-    <tr><td>PO / order numbers</td><td>Vicinity (HOC OES tracks batches)</td></tr>
-    <tr><td>Customer complaints / returns</td><td>Not yet in HOC OES — coming later</td></tr>
-  </table>
-
-  <div class="callout warn">
-    <strong>Trust but verify before customer-facing communication</strong>
-    Sales dashboard is a coordination tool, not a system of record. Before you commit a ship date to a customer, verify with the planner or production team. The dashboard tells you what <em>should</em> happen — reality on the floor may differ.
-  </div>
-</div>
-
 <!-- ════════════════════ HOWTO: UPLOAD ════════════════════ -->
 <div id="sec-howto-upload" class="section">
   <div class="h1">📤 Daily Upload Guide</div>
