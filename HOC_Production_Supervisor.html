@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34be">
+<meta name="hoc-build" content="v6.34bf">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Production Supervisor</title>
@@ -1793,7 +1793,7 @@ function renderLineSum(){
 
   // Table
   html += '<div style="overflow-x:auto"><table class="ls-table"><thead><tr>';
-  html += '<th>Line</th><th>Pattern</th><th class="num">Avail Hrs</th><th class="num">Rem Batches</th><th class="num">Rem Hrs</th><th class="num">Gap Hrs</th><th class="num">Util</th><th>Risk</th><th>Suggested Action</th>';
+  html += '<th>Line</th><th>Pattern</th><th class="num">Run Days</th><th class="num">Avail Hrs</th><th class="num">Rem Batches</th><th class="num">Rem Hrs</th><th class="num">Gap Hrs</th><th class="num">Util</th><th>Risk</th><th>Suggested Action</th>';
   html += '</tr></thead><tbody>';
   rows.forEach(function(r){
     var gapColor = r.gap_hrs < 0 ? 'var(--red)' : r.gap_hrs <= 5 ? 'var(--amber)' : 'var(--text)';
@@ -1809,6 +1809,31 @@ function renderLineSum(){
       provenance = ' <span title="Uploaded pattern wasn\'t recognized — using default weekdays. Check Line_Setup pattern field." style="color:var(--amber);font-size:9px">●</span>';
     }
     html += '<td>' + (r.pattern || '—') + provenance + '</td>';
+    // v6.34bf: Run Days suggestion cell.
+    // Compact display: "5d needed" with color coding based on verdict.
+    // Full suggestion in tooltip so the table stays readable.
+    var sug = r.run_day_suggestion || null;
+    var sugCell = '<td class="num" style="font-size:10px;color:var(--text3)">—</td>';
+    if(sug){
+      var sugColor = 'var(--text)';
+      var sugLabel = '';
+      if(sug.verdict === 'expand'){
+        sugColor = 'var(--red)';
+        sugLabel = '<b>' + sug.needed + 'd needed</b><br><span style="font-size:9px;color:var(--red);font-weight:700">+' + sug.delta + (sug.delta===1?' day':' days') + '</span>';
+      } else if(sug.verdict === 'reduce'){
+        sugColor = 'var(--blue)';
+        sugLabel = '<b>' + sug.needed + 'd needed</b><br><span style="font-size:9px;color:var(--blue)">−' + Math.abs(sug.delta) + (Math.abs(sug.delta)===1?' day':' days') + ' possible</span>';
+      } else if(sug.verdict === 'on_track'){
+        sugColor = 'var(--green)';
+        sugLabel = '<b>' + sug.needed + 'd</b><br><span style="font-size:9px;color:var(--green)">on track</span>';
+      } else if(sug.verdict === 'idle'){
+        sugLabel = '<span style="font-size:9px;color:var(--text3)">no work</span>';
+      } else {
+        sugLabel = '<span style="font-size:9px;color:var(--text3)">inactive</span>';
+      }
+      sugCell = '<td class="num" style="color:' + sugColor + ';font-size:10px" title="' + (sug.text || '').replace(/"/g,'&quot;') + '">' + sugLabel + '</td>';
+    }
+    html += sugCell;
     html += '<td class="num">' + r.avail_hours.toFixed(1) + '</td>';
     html += '<td class="num">' + r.remaining_batches + (r.overdue_batches ? ' <span style="color:var(--red);font-size:9px">(' + r.overdue_batches + ' overdue)</span>' : '') + '</td>';
     html += '<td class="num">' + r.total_remaining_hrs.toFixed(1) + '</td>';
@@ -1823,6 +1848,7 @@ function renderLineSum(){
   // Footer note
   html += '<div style="margin-top:10px;font-size:9px;color:var(--text3);font-style:italic">'
        + 'Risk thresholds: NO LOAD (0 batches) · WILL MISS (gap &lt; 0) · AT RISK (gap ≤ 5 hrs) · SAFE. '
+       + 'Run Days = ceil(Rem Hrs ÷ hours/day) — hover for add-a-day suggestions. '
        + 'Math ported from HOC Production Tracker workbook · validated against Excel.'
        + '</div>';
 

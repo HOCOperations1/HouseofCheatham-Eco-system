@@ -251,6 +251,66 @@
       var laborGapHrs = laborCapacityHrs - plannedLaborHrs;
       var needPerDayMin = availDays > 0 ? (totalRemMin / availDays) : totalRemMin;
 
+      // v6.34bf: Run Days suggestion
+      // ─────────────────────────────
+      // How many run days does this line ACTUALLY need in the remaining
+      // days of this month to finish the scheduled workload?
+      //
+      // days_needed = ceil(rem_hrs / hours_per_day)
+      //
+      // Then compare to avail_days_remaining (what the current pattern
+      // provides). Suggest reducing, keeping, or expanding.
+      //
+      // For expansion suggestions, propose which day(s) to add — computed
+      // by looking at gaps in the current weekday pattern. Uses labels
+      // so planners see "add Tue" or "add Sun" not weekday indices.
+      //
+      // Honest limitation: this is a math suggestion, not a labor plan.
+      // Real add-a-day decisions involve overtime rates, crew availability,
+      // and preferences that HOC-OES doesn't know. The suggestion is a
+      // starting point for the planner's conversation, not a decision.
+      var hoursPerDay = parseFloat(s.hours_per_day) || 9.17;
+      var minsPerDay = hoursPerDay * 60;
+      var daysNeeded = 0;
+      if(totalRemMin > 0 && minsPerDay > 0){
+        daysNeeded = Math.ceil(totalRemMin / minsPerDay);
+      }
+      var currentDays = availDays;  // remaining days in this month at current pattern
+      var deltaDays = daysNeeded - currentDays;
+      var suggestion = null;
+      if(!s.active){
+        suggestion = { verdict: 'inactive', text: 'Line inactive' };
+      } else if(totalRemMin === 0){
+        suggestion = { verdict: 'idle', text: 'No remaining work' };
+      } else if(deltaDays === 0){
+        suggestion = { verdict: 'on_track', text: 'Current pattern fits — ' + daysNeeded + 'd needed, ' + currentDays + 'd available' };
+      } else if(deltaDays < 0){
+        // Line has more days than needed — could drop days
+        suggestion = { verdict: 'reduce', needed: daysNeeded, current: currentDays, delta: deltaDays,
+          text: 'Only ' + daysNeeded + ' day' + (daysNeeded===1?'':'s') + ' needed (currently ' + currentDays + ') — could reduce by ' + Math.abs(deltaDays) };
+      } else {
+        // Line needs MORE days than it has — expand
+        // Build day-add options: which weekdays could be added?
+        // s.weekdays is an array of day indices (1=Mon...6=Sat, 0=Sun)
+        var allDays = [0,1,2,3,4,5,6];
+        var currentSet = {};
+        (s.weekdays || []).forEach(function(d){ currentSet[d] = true; });
+        var candidates = allDays.filter(function(d){ return !currentSet[d]; });
+        // Prefer adjacent-to-existing days (keeps a contiguous run)
+        var dayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        // Rank candidates: those adjacent to existing pattern come first
+        candidates.sort(function(a, b){
+          var aAdj = (currentSet[(a+6)%7] || currentSet[(a+1)%7]) ? 0 : 1;
+          var bAdj = (currentSet[(b+6)%7] || currentSet[(b+1)%7]) ? 0 : 1;
+          return aAdj - bAdj;
+        });
+        var addOptions = candidates.slice(0, Math.min(2, deltaDays + 1)).map(function(d){ return dayLabels[d]; });
+        suggestion = { verdict: 'expand', needed: daysNeeded, current: currentDays, delta: deltaDays,
+          add_options: addOptions,
+          text: 'Need ' + daysNeeded + ' day' + (daysNeeded===1?'':'s') + ' (have ' + currentDays + ') — add ' + deltaDays + (deltaDays===1?' day':' days') +
+            (addOptions.length ? ': ' + addOptions.join(' OR ') : '') };
+      }
+
       return {
         line: s.line,
         pattern: s.pattern,
@@ -262,6 +322,9 @@
         avail_days: availDays,
         avail_hours: Math.round(availHours * 100) / 100,
         avail_minutes: Math.round(availMinutes),
+        // v6.34bf: Run Days suggestion (see block above for math)
+        days_needed: daysNeeded,
+        run_day_suggestion: suggestion,
         remaining_batches: remBatches,
         running_batches: runBatches,
         overdue_batches: overdueBatches,
