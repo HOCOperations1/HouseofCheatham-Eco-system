@@ -44,66 +44,78 @@
     } catch(e){ return []; }
   }
 
-  // v6.34at: Hardcoded line patterns matching LINE_DEFAULTS in Production
-  // Supervisor. Used as a FALLBACK when no Line Setup upload exists or
-  // when an uploaded row has weekdays=[] (unknown pattern string).
-  // Without this fallback, every line showed avail_hours=0 → Gap Hrs = full
-  // negative remaining workload, making Line Summary unusable on first deploy
-  // before the planner has uploaded Line_Setup.xlsx.
-  var LINE_DEFAULTS_634at = {
-    1:  {weekdays:[1,2,3,4],     pattern:'Mon-Thu',   hours_per_day:9.17, active:true},
-    2:  {weekdays:[1,2,3,4,5,6], pattern:'Mon-Sat',   hours_per_day:9.17, active:true},
-    3:  {weekdays:[1,2,3,4,5,6], pattern:'Mon-Sat',   hours_per_day:9.17, active:true},
-    4:  {weekdays:[1,2,3,4,5,6], pattern:'Mon-Sat',   hours_per_day:9.17, active:true},
-    5:  {weekdays:[3,4,5,6],     pattern:'Wed-Sat',   hours_per_day:9.17, active:true},
-    6:  {weekdays:[1,2,3,4],     pattern:'Mon-Thu',   hours_per_day:9.17, active:true},
-    8:  {weekdays:[3,4,5,6],     pattern:'Wed-Sat',   hours_per_day:9.17, active:true},
-    10: {weekdays:[3,4,5,6],     pattern:'Wed-Sat',   hours_per_day:9.17, active:true},
-    11: {weekdays:[1,2,3,4,5,6], pattern:'Mon-Sat',   hours_per_day:9.17, active:true},
-    14: {weekdays:[1,2,3,4,5,6], pattern:'Mon-Sat',   hours_per_day:9.17, active:true},
-    15: {weekdays:[3,4,5,6],     pattern:'Wed-Sat',   hours_per_day:9.17, active:true},
-    16: {weekdays:[],            pattern:'As Needed', hours_per_day:9.17, active:false}
-  };
-  // Merge default patterns into setup. Adds missing lines and fills in
-  // empty weekdays/zero hours_per_day on existing rows.
-  function withDefaults(setup){
-    var bySource = {};
-    setup.forEach(function(s){ bySource[s.line] = s; });
-    var merged = [];
-    Object.keys(LINE_DEFAULTS_634at).forEach(function(ln){
-      var lineNum = parseInt(ln);
-      var def = LINE_DEFAULTS_634at[lineNum];
-      var s = bySource[lineNum];
-      if(!s){
-        // No row from upload — use default
-        merged.push({
-          line: lineNum,
-          pattern: def.pattern,
-          hours_per_day: def.hours_per_day,
-          weekdays: def.weekdays.slice(),
-          manual_days: null,
-          active: def.active,
-          notes: '(default — Line_Setup.xlsx not uploaded)',
-          _from_default: true
-        });
-      } else {
-        // Row exists — patch missing fields from default
-        var patched = {
-          line: s.line,
-          pattern: s.pattern || def.pattern,
-          hours_per_day: (s.hours_per_day > 0 ? s.hours_per_day : def.hours_per_day),
-          weekdays: (Array.isArray(s.weekdays) && s.weekdays.length) ? s.weekdays : def.weekdays.slice(),
-          manual_days: s.manual_days,
-          active: (s.active !== undefined) ? s.active : def.active,
-          notes: s.notes || '',
-          _from_default: false,
-          _patched_weekdays: (Array.isArray(s.weekdays) && s.weekdays.length === 0)
+  // v6.34bk: In-app manual setup (per-line override authored inside Production
+  // Supervisor's Line Setup tab). Independent from hoc_line_setup_v1 (which
+  // comes from Line_Setup.xlsx uploads).
+  //
+  // Storage shape:
+  //   hoc_line_setup_manual_v1 = {
+  //     lines: {
+  //       [lineNum]: { pattern, weekdays, hours_per_day, manual_days,
+  //                    active, notes, use_manual: bool, updated_at, ...
+  //                    plus optional planned_duration metadata },
+  //       ...
+  //     },
+  //     _updated
+  //   }
+  //
+  // Per-line semantics:
+  //   - use_manual=true  → this line uses the in-app row (bypass upload)
+  //   - use_manual=false → this line uses the upload row (if any)
+  //
+  // Lines with NEITHER source configured are omitted from output — no
+  // hardcoded fallback. Line Summary handles empty state gracefully.
+  function loadManualSetup(){
+    try {
+      var ms = JSON.parse(localStorage.getItem('hoc_line_setup_manual_v1') || '{}');
+      return (ms && ms.lines && typeof ms.lines === 'object') ? ms.lines : {};
+    } catch(e){ return {}; }
+  }
+
+  // Merge sources per-line. In-app override wins when use_manual=true.
+  // Returns only lines that have at least one configured source.
+  //
+  // v6.34bk: All hardcoded LINE_DEFAULTS removed. No fake data injected —
+  // if a line isn't configured anywhere, it doesn't appear.
+  function mergeSources(uploadSetup, manualSetup){
+    var byLine = {};
+    // Start with uploaded lines
+    (uploadSetup || []).forEach(function(s){
+      byLine[s.line] = {
+        line: s.line,
+        pattern: s.pattern,
+        weekdays: s.weekdays,
+        hours_per_day: s.hours_per_day,
+        manual_days: s.manual_days,
+        active: (s.active !== undefined) ? s.active : true,
+        notes: s.notes || '',
+        _source: 'upload'
+      };
+    });
+    // Overlay manual (in-app) rows where use_manual=true
+    Object.keys(manualSetup || {}).forEach(function(k){
+      var ln = parseInt(k);
+      if(isNaN(ln)) return;
+      var m = manualSetup[k];
+      if(!m) return;
+      // If use_manual is explicitly false, skip (upload row stands)
+      if(m.use_manual === false) return;
+      // Only apply when use_manual=true OR when no upload row exists
+      if(m.use_manual === true || !byLine[ln]){
+        byLine[ln] = {
+          line: ln,
+          pattern: m.pattern || '',
+          weekdays: Array.isArray(m.weekdays) ? m.weekdays : [],
+          hours_per_day: (parseFloat(m.hours_per_day) > 0) ? parseFloat(m.hours_per_day) : 0,
+          manual_days: (m.manual_days !== null && m.manual_days !== undefined && m.manual_days !== '') ? parseFloat(m.manual_days) : null,
+          active: (m.active !== undefined) ? !!m.active : true,
+          notes: m.notes || '',
+          _source: 'manual'
         };
-        merged.push(patched);
       }
     });
-    merged.sort(function(a,b){ return a.line - b.line; });
-    return merged;
+    return Object.keys(byLine).map(function(k){ return byLine[k]; })
+                              .sort(function(a,b){ return a.line - b.line; });
   }
 
   // ── Date helpers ───────────────────────────────────────────────────
@@ -160,9 +172,9 @@
     if(!asOf) asOf = new Date();
     if(!batches) batches = loadBatches();
     if(!setup)   setup   = loadSetup();
-    // v6.34at: Always merge with defaults so dashboards work pre-upload AND
-    // when an uploaded Line_Setup row has an unrecognized pattern string.
-    setup = withDefaults(setup);
+    // v6.34bk: Merge upload with in-app manual setup. No hardcoded defaults.
+    // Lines not configured anywhere are excluded from output.
+    setup = mergeSources(setup, loadManualSetup());
     if(!setup.length) return [];
 
     // Group batches by line for efficient lookup
@@ -316,9 +328,10 @@
         pattern: s.pattern,
         active: s.active,
         notes: s.notes,
-        // v6.34at: provenance flags so renderer can show "(default)" indicator
-        from_default: !!s._from_default,
-        patched_weekdays: !!s._patched_weekdays,
+        // v6.34bk: source flag (was v6.34at from_default/patched_weekdays)
+        source: s._source || 'unknown',   // 'upload' | 'manual'
+        from_default: false,              // v6.34bk: no hardcoded defaults anymore
+        patched_weekdays: false,
         avail_days: availDays,
         avail_hours: Math.round(availHours * 100) / 100,
         avail_minutes: Math.round(availMinutes),

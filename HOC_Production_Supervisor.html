@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34bj">
+<meta name="hoc-build" content="v6.34bk">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Production Supervisor</title>
@@ -149,6 +149,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--green)}
     <button class="nb active" onclick="P('cmd')">Command Center</button>
     <button class="nb" onclick="P('forecast')">Capacity Forecast</button>
     <button class="nb" onclick="P('linesum')">Line Summary</button>
+    <button class="nb" onclick="P('linesetup')">Line Setup</button>
     <button class="nb" onclick="P('engine')">Engine</button>
     <button class="nb" onclick="P('lines')">Lines</button>
     <button class="nb" onclick="P('batches')">All Batches</button>
@@ -349,6 +350,66 @@ select:focus,input:focus,textarea:focus{border-color:var(--green)}
     </div>
     <div id="ls-diag" style="margin-bottom:10px"></div>
     <div id="ls-content"><div class="ls-empty">Loading…</div></div>
+  </div>
+</div></div>
+
+<!-- LINE SETUP TAB (v6.34bk · in-app per-line config) -->
+<div class="page" id="page-linesetup"><div class="content">
+  <div class="card">
+    <div class="ls-header">
+      <div class="card-title" style="margin:0">Line Setup — In-App Configuration</div>
+      <div class="ls-title-meta">Per-line pattern override · bypasses Line_Setup.xlsx upload when toggled</div>
+      <div class="ls-title-meta" id="lsetup-meta" style="margin-left:auto"></div>
+    </div>
+    <div id="lsetup-diag" style="margin-bottom:10px"></div>
+
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:6px">
+      <div style="font-size:10px;font-weight:700;color:var(--text)">Planned Duration:</div>
+      <select id="lsetup-duration" style="padding:4px 8px;font:inherit;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text)">
+        <option value="permanent">Permanent (until manually changed)</option>
+        <option value="this_week">This week (through Saturday)</option>
+        <option value="this_month">This month (through last day)</option>
+        <option value="custom">Custom date…</option>
+        <option value="pay_period">Until end of pay period</option>
+      </select>
+      <input type="date" id="lsetup-custom-date" style="display:none;padding:4px 8px;font:inherit;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text)">
+      <div style="font-size:9px;color:var(--text3);flex:1;min-width:200px">Metadata only — does not auto-expire. Reminder shown on Line Summary.</div>
+      <button class="nb" onclick="lsetupSaveAll()" style="background:var(--blue);color:white;padding:5px 12px;border-radius:5px;font-weight:700">Save All</button>
+      <button class="nb" onclick="lsetupRevertAll()" style="padding:5px 12px;border-radius:5px;border:1px solid var(--border)">Revert</button>
+    </div>
+
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:6px">
+      <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead>
+          <tr style="background:var(--bg3)">
+            <th style="padding:8px;text-align:left;font-size:9px;text-transform:uppercase;color:var(--text3);letter-spacing:.06em">Line</th>
+            <th style="padding:8px;text-align:left;font-size:9px;text-transform:uppercase;color:var(--text3);letter-spacing:.06em">Source</th>
+            <th style="padding:8px;text-align:left;font-size:9px;text-transform:uppercase;color:var(--text3);letter-spacing:.06em">Pattern</th>
+            <th style="padding:8px;text-align:right;font-size:9px;text-transform:uppercase;color:var(--text3);letter-spacing:.06em">Hours/Day</th>
+            <th style="padding:8px;text-align:right;font-size:9px;text-transform:uppercase;color:var(--text3);letter-spacing:.06em">Manual Days</th>
+            <th style="padding:8px;text-align:center;font-size:9px;text-transform:uppercase;color:var(--text3);letter-spacing:.06em">Active</th>
+            <th style="padding:8px;text-align:left;font-size:9px;text-transform:uppercase;color:var(--text3);letter-spacing:.06em">Notes</th>
+            <th style="padding:8px;text-align:center;font-size:9px;text-transform:uppercase;color:var(--text3);letter-spacing:.06em"></th>
+          </tr>
+        </thead>
+        <tbody id="lsetup-tbody"></tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:10px;display:flex;gap:10px;align-items:center">
+      <input type="number" id="lsetup-add-line" placeholder="Line #" min="1" max="99" style="width:80px;padding:4px 8px;font:inherit;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text)">
+      <button class="nb" onclick="lsetupAddLine()" style="padding:5px 12px;border-radius:5px;border:1px solid var(--border)">+ Add Line</button>
+      <div style="font-size:9px;color:var(--text3);margin-left:auto">
+        Pattern examples: Mon-Fri, Wed-Sat, Mon-Thu, As Needed
+      </div>
+    </div>
+
+    <div style="margin-top:16px;font-size:9px;color:var(--text3);font-style:italic;line-height:1.5">
+      <b>Source column</b>: 🔵 Upload = uses Line_Setup.xlsx values · 🟢 In-App = uses values from this tab (bypasses upload) ·
+      Rows with neither source configured are excluded from Line Summary (no hardcoded defaults as of v6.34bk).
+      <br><b>Pattern parser</b> accepts full or abbreviated day names (Mon-Fri, Monday-Friday, mon- fri, wed-thur, etc).
+      <b>Manual Days</b> overrides pattern-based calculation when set.
+    </div>
   </div>
 </div></div>
 
@@ -1266,7 +1327,7 @@ function showPage(id, map) {
 
 let bF='ALL', fcF='ALL', activeBatch=null;
 const PM = {cmd:0,forecast:1,linesum:2,engine:3,lines:4,batches:5,sync:6};
-function P(id){showPage(id,PM);if(id==='batches')renderBatches();if(id==='forecast')renderFC();if(id==='linesum')renderLineSum();if(id==='engine')renderEngine();}
+function P(id){showPage(id,PM);if(id==='batches')renderBatches();if(id==='forecast')renderFC();if(id==='linesum')renderLineSum();if(id==='linesetup')lsetupInit();if(id==='engine')renderEngine();}
 
 function renderAll(){
   // Recompute LINES from live BATCHES on every render so OEE/capacity stays current
@@ -1717,7 +1778,247 @@ function openLD(ln){
   document.getElementById('ld').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
-// ── Line Summary (v6.34v) ────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════
+// v6.34bk — Line Setup tab (in-app per-line config)
+// ═══════════════════════════════════════════════════════════════════════
+// Storage key: hoc_line_setup_manual_v1
+// Shape: { lines: { [lineNum]: {pattern, weekdays[], hours_per_day,
+//                               manual_days, active, notes, use_manual,
+//                               updated_at} },
+//          duration: 'permanent'|'this_week'|'this_month'|'custom'|'pay_period',
+//          duration_date: 'YYYY-MM-DD' (only for custom),
+//          _updated }
+//
+// Working state (unsaved edits) held in LSETUP_STATE. Save button persists.
+var LSETUP_STORAGE_KEY = 'hoc_line_setup_manual_v1';
+var LSETUP_STATE = null;   // { lines: {[ln]: row}, duration, duration_date }
+
+// Pattern → weekdays parser (same logic as Data Upload Hub v6.34bj)
+var _LSETUP_DAYS = {
+  'sun':0,'sunday':0,'mon':1,'monday':1,'tue':2,'tues':2,'tuesday':2,
+  'wed':3,'weds':3,'wednesday':3,'thu':4,'thur':4,'thurs':4,'thursday':4,
+  'fri':5,'friday':5,'sat':6,'saturday':6
+};
+function _lsetupParsePattern(patRaw){
+  if(!patRaw) return { weekdays: null };
+  var p = String(patRaw).toLowerCase().trim();
+  if(p === 'as needed' || p === 'as-needed' || p === 'off' || p === 'down' || p === 'inactive'){
+    return { weekdays: [] };
+  }
+  var m = p.match(/^([a-z]+)\s*-\s*([a-z]+)$/);
+  if(!m) return { weekdays: null };
+  var d1 = _LSETUP_DAYS[m[1]], d2 = _LSETUP_DAYS[m[2]];
+  if(d1 === undefined || d2 === undefined) return { weekdays: null };
+  var start = d1, end = d2;
+  if(end < start) end += 7;
+  var out = [];
+  for(var i = start; i <= end; i++) out.push(i % 7);
+  return { weekdays: out };
+}
+
+function lsetupLoad(){
+  try {
+    var raw = JSON.parse(localStorage.getItem(LSETUP_STORAGE_KEY) || 'null');
+    if(!raw) return { lines: {}, duration: 'permanent', duration_date: '' };
+    return {
+      lines: (raw.lines && typeof raw.lines === 'object') ? raw.lines : {},
+      duration: raw.duration || 'permanent',
+      duration_date: raw.duration_date || ''
+    };
+  } catch(e){
+    return { lines: {}, duration: 'permanent', duration_date: '' };
+  }
+}
+
+function lsetupInit(){
+  LSETUP_STATE = lsetupLoad();
+  // Seed with lines discovered from other sources so the user can see what's
+  // configured elsewhere (upload). Any line NOT present anywhere gets
+  // added as blank so user can define it fresh.
+  var seedLines = new Set();
+  // From existing manual state
+  Object.keys(LSETUP_STATE.lines).forEach(function(k){ seedLines.add(parseInt(k)); });
+  // From upload
+  try {
+    var up = JSON.parse(localStorage.getItem('hoc_line_setup_v1') || '{}');
+    if(Array.isArray(up.setup)){
+      up.setup.forEach(function(s){ if(!isNaN(parseInt(s.line))) seedLines.add(parseInt(s.line)); });
+    }
+  } catch(e){}
+  // From batches (any line referenced in the schedule)
+  try {
+    var pd = JSON.parse(localStorage.getItem('hoc_upload_v1') || '{}');
+    if(Array.isArray(pd.batches)){
+      pd.batches.forEach(function(b){
+        var ln = parseInt(b.line);
+        if(!isNaN(ln) && ln > 0) seedLines.add(ln);
+      });
+    }
+  } catch(e){}
+  seedLines.forEach(function(ln){
+    if(!LSETUP_STATE.lines[ln]){
+      LSETUP_STATE.lines[ln] = {
+        pattern: '',
+        hours_per_day: 9.17,
+        manual_days: '',
+        active: true,
+        notes: '',
+        use_manual: false,   // default: honor upload; user toggles to bypass
+        updated_at: null
+      };
+    }
+  });
+  lsetupRenderRows();
+  // Set duration selector state
+  var dsel = document.getElementById('lsetup-duration');
+  var ddate = document.getElementById('lsetup-custom-date');
+  if(dsel){ dsel.value = LSETUP_STATE.duration || 'permanent'; }
+  if(ddate){
+    ddate.value = LSETUP_STATE.duration_date || '';
+    ddate.style.display = (LSETUP_STATE.duration === 'custom') ? '' : 'none';
+    dsel.onchange = function(){
+      LSETUP_STATE.duration = dsel.value;
+      ddate.style.display = (dsel.value === 'custom') ? '' : 'none';
+    };
+    ddate.onchange = function(){
+      LSETUP_STATE.duration_date = ddate.value;
+    };
+  }
+  lsetupUpdateMeta();
+}
+
+function lsetupUpdateMeta(){
+  var el = document.getElementById('lsetup-meta');
+  if(!el || !LSETUP_STATE) return;
+  var total = Object.keys(LSETUP_STATE.lines).length;
+  var overrides = 0;
+  Object.keys(LSETUP_STATE.lines).forEach(function(k){
+    if(LSETUP_STATE.lines[k].use_manual === true) overrides++;
+  });
+  el.textContent = total + ' lines · ' + overrides + ' using in-app override';
+}
+
+function lsetupRenderRows(){
+  var tbody = document.getElementById('lsetup-tbody');
+  if(!tbody || !LSETUP_STATE) return;
+  var lineNums = Object.keys(LSETUP_STATE.lines).map(function(k){ return parseInt(k); }).sort(function(a,b){return a-b;});
+  if(lineNums.length === 0){
+    tbody.innerHTML = '<tr><td colspan="8" style="padding:20px;text-align:center;color:var(--text3);font-size:11px">No lines configured. Add a line below to start.</td></tr>';
+    return;
+  }
+  // Load upload data to show fallback values for comparison
+  var uploadByLine = {};
+  try {
+    var up = JSON.parse(localStorage.getItem('hoc_line_setup_v1') || '{}');
+    if(Array.isArray(up.setup)){
+      up.setup.forEach(function(s){ uploadByLine[s.line] = s; });
+    }
+  } catch(e){}
+  var html = '';
+  lineNums.forEach(function(ln){
+    var r = LSETUP_STATE.lines[ln];
+    var upl = uploadByLine[ln];
+    var srcBadge = r.use_manual ?
+      '<span style="color:var(--green);font-weight:700;font-size:9px">🟢 IN-APP</span>' :
+      (upl ? '<span style="color:var(--blue);font-size:9px">🔵 UPLOAD</span>'
+           : '<span style="color:var(--text3);font-size:9px">— NONE</span>');
+    // Placeholder text: if there's an upload row, show its values as hints
+    var patPh = upl ? ('upload: ' + (upl.pattern || '—')) : 'e.g. Mon-Fri';
+    var hpdPh = upl ? ('upload: ' + (upl.hours_per_day || '—')) : '9.17';
+    var mdPh  = upl && upl.manual_days !== null ? ('upload: ' + upl.manual_days) : '(from pattern)';
+    html += '<tr data-line="' + ln + '" style="border-top:1px solid var(--border)">';
+    html += '<td style="padding:6px 8px;font-weight:700"><b>' + ln + '</b></td>';
+    html += '<td style="padding:6px 8px">' + srcBadge + '<br>'
+         + '<label style="font-size:9px;color:var(--text3);cursor:pointer;display:flex;align-items:center;gap:4px;margin-top:2px">'
+         + '<input type="checkbox" ' + (r.use_manual ? 'checked' : '') + ' onchange="lsetupToggleUseManual(' + ln + ', this.checked)"> use in-app'
+         + '</label></td>';
+    html += '<td style="padding:6px 8px"><input type="text" value="' + (r.pattern || '').replace(/"/g,'&quot;') + '" placeholder="' + patPh + '" onchange="lsetupUpdateField(' + ln + ', \'pattern\', this.value)" style="width:100px;padding:4px 6px;font:inherit;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text)"></td>';
+    html += '<td style="padding:6px 8px;text-align:right"><input type="number" step="0.01" min="0" max="24" value="' + (r.hours_per_day || '') + '" placeholder="' + hpdPh + '" onchange="lsetupUpdateField(' + ln + ', \'hours_per_day\', parseFloat(this.value))" style="width:70px;padding:4px 6px;font:inherit;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);text-align:right"></td>';
+    html += '<td style="padding:6px 8px;text-align:right"><input type="number" min="0" max="31" value="' + (r.manual_days !== null && r.manual_days !== '' ? r.manual_days : '') + '" placeholder="' + mdPh + '" onchange="lsetupUpdateField(' + ln + ', \'manual_days\', this.value === \'\' ? null : parseFloat(this.value))" style="width:70px;padding:4px 6px;font:inherit;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);text-align:right"></td>';
+    html += '<td style="padding:6px 8px;text-align:center"><input type="checkbox" ' + (r.active ? 'checked' : '') + ' onchange="lsetupUpdateField(' + ln + ', \'active\', this.checked)"></td>';
+    html += '<td style="padding:6px 8px"><input type="text" value="' + (r.notes || '').replace(/"/g,'&quot;') + '" placeholder="optional notes" onchange="lsetupUpdateField(' + ln + ', \'notes\', this.value)" style="width:100%;padding:4px 6px;font:inherit;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text)"></td>';
+    html += '<td style="padding:6px 8px;text-align:center"><button onclick="lsetupRemoveLine(' + ln + ')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px" title="Remove this line">×</button></td>';
+    html += '</tr>';
+  });
+  tbody.innerHTML = html;
+}
+
+function lsetupToggleUseManual(ln, on){
+  if(!LSETUP_STATE.lines[ln]) return;
+  LSETUP_STATE.lines[ln].use_manual = !!on;
+  lsetupRenderRows();
+  lsetupUpdateMeta();
+}
+
+function lsetupUpdateField(ln, field, val){
+  if(!LSETUP_STATE.lines[ln]) return;
+  LSETUP_STATE.lines[ln][field] = val;
+  // If pattern changed, recompute weekdays
+  if(field === 'pattern'){
+    var parsed = _lsetupParsePattern(val);
+    LSETUP_STATE.lines[ln].weekdays = parsed.weekdays;
+  }
+}
+
+function lsetupAddLine(){
+  var input = document.getElementById('lsetup-add-line');
+  if(!input) return;
+  var ln = parseInt(input.value);
+  if(isNaN(ln) || ln < 1){ alert('Enter a valid line number'); return; }
+  if(LSETUP_STATE.lines[ln]){ alert('Line ' + ln + ' already exists in the table'); return; }
+  LSETUP_STATE.lines[ln] = {
+    pattern: '', hours_per_day: 9.17, manual_days: '', active: true,
+    notes: '', use_manual: true, updated_at: null
+  };
+  input.value = '';
+  lsetupRenderRows();
+  lsetupUpdateMeta();
+}
+
+function lsetupRemoveLine(ln){
+  if(!confirm('Remove Line ' + ln + ' from the setup?')) return;
+  delete LSETUP_STATE.lines[ln];
+  lsetupRenderRows();
+  lsetupUpdateMeta();
+}
+
+function lsetupSaveAll(){
+  if(!LSETUP_STATE) return;
+  // Parse pattern → weekdays for every row before saving
+  Object.keys(LSETUP_STATE.lines).forEach(function(k){
+    var r = LSETUP_STATE.lines[k];
+    var parsed = _lsetupParsePattern(r.pattern);
+    r.weekdays = parsed.weekdays;
+    if(r.manual_days === '' || r.manual_days === undefined) r.manual_days = null;
+    r.updated_at = new Date().toISOString();
+  });
+  var payload = {
+    lines: LSETUP_STATE.lines,
+    duration: LSETUP_STATE.duration || 'permanent',
+    duration_date: LSETUP_STATE.duration_date || '',
+    _updated: new Date().toISOString()
+  };
+  try {
+    localStorage.setItem(LSETUP_STORAGE_KEY, JSON.stringify(payload));
+    // Show a brief confirmation
+    var diag = document.getElementById('lsetup-diag');
+    if(diag){
+      diag.innerHTML = '<div style="padding:8px 10px;background:rgba(34,197,94,.1);border:1px solid var(--green);border-radius:5px;color:var(--green);font-size:10px;font-weight:700">✓ Saved · ' + Object.keys(LSETUP_STATE.lines).length + ' line(s). Line Summary will pick up changes on next render.</div>';
+      setTimeout(function(){ diag.innerHTML = ''; }, 5000);
+    }
+    // Trigger Line Summary re-render if it's the visible page
+    if(typeof renderLineSum === 'function'){ try { renderLineSum(); } catch(e){} }
+  } catch(e){
+    alert('Save failed: ' + e.message);
+  }
+}
+
+function lsetupRevertAll(){
+  if(!confirm('Discard unsaved edits and reload from storage?')) return;
+  lsetupInit();
+}
+
+
 // Reads live from HOC_Capacity engine, which reads from hoc_upload_v1
 // and hoc_line_setup_v1. Empty state shown if either is missing.
 function renderLineSum(){
@@ -1759,48 +2060,38 @@ function renderLineSum(){
   var rows = HOC_Capacity.lineSummary(asOf);
   var ctl  = HOC_Capacity.fullControl(asOf);
 
-  // v6.34bi: Diagnostic strip — surface why Avail Hrs / Gap Hrs might look
-  // "hardcoded" (not adjusting after Line_Setup.xlsx upload). Three real
-  // reasons this can happen:
-  //   1. No Line_Setup uploaded at all → engine uses hardcoded defaults
-  //   2. Uploaded but pattern text unrecognized (e.g. "M-F", "Monday-Friday")
-  //      → parser produces weekdays=[] → withDefaults substitutes defaults
-  //   3. Manual Days column has a value → override wins over pattern math
+  // v6.34bk: Diagnostic strip — reflects the new source model.
+  // Hardcoded LINE_DEFAULTS_634at is GONE. Sources are (1) uploaded
+  // hoc_line_setup_v1 and (2) in-app hoc_line_setup_manual_v1. Lines
+  // configured in neither are simply omitted from Line Summary.
   var diagEl = document.getElementById('ls-diag');
   if(diagEl){
     var lsRaw = null;
     try { lsRaw = JSON.parse(localStorage.getItem('hoc_line_setup_v1') || 'null'); } catch(e){}
+    var msRaw = null;
+    try { msRaw = JSON.parse(localStorage.getItem('hoc_line_setup_manual_v1') || 'null'); } catch(e){}
     var uploadedCount = (lsRaw && Array.isArray(lsRaw.setup)) ? lsRaw.setup.length : 0;
-    var uploadedAt = lsRaw ? new Date(lsRaw._updated).toLocaleString() : null;
-    // Per-line breakdown
-    var defaultCount = rows.filter(function(r){ return r.from_default; }).length;
-    var patchedCount = rows.filter(function(r){ return r.patched_weekdays; }).length;
-    var manualDaysCount = rows.filter(function(r){ return r.notes && r.notes.toLowerCase().indexOf('manual') !== -1; }).length;
-    // Also count from raw upload (setup rows that came in with manual_days)
-    var rawManualDays = 0;
-    if(lsRaw && Array.isArray(lsRaw.setup)){
-      rawManualDays = lsRaw.setup.filter(function(s){ return s.manual_days !== null && s.manual_days !== undefined; }).length;
-    }
+    var manualLines = (msRaw && msRaw.lines) ? msRaw.lines : {};
+    var manualCount = 0, overrideCount = 0;
+    Object.keys(manualLines).forEach(function(k){
+      manualCount++;
+      if(manualLines[k].use_manual === true) overrideCount++;
+    });
+    var upSource = rows.filter(function(r){ return r.source === 'upload'; }).length;
+    var manSource = rows.filter(function(r){ return r.source === 'manual'; }).length;
     var msgs = [];
-    var color = 'var(--text2)';
-    if(uploadedCount === 0){
-      msgs.push('<span style="color:var(--amber);font-weight:700">⚠ No Line_Setup.xlsx uploaded.</span> All Avail Hrs values shown are from hardcoded defaults. Upload via Data Upload Hub to activate line-specific values.');
-      color = 'var(--amber)';
+    if(rows.length === 0){
+      msgs.push('<span style="color:var(--amber);font-weight:700">⚠ No lines configured.</span> Upload Line_Setup.xlsx via Data Upload Hub, OR go to the <b>Line Setup</b> tab above to configure lines in-app. Hardcoded defaults were removed in v6.34bk.');
     } else {
-      msgs.push('<span style="color:var(--green);font-weight:700">✓ Line Setup loaded</span> · ' + uploadedCount + ' rows · uploaded ' + uploadedAt);
-      if(defaultCount > 0){
-        msgs.push('<span style="color:var(--amber)">⚠ ' + defaultCount + ' line(s) fell back to defaults (upload didn\'t cover them)</span>');
-        color = 'var(--amber)';
-      }
-      if(patchedCount > 0){
-        msgs.push('<span style="color:var(--amber)">⚠ ' + patchedCount + ' line(s) had unrecognized pattern text — Avail Hrs using default weekdays</span>');
-        color = 'var(--amber)';
-      }
-      if(rawManualDays > 0){
-        msgs.push('<span style="color:var(--blue)">ℹ ' + rawManualDays + ' line(s) using Manual Days column override (pattern math ignored for those)</span>');
-      }
-      if(defaultCount === 0 && patchedCount === 0 && rawManualDays === 0){
-        msgs.push('<span style="color:var(--text3)">All lines using uploaded pattern values ✓ — Avail Hrs and Gap Hrs are live from your upload</span>');
+      msgs.push('<span style="color:var(--green);font-weight:700">' + rows.length + ' line(s) configured</span>');
+      if(upSource > 0) msgs.push('<span style="color:var(--blue)">🔵 ' + upSource + ' from upload</span>');
+      if(manSource > 0) msgs.push('<span style="color:var(--green)">🟢 ' + manSource + ' in-app override</span>');
+      if(msRaw && msRaw.duration && msRaw.duration !== 'permanent'){
+        var durLabel = msRaw.duration.replace(/_/g,' ');
+        if(msRaw.duration === 'custom' && msRaw.duration_date){
+          durLabel = 'custom (through ' + msRaw.duration_date + ')';
+        }
+        msgs.push('<span style="color:var(--text3)">planned duration: ' + durLabel + '</span>');
       }
     }
     diagEl.innerHTML = '<div style="font-size:10px;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;line-height:1.5">' + msgs.join(' · ') + '</div>';
@@ -1852,10 +2143,12 @@ function renderLineSum(){
     // v6.34at: Show provenance — yellow dot if pattern came from defaults
     // (Line_Setup.xlsx not uploaded, or row had unknown pattern string).
     var provenance = '';
-    if(r.from_default){
-      provenance = ' <span title="No Line Setup upload — using default pattern. Upload Line_Setup.xlsx in Data Upload Hub for line-specific values." style="color:var(--amber);font-size:9px">●</span>';
-    } else if(r.patched_weekdays){
-      provenance = ' <span title="Uploaded pattern wasn\'t recognized — using default weekdays. Check Line_Setup pattern field." style="color:var(--amber);font-size:9px">●</span>';
+    // v6.34bk: Source indicator on Pattern (was v6.34at's default/patched dot).
+    // No more hardcoded defaults — just show which source the row came from.
+    if(r.source === 'manual'){
+      provenance = ' <span title="In-app override — configured in Line Setup tab" style="color:var(--green);font-size:9px">🟢</span>';
+    } else if(r.source === 'upload'){
+      provenance = ' <span title="From Line_Setup.xlsx upload" style="color:var(--blue);font-size:9px">🔵</span>';
     }
     html += '<td>' + (r.pattern || '—') + provenance + '</td>';
     // v6.34bf: Run Days suggestion cell.

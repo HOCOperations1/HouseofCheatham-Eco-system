@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34bj">
+<meta name="hoc-build" content="v6.34bk">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -2875,6 +2875,8 @@ function clearAllData() {
   localStorage.removeItem('hoc_patch_oee_v1');
   localStorage.removeItem('hoc_patch_stops_v1');
   localStorage.removeItem('hoc_line_setup_v1');
+  // v6.34bk: also clear the in-app manual line setup
+  localStorage.removeItem('hoc_line_setup_manual_v1');
   localStorage.removeItem('hoc_line_clearance_v1');
   // v6.34bh: cleanup for keys left behind by removed dashboards
   localStorage.removeItem('hoc_finance_cfg_v1');
