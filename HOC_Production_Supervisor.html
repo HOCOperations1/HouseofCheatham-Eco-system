@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34bk">
+<meta name="hoc-build" content="v6.34bl">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Production Supervisor</title>
@@ -173,7 +173,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--green)}
   <div class="card">
     <div class="card-title">Line Status — <span id="line-status-month">May 2026</span> <span class="t3" style="font-size:9px;font-weight:400;letter-spacing:0">Click row → line detail</span></div>
     <div class="tbl-wrap"><table>
-      <thead><tr><th>Line</th><th>Pattern</th><th>Total</th><th>Done</th><th>Running</th><th>Pending</th><th>Rem Min</th><th>Avail Hrs</th><th>Gap Hrs</th><th>OEE</th><th>Top Loss</th><th>Signal</th><th>Act HC</th><th>Adj Speed</th><th>ETA</th></tr></thead>
+      <thead><tr><th>Line</th><th>Total</th><th>Done</th><th>Running</th><th>Pending</th><th>Rem Min</th><th>Avail Hrs</th><th>Gap Hrs</th><th>OEE</th><th>Top Loss</th><th>Signal</th><th>Act HC</th><th>Adj Speed</th><th>ETA</th></tr></thead>
       <tbody id="line-tbody"></tbody>
     </table></div>
   </div>
@@ -1611,7 +1611,7 @@ function renderKPIs(){
 function renderLineTable(){
   document.getElementById('line-tbody').innerHTML=LINES.map(l=>`
     <tr onclick="P('lines');openLD(${l.line})" style="cursor:pointer">
-      <td style="font-weight:700;color:var(--green)">Line ${l.line}</td><td class="t3">${l.pattern}</td>
+      <td style="font-weight:700;color:var(--green)">Line ${l.line}</td>
       <td style="text-align:center">${l.total}</td><td style="text-align:center;color:var(--green)">${l.done}</td>
       <td style="text-align:center;color:var(--blue)">${l.running}</td><td style="text-align:center">${l.pending}</td>
       <td style="text-align:center">${N(l.remmin)}</td><td style="text-align:center">${l.availhr}h</td>
