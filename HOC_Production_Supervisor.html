@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34bh">
+<meta name="hoc-build" content="v6.34bi">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Production Supervisor</title>
@@ -347,6 +347,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--green)}
       <div class="ls-title-meta">Live from upload data · sorted by Gap Hrs ascending</div>
       <div class="ls-title-meta" id="ls-asof" style="margin-left:auto"></div>
     </div>
+    <div id="ls-diag" style="margin-bottom:10px"></div>
     <div id="ls-content"><div class="ls-empty">Loading…</div></div>
   </div>
 </div></div>
@@ -1757,6 +1758,54 @@ function renderLineSum(){
   var asOf = new Date();
   var rows = HOC_Capacity.lineSummary(asOf);
   var ctl  = HOC_Capacity.fullControl(asOf);
+
+  // v6.34bi: Diagnostic strip — surface why Avail Hrs / Gap Hrs might look
+  // "hardcoded" (not adjusting after Line_Setup.xlsx upload). Three real
+  // reasons this can happen:
+  //   1. No Line_Setup uploaded at all → engine uses hardcoded defaults
+  //   2. Uploaded but pattern text unrecognized (e.g. "M-F", "Monday-Friday")
+  //      → parser produces weekdays=[] → withDefaults substitutes defaults
+  //   3. Manual Days column has a value → override wins over pattern math
+  var diagEl = document.getElementById('ls-diag');
+  if(diagEl){
+    var lsRaw = null;
+    try { lsRaw = JSON.parse(localStorage.getItem('hoc_line_setup_v1') || 'null'); } catch(e){}
+    var uploadedCount = (lsRaw && Array.isArray(lsRaw.setup)) ? lsRaw.setup.length : 0;
+    var uploadedAt = lsRaw ? new Date(lsRaw._updated).toLocaleString() : null;
+    // Per-line breakdown
+    var defaultCount = rows.filter(function(r){ return r.from_default; }).length;
+    var patchedCount = rows.filter(function(r){ return r.patched_weekdays; }).length;
+    var manualDaysCount = rows.filter(function(r){ return r.notes && r.notes.toLowerCase().indexOf('manual') !== -1; }).length;
+    // Also count from raw upload (setup rows that came in with manual_days)
+    var rawManualDays = 0;
+    if(lsRaw && Array.isArray(lsRaw.setup)){
+      rawManualDays = lsRaw.setup.filter(function(s){ return s.manual_days !== null && s.manual_days !== undefined; }).length;
+    }
+    var msgs = [];
+    var color = 'var(--text2)';
+    if(uploadedCount === 0){
+      msgs.push('<span style="color:var(--amber);font-weight:700">⚠ No Line_Setup.xlsx uploaded.</span> All Avail Hrs values shown are from hardcoded defaults. Upload via Data Upload Hub to activate line-specific values.');
+      color = 'var(--amber)';
+    } else {
+      msgs.push('<span style="color:var(--green);font-weight:700">✓ Line Setup loaded</span> · ' + uploadedCount + ' rows · uploaded ' + uploadedAt);
+      if(defaultCount > 0){
+        msgs.push('<span style="color:var(--amber)">⚠ ' + defaultCount + ' line(s) fell back to defaults (upload didn\'t cover them)</span>');
+        color = 'var(--amber)';
+      }
+      if(patchedCount > 0){
+        msgs.push('<span style="color:var(--amber)">⚠ ' + patchedCount + ' line(s) had unrecognized pattern text — Avail Hrs using default weekdays</span>');
+        color = 'var(--amber)';
+      }
+      if(rawManualDays > 0){
+        msgs.push('<span style="color:var(--blue)">ℹ ' + rawManualDays + ' line(s) using Manual Days column override (pattern math ignored for those)</span>');
+      }
+      if(defaultCount === 0 && patchedCount === 0 && rawManualDays === 0){
+        msgs.push('<span style="color:var(--text3)">All lines using uploaded pattern values ✓ — Avail Hrs and Gap Hrs are live from your upload</span>');
+      }
+    }
+    diagEl.innerHTML = '<div style="font-size:10px;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;line-height:1.5">' + msgs.join(' · ') + '</div>';
+  }
+
   // Sort by gap_hrs ascending (worst first), but push NO LOAD lines to bottom
   rows.sort(function(a,b){
     var aNL = a.risk_status === 'NO LOAD';

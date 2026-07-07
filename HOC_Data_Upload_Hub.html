@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34bh">
+<meta name="hoc-build" content="v6.34bi">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1734,20 +1734,37 @@ function updateAllDashboards() {
             'mon-thu':[1,2,3,4], 'mon-fri':[1,2,3,4,5], 'mon-sat':[1,2,3,4,5,6],
             'wed-sat':[3,4,5,6], 'as needed':[], 'down':[]
           };
+          // v6.34bi: Whitespace-tolerant field lookup. Excel exports sometimes
+          // add leading/trailing spaces to column headers (' Manual Days ' vs
+          // 'Manual Days'). Without this, uploaded values silently ignored →
+          // Line Summary looks 'hardcoded' even though user updated the template.
+          function _lsField(row, names){
+            for(var i = 0; i < names.length; i++){
+              if(row[names[i]] !== undefined && row[names[i]] !== '') return row[names[i]];
+            }
+            // Try whitespace-tolerant match
+            var trimmedTargets = names.map(function(n){ return n.toLowerCase().replace(/\s+/g,''); });
+            for(var k in row){
+              if(!row.hasOwnProperty(k)) continue;
+              var kTrim = String(k).toLowerCase().replace(/\s+/g,'');
+              if(trimmedTargets.indexOf(kTrim) !== -1 && row[k] !== '' && row[k] !== null) return row[k];
+            }
+            return undefined;
+          }
           var setup = [];
           var bad = [];
           lsRows.forEach(function(r){
             // Tolerate header variants
-            var rawLine = r['Line']!==undefined?r['Line']:(r['Line #']!==undefined?r['Line #']:r['LineNumber']);
+            var rawLine = _lsField(r, ['Line', 'Line #', 'LineNumber', 'Line Number']);
             if(rawLine===''||rawLine===null||rawLine===undefined) return;
             var lineNum = parseInt(String(rawLine).replace(/\D/g,''));
             if(isNaN(lineNum)) return;
-            var patRaw = String(r['Pattern']||r['Work Pattern']||'').trim();
+            var patRaw = String(_lsField(r, ['Pattern', 'Work Pattern']) || '').trim();
             var pat = patRaw.toLowerCase();
-            var hpd = parseFloat(r['Hours/Day']||r['Hours per Day']||r['Hrs/Day']||9.17);
+            var hpd = parseFloat(_lsField(r, ['Hours/Day', 'Hours per Day', 'Hrs/Day']) || 9.17);
             if(isNaN(hpd) || hpd <= 0) hpd = 9.17;
             // Active
-            var actRaw = String(r['Active']||'').trim().toUpperCase();
+            var actRaw = String(_lsField(r, ['Active']) || '').trim().toUpperCase();
             var active = !(actRaw === 'FALSE' || actRaw === '0' || actRaw === 'NO' || actRaw === 'N');
             var weekdays = patternMap[pat];
             if(weekdays === undefined){
@@ -1755,7 +1772,7 @@ function updateAllDashboards() {
               weekdays = [];
             }
             // Manual Days override — workbook compatibility
-            var mdRaw = r['Manual Days']!==undefined?r['Manual Days']:r['Manual Days Override'];
+            var mdRaw = _lsField(r, ['Manual Days', 'Manual Days Override', 'Days Override']);
             var manualDays = null;
             if(mdRaw !== '' && mdRaw !== null && mdRaw !== undefined){
               var mdNum = parseFloat(mdRaw);
@@ -1768,7 +1785,7 @@ function updateAllDashboards() {
               weekdays: weekdays,
               manual_days: manualDays,          // null → engine uses date-range calc
               active: active,
-              notes: String(r['Notes']||'').trim()
+              notes: String(_lsField(r, ['Notes']) || '').trim()
             });
           });
           setup.sort(function(a,b){ return a.line - b.line; });
