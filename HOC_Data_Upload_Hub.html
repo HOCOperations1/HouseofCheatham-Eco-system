@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34bi">
+<meta name="hoc-build" content="v6.34bj">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -1729,11 +1729,52 @@ function updateAllDashboards() {
           progress('⚠ Line Setup: no sheets found', 'warn');
         } else {
           var lsRows = XLSX.utils.sheet_to_json(lsSheet, {defval:''});
-          // Pattern → array of weekday numbers (0=Sun, 1=Mon, ..., 6=Sat)
-          var patternMap = {
-            'mon-thu':[1,2,3,4], 'mon-fri':[1,2,3,4,5], 'mon-sat':[1,2,3,4,5,6],
-            'wed-sat':[3,4,5,6], 'as needed':[], 'down':[]
+          // v6.34bj: TOLERANT pattern parser. Previous version had a strict
+          // patternMap with 6 exact strings — anything else (like 'Mon-thur',
+          // 'Wed- Saturday', 'Mon-Saturday') silently failed and fell back
+          // to hardcoded defaults. Users saw 12 amber warnings even after
+          // uploading a valid Line Setup.
+          //
+          // New approach: decode any "Day1-Day2" range. Accepts:
+          //   - Full names: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday
+          //   - Abbreviations: Mon, Tue, Tues, Wed, Thu, Thur, Thurs, Fri, Sat, Sun
+          //   - Any whitespace around the dash: "Wed- Sat" or "Wed - Sat" or "Wed-Sat"
+          //   - Case-insensitive
+          //   - "As Needed" / "Down" → empty weekdays (line off)
+          var dayNameToIdx = {
+            'sun':0,'sunday':0,
+            'mon':1,'monday':1,
+            'tue':2,'tues':2,'tuesday':2,
+            'wed':3,'weds':3,'wednesday':3,
+            'thu':4,'thur':4,'thurs':4,'thursday':4,
+            'fri':5,'friday':5,
+            'sat':6,'saturday':6
           };
+          function parsePattern(patRaw){
+            if(!patRaw) return { weekdays: null, canonical: '' };  // null = didn't recognize
+            var p = String(patRaw).toLowerCase().trim();
+            // Special cases: line off
+            if(p === 'as needed' || p === 'as-needed' || p === 'off' || p === 'down' || p === 'inactive'){
+              return { weekdays: [], canonical: patRaw };
+            }
+            // Look for a two-day range separated by a dash (with optional spaces)
+            // Match: [day1] optional-whitespace - optional-whitespace [day2]
+            var m = p.match(/^([a-z]+)\s*-\s*([a-z]+)$/);
+            if(!m) return { weekdays: null, canonical: patRaw };
+            var d1 = dayNameToIdx[m[1]];
+            var d2 = dayNameToIdx[m[2]];
+            if(d1 === undefined || d2 === undefined) return { weekdays: null, canonical: patRaw };
+            // Build the range from d1 through d2 (wrapping through Sunday if needed).
+            // For HOC's context both are always inside Mon-Sat (1-6), so simple
+            // linear range works. Support Sun (0) at either end by treating as 7.
+            var start = d1, end = d2;
+            if(end < start) end += 7;  // Sun→Sat semantics; typically doesn't happen at HOC
+            var out = [];
+            for(var i = start; i <= end; i++){
+              out.push(i % 7);
+            }
+            return { weekdays: out, canonical: patRaw };
+          }
           // v6.34bi: Whitespace-tolerant field lookup. Excel exports sometimes
           // add leading/trailing spaces to column headers (' Manual Days ' vs
           // 'Manual Days'). Without this, uploaded values silently ignored →
@@ -1760,16 +1801,19 @@ function updateAllDashboards() {
             var lineNum = parseInt(String(rawLine).replace(/\D/g,''));
             if(isNaN(lineNum)) return;
             var patRaw = String(_lsField(r, ['Pattern', 'Work Pattern']) || '').trim();
-            var pat = patRaw.toLowerCase();
             var hpd = parseFloat(_lsField(r, ['Hours/Day', 'Hours per Day', 'Hrs/Day']) || 9.17);
             if(isNaN(hpd) || hpd <= 0) hpd = 9.17;
             // Active
             var actRaw = String(_lsField(r, ['Active']) || '').trim().toUpperCase();
             var active = !(actRaw === 'FALSE' || actRaw === '0' || actRaw === 'NO' || actRaw === 'N');
-            var weekdays = patternMap[pat];
-            if(weekdays === undefined){
+            // v6.34bj: use tolerant parser
+            var parsed = parsePattern(patRaw);
+            var weekdays;
+            if(parsed.weekdays === null){
               bad.push({line: lineNum, pattern: patRaw});
               weekdays = [];
+            } else {
+              weekdays = parsed.weekdays;
             }
             // Manual Days override — workbook compatibility
             var mdRaw = _lsField(r, ['Manual Days', 'Manual Days Override', 'Days Override']);
