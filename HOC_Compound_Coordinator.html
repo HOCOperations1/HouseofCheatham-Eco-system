@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34bn">
+<meta name="hoc-build" content="v6.34bo">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Compound Coordinator</title>
@@ -156,7 +156,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--blue)}
     <div class="tbl-wrap"><table>
       <thead><tr>
         <th>Batch</th><th>Ln</th><th>Date</th><th>Description</th><th>Formula</th>
-        <th>Cases Needed</th><th>Labor Hrs</th><th>Cmpd Status</th><th>Raw Status</th><th>Shortage</th>
+        <th>Lbs Needed</th><th>Raw Status</th><th>Shortage</th>
         <th>Correction Flag</th><th>CC Verified</th><th>Proceed?</th>
       </tr></thead>
       <tbody id="cmd-tbody"></tbody>
@@ -173,7 +173,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--blue)}
   <div class="tbl-wrap"><table>
     <thead><tr>
       <th>Batch</th><th>Ln</th><th>Date</th><th>Description</th><th>Formula</th>
-      <th>Cases</th><th>Due By</th><th>Cmpd Status</th><th>Raw Status</th><th>CC Verified</th><th>Proceed</th>
+      <th>Lbs Needed</th><th>Due By</th><th>Raw Status</th><th>CC Verified</th><th>Proceed</th>
     </tr></thead>
     <tbody id="ver-tbody"></tbody>
   </table></div>
@@ -724,6 +724,31 @@ function _loadBatches(){
     var src = (up && up.batches) ? up.batches : [];
     var todayStr = new Date().toISOString().slice(0,10);
 
+    // v6.34bo: Build per-batch chemical LBS lookup from Planning_Data BOM.
+    // This is what Compound Coordinator needs — total pounds of chemistry
+    // to be produced for each batch. Only 8-* SKUs with UoM='LB' count as
+    // chemicals; packaging (2-*/7-*/9-*) belongs to Production Coordinator.
+    //
+    // Honest limitation: if Planning_Data hasn't been uploaded, chem_lbs
+    // will be 0 for every batch and the "Lbs Needed" column will show a
+    // dash. That's the right honest signal — no fake numbers, no fallback
+    // to cases-treated-as-lbs.
+    var chemLbsByBatch = {};
+    if(up && Array.isArray(up.bom)){
+      up.bom.forEach(function(entry){
+        if(!entry || !entry.batch || !Array.isArray(entry.components)) return;
+        var total = 0;
+        entry.components.forEach(function(c){
+          var sku = String(c.sku || '');
+          var uom = String(c.uom || '').toUpperCase();
+          if(sku.indexOf('8-') !== 0) return;   // chemicals only
+          if(uom !== 'LB') return;              // pounds only, not EACH/CASE
+          total += parseFloat(c.qty) || 0;
+        });
+        chemLbsByBatch[entry.batch] = total;
+      });
+    }
+
     return src.map(function(b){
       // Compute urgency from cmpddue vs today
       var urgency = 'PLANNED';
@@ -737,8 +762,12 @@ function _loadBatches(){
       else if(cmpd.indexOf('ON TRACK') >= 0) urgency = 'ON TRACK';
       else if(cmpd.indexOf('NO COMPOUND') >= 0) urgency = 'NO STD';
 
-      // raw_status from shortage
-      var raw_status = 'VERIFIED';
+      // v6.34bo: raw_status defaults to AWAITING VERIFICATION (was VERIFIED).
+      // That old default made the dashboard falsely claim every batch had
+      // materials verified before any human had actually checked. Now only
+      // an explicit shortage flips it — verification still requires a human
+      // action on the Batch Verification screen (writes to CC status).
+      var raw_status = 'AWAITING VERIFICATION';
       var sh = parseFloat(b.shortage) || 0;
       if(sh < -3000) raw_status = 'CRITICALLY SHORT';
       else if(sh < 0) raw_status = 'SHORT';
@@ -770,6 +799,8 @@ function _loadBatches(){
         urgency: urgency,
         raw_status: raw_status,
         verified: false,
+        // v6.34bo: Chemical LBS from Planning_Data BOM (compound scope)
+        chem_lbs: chemLbsByBatch[b.batch] || 0,
         // Pass through useful extras
         status: b.status,
         item: b.item || '',
@@ -924,12 +955,51 @@ const PM = {cmd:0,verify:1,inventory:2,alerts:3,sync:4,checklist:5};
 function P(id){showPage(id,PM);if(id==='verify')renderVerify();if(id==='inventory')renderInventory();if(id==='alerts')renderAlerts();if(id==='checklist')clInit();}
 
 function getCCStatus(batchId){ return syncGet(batchId).cc?.status||''; }
+
+// v6.34bo: Per-item verified state for batch's chemical components.
+// Storage: hoc_cc_item_verified_v1 = { [batch_id]: { [sku]: true, ... } }
+// Cleared alongside other CC state in clearAllData.
+var CC_ITEM_VERIFIED_KEY = 'hoc_cc_item_verified_v1';
+function getBatchItemVerified(batchId){
+  try {
+    var all = JSON.parse(localStorage.getItem(CC_ITEM_VERIFIED_KEY) || '{}');
+    return (all && all[batchId]) || {};
+  } catch(e){ return {}; }
+}
+function toggleItemVerified(batchId, sku, checked){
+  try {
+    var all = JSON.parse(localStorage.getItem(CC_ITEM_VERIFIED_KEY) || '{}');
+    if(!all[batchId]) all[batchId] = {};
+    if(checked){
+      all[batchId][sku] = true;
+    } else {
+      delete all[batchId][sku];
+      // If no items remain verified for this batch, drop the batch entry too
+      if(Object.keys(all[batchId]).length === 0) delete all[batchId];
+    }
+    localStorage.setItem(CC_ITEM_VERIFIED_KEY, JSON.stringify(all));
+    // Refresh the detail panel so the summary + row styles update
+    var currentBatch = document.getElementById('vd-title');
+    if(currentBatch && currentBatch.textContent.indexOf(batchId) >= 0){
+      // Re-open the same batch to re-render (safe: preserves scroll)
+      openVD(batchId);
+    }
+  } catch(e){
+    console.warn('toggleItemVerified failed:', e);
+  }
+}
+window.toggleItemVerified = toggleItemVerified;
 function getCCBlock(batchId){ return syncGet(batchId).cc?.blocked||false; }
 
 function rawBadge(s){
+  s = s || '';
+  // v6.34bo: AWAITING VERIFICATION is the honest default state — no human
+  // has verified this batch's raw materials yet. Shown in amber, distinct
+  // from actual VERIFIED (green) and SHORT (red).
   if(s==='VERIFIED'||s.includes('PROCEED')) return '<span class="pill p-ot">✓ VERIFIED</span>';
-  if(s.includes('SHORT')||s.includes('HOLD')||s.includes('EMERGENCY')) return '<span class="pill p-od">SHORT</span>';
+  if(s==='AWAITING VERIFICATION') return '<span class="pill p-ar">⧗ AWAITING VERIFICATION</span>';
   if(s==='CRITICALLY SHORT') return '<span class="pill p-od">⚠ CRITICALLY SHORT</span>';
+  if(s.includes('SHORT')||s.includes('HOLD')||s.includes('EMERGENCY')) return '<span class="pill p-od">SHORT</span>';
   if(s==='LOW') return '<span class="pill p-ar">LOW</span>';
   return '<span class="pill p-ns">UNVERIFIED</span>';
 }
@@ -1075,9 +1145,10 @@ function renderCmdTable(){
   document.getElementById('cmd-tbody').innerHTML=BATCHES.map(b=>{
     const cc=getCCStatus(b.batch);
     const bc=b.urgency==='CRITICAL'?'rgba(239,68,68,.03)':b.urgency==='AT RISK'?'rgba(245,158,11,.02)':'';
-    const lhrs = getBatchLaborHrs(b);
-    const lhrsCell = lhrs != null
-      ? '<span style="color:var(--purple);font-weight:600">'+lhrs.toFixed(1)+'h</span>'
+    // v6.34bo: Lbs Needed — from Planning_Data 8-* chemical BOM. Show
+    // em-dash when 0 (either not chemical batch or Planning_Data missing).
+    const lbsCell = b.chem_lbs > 0
+      ? '<span style="color:var(--text)">'+N(Math.round(b.chem_lbs))+'</span>'
       : '<span class="t3">—</span>';
     return`<tr onclick="P('verify');openVD('${b.batch}')" style="cursor:pointer;background:${bc}">
       <td style="font-size:10px;font-weight:600;color:var(--text2)">${b.batch}</td>
@@ -1085,9 +1156,7 @@ function renderCmdTable(){
       <td>${fD(b.date)}</td>
       <td style="font-size:10px;max-width:155px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.desc}</td>
       <td style="font-weight:700;color:var(--blue)">F.${b.formula}</td>
-      <td style="text-align:right">${N(b.origqty)}</td>
-      <td style="text-align:right;font-size:10px">${lhrsCell}</td>
-      <td>${cmpdBadge(b.cmpd_status)}</td>
+      <td style="text-align:right">${lbsCell}</td>
       <td>${rawBadge(cc||b.raw_status)}</td>
       <td class="${b.shortage<0?'num-red':'t3'}">${b.shortage<0?N(b.shortage)+' lbs':'—'}</td>
       <td style="font-size:9px;${b.correction&&b.correction.includes('VARIANCE')?'color:var(--amber)':'color:var(--green)'}">${b.correction?b.correction.slice(0,30):'✓ OK'}</td>
@@ -1115,9 +1184,8 @@ function renderVerify(){
       <td>${fD(b.date)}</td>
       <td style="font-size:10px;max-width:155px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.desc}</td>
       <td style="font-weight:700;color:var(--blue)">F.${b.formula}</td>
-      <td style="text-align:right">${N(b.origqty)}</td>
+      <td style="text-align:right">${b.chem_lbs>0?N(Math.round(b.chem_lbs)):'<span class="t3">—</span>'}</td>
       <td>${fD(b.cmpd_due)}</td>
-      <td>${cmpdBadge(b.cmpd_status)}</td>
       <td>${rawBadge(cc||b.raw_status)}</td>
       <td>${cc?`<span style="font-size:9px;color:var(--blue)">${cc.slice(0,20)}</span>`:'<span class="t3">—</span>'}</td>
       <td>${proceedBadge(b.batch)}</td>
@@ -1165,6 +1233,11 @@ function openVD(id){
   // now reads from that authoritative source, matching Production
   // Coordinator's working placard auto-populate.
   //
+  // v6.34bo: Added per-item verification checkboxes with persistent state
+  // in localStorage. Each row lets the operator click ✓ to mark a specific
+  // chemical verified — persistence keyed by batch+SKU so navigating away
+  // and back preserves progress. Summary shows N of M verified.
+  //
   // Join strategy: components come from up.bom (need qty), QOH from
   // up.inventory (available qty). Joined on ComponentId/sku.
   (function populateBOM(){
@@ -1205,23 +1278,57 @@ function openVD(id){
       }
     }
     if(rows && rows.length){
+      // v6.34bo: load persisted per-item verify state
+      var itemVerified = getBatchItemVerified(b.batch);
+      var verifiedCount = 0;
+      rows.forEach(function(r){ if(itemVerified[r.sku]) verifiedCount++; });
+      // Sub-header with verified count
+      bomSrc.innerHTML = '· from Planning_Data BOM (' + rows.length + ' chemicals · '
+                      + '<b style="color:' + (verifiedCount===rows.length?'var(--green)':'var(--amber)') + '">'
+                      + verifiedCount + '/' + rows.length + ' verified</b>)';
       bomList.innerHTML = '<table style="width:100%;font-size:11px;border-collapse:collapse">' +
-        '<thead><tr><th style="text-align:left;padding:4px;color:var(--text3);font-size:9px;font-weight:700;letter-spacing:.05em;border-bottom:1px solid var(--border)">SKU</th>' +
+        '<thead><tr>' +
+        '<th style="text-align:center;padding:4px;color:var(--text3);font-size:9px;font-weight:700;letter-spacing:.05em;border-bottom:1px solid var(--border);width:40px">Verify</th>' +
+        '<th style="text-align:left;padding:4px;color:var(--text3);font-size:9px;font-weight:700;letter-spacing:.05em;border-bottom:1px solid var(--border)">SKU</th>' +
         '<th style="text-align:left;padding:4px;color:var(--text3);font-size:9px;font-weight:700;letter-spacing:.05em;border-bottom:1px solid var(--border)">Description</th>' +
         '<th style="text-align:right;padding:4px;color:var(--text3);font-size:9px;font-weight:700;letter-spacing:.05em;border-bottom:1px solid var(--border)">Need (lbs)</th>' +
         '<th style="text-align:right;padding:4px;color:var(--text3);font-size:9px;font-weight:700;letter-spacing:.05em;border-bottom:1px solid var(--border)">On Hand</th>' +
-        '<th style="text-align:center;padding:4px;color:var(--text3);font-size:9px;font-weight:700;letter-spacing:.05em;border-bottom:1px solid var(--border)">OK?</th></tr></thead><tbody>' +
+        '<th style="text-align:center;padding:4px;color:var(--text3);font-size:9px;font-weight:700;letter-spacing:.05em;border-bottom:1px solid var(--border)">Status</th></tr></thead><tbody>' +
         rows.map(function(r){
           var need = parseFloat(r.qty_need || r.lbs_need || r.need || 0) || 0;
           var have = parseFloat(r.qty_have || r.qoh || r.have || 0) || 0;
-          var ok = have >= need;
-          return '<tr><td style="padding:4px;font-family:ui-monospace,monospace;color:var(--text)">' + (r.sku||r.item||'—') + '</td>' +
-            '<td style="padding:4px;color:var(--text2)">' + (r.desc||r.description||'—') + '</td>' +
-            '<td style="padding:4px;text-align:right;color:var(--text)">' + need.toLocaleString(undefined,{maximumFractionDigits:1}) + '</td>' +
-            '<td style="padding:4px;text-align:right;color:' + (ok?'var(--text)':'var(--red)') + '">' + have.toLocaleString(undefined,{maximumFractionDigits:1}) + '</td>' +
-            '<td style="padding:4px;text-align:center;color:' + (ok?'var(--green)':'var(--red)') + '">' + (ok?'✓':'⚠') + '</td></tr>';
+          var hasStock = have >= need;
+          var isVerified = !!itemVerified[r.sku];
+          // Status logic:
+          //   verified & stock OK        → ✓ VERIFIED (green)
+          //   not verified but stock OK  → ⧗ AWAITING (amber)
+          //   stock short                → ⚠ SHORT (red)
+          var statusHtml;
+          if(!hasStock){
+            statusHtml = '<span style="color:var(--red);font-weight:700;font-size:10px">⚠ SHORT</span>';
+          } else if(isVerified){
+            statusHtml = '<span style="color:var(--green);font-weight:700;font-size:10px">✓ VERIFIED</span>';
+          } else {
+            statusHtml = '<span style="color:var(--amber);font-weight:600;font-size:10px">⧗ AWAITING</span>';
+          }
+          var skuEsc = String(r.sku||'').replace(/"/g,'&quot;');
+          var checkbox = '<input type="checkbox" ' + (isVerified?'checked':'')
+                       + ' onchange="toggleItemVerified(\'' + b.batch + '\', \'' + skuEsc + '\', this.checked)"'
+                       + ' style="cursor:pointer;width:14px;height:14px"'
+                       + (hasStock ? '' : ' title="Cannot verify — stock is short"')
+                       + '>';
+          return '<tr style="background:' + (isVerified?'rgba(34,197,94,.05)':'') + '">'
+              + '<td style="padding:4px;text-align:center">' + checkbox + '</td>'
+              + '<td style="padding:4px;font-family:ui-monospace,monospace;color:var(--text)">' + (r.sku||'—') + '</td>'
+              + '<td style="padding:4px;color:var(--text2)">' + (r.desc||r.description||'—') + '</td>'
+              + '<td style="padding:4px;text-align:right;color:var(--text)">' + need.toLocaleString(undefined,{maximumFractionDigits:1}) + '</td>'
+              + '<td style="padding:4px;text-align:right;color:' + (hasStock?'var(--text)':'var(--red)') + '">' + have.toLocaleString(undefined,{maximumFractionDigits:1}) + '</td>'
+              + '<td style="padding:4px;text-align:center">' + statusHtml + '</td></tr>';
         }).join('') +
-        '</tbody></table>';
+        '</tbody></table>' +
+        '<div style="margin-top:8px;font-size:9px;color:var(--text3);font-style:italic">' +
+          'Check each item as you visually verify it in the warehouse. When all items are checked AND stock is OK, click "Mark Verified — Proceed" below.' +
+        '</div>';
     } else {
       // No BOM data available — explain the gap and what the operator should do
       bomSrc.textContent = '· BOM not yet integrated';
@@ -1459,6 +1566,32 @@ function saveVerification(){
 
 function markProceed(){
   if(!activeVer)return;
+  // v6.34bo: Before proceeding, require every chemical (8-*) component in
+  // this batch's Planning_Data BOM to have been individually verified. This
+  // prevents "proceed" being clicked without actually checking materials.
+  //
+  // Honest fallback: if Planning_Data BOM isn't uploaded (no components
+  // known), we let the user proceed on their overall judgement — the old
+  // pre-BOM behavior. Better than blocking a legitimate proceed when we
+  // simply lack the data to enforce the check.
+  var up = (typeof _UPLOAD !== 'undefined') ? _UPLOAD : null;
+  if(up && Array.isArray(up.bom)){
+    var bomEntry = up.bom.find(function(x){ return x.batch === activeVer; });
+    if(bomEntry && Array.isArray(bomEntry.components)){
+      var chems = bomEntry.components.filter(function(c){
+        return String(c.sku||'').indexOf('8-') === 0;
+      });
+      if(chems.length > 0){
+        var verified = getBatchItemVerified(activeVer);
+        var unverified = chems.filter(function(c){ return !verified[c.sku]; });
+        if(unverified.length > 0){
+          alert('Cannot proceed — ' + unverified.length + ' of ' + chems.length +
+            ' chemical(s) not yet verified.\n\nPlease check each item in the Required Raw Materials list above.');
+          return;
+        }
+      }
+    }
+  }
   document.getElementById('v-status').value='VERIFIED — PROCEED';
   saveVerification();
 }

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34bn">
+<meta name="hoc-build" content="v6.34bo">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -2886,6 +2886,8 @@ function clearAllData() {
   localStorage.removeItem('hoc_scores');
   localStorage.removeItem('hoc_pillars');
   localStorage.removeItem('hoc_cars');
+  // v6.34bo: Per-item verified state on Compound Coordinator
+  localStorage.removeItem('hoc_cc_item_verified_v1');
   // v6.34aq: also clear new keys + BOM
   localStorage.removeItem('hoc_chem_pulls_req_v1');
   // v6.34ba: also clear NMP isolated storage
