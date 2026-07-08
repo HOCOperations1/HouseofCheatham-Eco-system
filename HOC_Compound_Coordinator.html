@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34bq">
+<meta name="hoc-build" content="v6.34br">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Compound Coordinator</title>
@@ -1368,6 +1368,28 @@ function openVD(id){
       }
       html += '</div>';
     } else {
+      // v6.34br: Auto-switch units per item based on magnitude.
+      //   qty >= 1 lb → display in lbs (tenths precision)
+      //   qty < 1 lb  → display in grams (tiered precision based on size)
+      //     < 1 g    → 2 decimals (0.21 g Cocoa Butter)
+      //     < 10 g   → 1 decimal (3.2 g)
+      //     >= 10 g  → 0 decimals (116 g)
+      // On Hand shows in the SAME unit as Need so the comparison is direct
+      // (yes, that means '385,102 g' on-hand for a micro-need item, but
+      // apples-to-apples comparison is more valuable than pretty numbers).
+      //
+      // 543 rows in real Planning_Data have qty < 0.05 lb which used to
+      // round to '0 lbs' — grams display makes those visible and weighable.
+      var LBS_TO_G = 453.592;
+      function formatQty(lbs){
+        if(lbs >= 1){
+          return {value: lbs.toLocaleString(undefined,{maximumFractionDigits:1}), unit:'lbs'};
+        }
+        // Small — convert to grams
+        var g = lbs * LBS_TO_G;
+        var decimals = g < 1 ? 2 : (g < 10 ? 1 : 0);
+        return {value: g.toLocaleString(undefined,{maximumFractionDigits:decimals}), unit:'g'};
+      }
       // Render one item per chemical — no blank slot padding (per user request)
       chems.forEach(function(it, i){
         var need = it.qty_need;
@@ -1375,6 +1397,16 @@ function openVD(id){
         var hasStock = have >= need;
         var isVerified = !!itemVerified[it.sku];
         var skuEsc = String(it.sku || '').replace(/"/g, '&quot;');
+        // Choose display unit based on the NEED amount; render both need
+        // and have in that unit so operator can compare directly.
+        var needFmt = formatQty(need);
+        var haveInSameUnit = needFmt.unit === 'g' ? have * LBS_TO_G : have;
+        var haveDecimals = needFmt.unit === 'g'
+          ? (haveInSameUnit < 1 ? 2 : (haveInSameUnit < 10 ? 1 : 0))
+          : 1;
+        var haveDisplay = haveInSameUnit.toLocaleString(undefined,{maximumFractionDigits:haveDecimals});
+        var needLabel = needFmt.unit === 'g' ? 'Quantity Needed (G)' : 'Quantity Needed (LBS)';
+        var haveLabel = needFmt.unit === 'g' ? 'Quantity On Hand (G)' : 'Quantity On Hand (LBS)';
         var statusHtml;
         if(!hasStock){
           statusHtml = '<span style="color:#c00;font-weight:700;font-size:10px">⚠ SHORT</span>';
@@ -1390,14 +1422,14 @@ function openVD(id){
           '</div>';
         html += '<div class="cpitem-row">' +
           '<div>' + (it.sku || '') + (it.desc ? ' — ' + it.desc : '') + '</div>' +
-          '<div>' + need.toLocaleString(undefined,{maximumFractionDigits:1}) + ' lbs</div>' +
-          '<div>' + have.toLocaleString(undefined,{maximumFractionDigits:1}) + ' lbs</div>' +
+          '<div>' + needFmt.value + ' ' + needFmt.unit + '</div>' +
+          '<div>' + haveDisplay + ' ' + needFmt.unit + '</div>' +
           '<div>&nbsp;</div>' +
           '</div>';
         html += '<div class="cpitem-row">' +
           '<div class="lbl">Product Number / Description</div>' +
-          '<div class="lbl">Quantity Needed (LBS)</div>' +
-          '<div class="lbl">Quantity On Hand</div>' +
+          '<div class="lbl">' + needLabel + '</div>' +
+          '<div class="lbl">' + haveLabel + '</div>' +
           '<div class="lbl">Verified Quantity</div>' +
           '</div>';
         if(it.location){
