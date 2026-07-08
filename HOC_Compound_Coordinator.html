@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34bl">
+<meta name="hoc-build" content="v6.34bn">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Compound Coordinator</title>
@@ -1157,23 +1157,52 @@ function openVD(id){
   document.getElementById('vd-saved').classList.remove('show');
 
   // Populate batch-specific raw materials (BOM) section.
-  // We look in 3 places, in order of preference:
-  //   1. _UPLOAD.boms[formula_id]  — if a BOM upload exists per formula
-  //   2. _UPLOAD.bom_lookup[batch] — if per-batch BOM available
-  //   3. Fall back to derived signals: shortage value + formula number + a
-  //      placeholder list pulled from CHEMICALS inventory if formula data exists
+  //
+  // v6.34bm: FIXED wrong-key lookup that had been silently failing.
+  // Previous code looked for up.bom_lookup[batch] and up.boms[formula] — those
+  // fields don't exist. The Planning_Data parser (Data Upload Hub) writes
+  // components to `up.bom` (array of {batch, components:[...]}). The lookup
+  // now reads from that authoritative source, matching Production
+  // Coordinator's working placard auto-populate.
+  //
+  // Join strategy: components come from up.bom (need qty), QOH from
+  // up.inventory (available qty). Joined on ComponentId/sku.
   (function populateBOM(){
     var bomList = document.getElementById('bom-list');
     var bomSrc = document.getElementById('bom-source');
     if(!bomList) return;
     var up = (typeof _UPLOAD !== 'undefined') ? _UPLOAD : null;
     var rows = null;
-    if(up && up.bom_lookup && up.bom_lookup[b.batch]) {
-      rows = up.bom_lookup[b.batch];
-      bomSrc.textContent = '· from BOM upload (batch-specific)';
-    } else if(up && up.boms && up.boms[b.formula]) {
-      rows = up.boms[b.formula];
-      bomSrc.textContent = '· from BOM upload (formula F.' + b.formula + ')';
+    if(up && Array.isArray(up.bom)){
+      var bomEntry = up.bom.find(function(x){ return x.batch === b.batch; });
+      if(bomEntry && Array.isArray(bomEntry.components)){
+        // Build QOH lookup from inventory for the join
+        var qohBySku = {};
+        if(Array.isArray(up.inventory)){
+          up.inventory.forEach(function(inv){
+            qohBySku[inv.sku] = parseFloat(inv.qoh) || 0;
+          });
+        }
+        // Filter to chemicals (8-*) since this is the Compound view.
+        // Packaging/labels/semi-finished (2-*/7-*/9-*) show on the Material
+        // Staging Placard in Production Coordinator instead.
+        rows = bomEntry.components
+          .filter(function(c){ return String(c.sku||'').indexOf('8-') === 0; })
+          .map(function(c){
+            return {
+              sku:      c.sku,
+              desc:     c.desc,
+              qty_need: parseFloat(c.qty) || 0,
+              qoh:      qohBySku[c.sku] || 0,
+              uom:      c.uom || ''
+            };
+          });
+        if(rows.length){
+          bomSrc.textContent = '· from Planning_Data BOM (' + rows.length + ' chemicals)';
+        } else {
+          rows = null;   // no chemicals in this batch's BOM — fall through
+        }
+      }
     }
     if(rows && rows.length){
       bomList.innerHTML = '<table style="width:100%;font-size:11px;border-collapse:collapse">' +

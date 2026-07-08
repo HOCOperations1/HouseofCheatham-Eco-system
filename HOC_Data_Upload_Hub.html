@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34bl">
+<meta name="hoc-build" content="v6.34bn">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -2882,6 +2882,10 @@ function clearAllData() {
   localStorage.removeItem('hoc_finance_cfg_v1');
   localStorage.removeItem('hoc_maintenance_v1');
   localStorage.removeItem('hoc_pos_v1');
+  // v6.34bn: 5S Connected removed (moved to separate project)
+  localStorage.removeItem('hoc_scores');
+  localStorage.removeItem('hoc_pillars');
+  localStorage.removeItem('hoc_cars');
   // v6.34aq: also clear new keys + BOM
   localStorage.removeItem('hoc_chem_pulls_req_v1');
   // v6.34ba: also clear NMP isolated storage
