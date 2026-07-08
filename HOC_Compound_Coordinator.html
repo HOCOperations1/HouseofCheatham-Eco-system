@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34bo">
+<meta name="hoc-build" content="v6.34bp">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Compound Coordinator</title>
@@ -122,6 +122,52 @@ select:focus,input:focus,textarea:focus{border-color:var(--blue)}
 .check-row.short{border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.04)}
 .check-label{font-size:10px;flex:1;color:var(--text)}
 .check-val{font-size:10px;font-weight:700;min-width:80px;text-align:right}
+/* ── VERIFICATION PLACARD (v6.34bp) ─────────────────────────────────
+   Mirrors Production Coordinator's Staging Placard visually and
+   structurally. Renders black-on-white so it's legible printed on
+   paper. Print scope narrowed to #cc-placard-printable so only the
+   placard prints — every other page element hidden via @media print.
+*/
+.cc-placard-print-area {
+  background:#fff;
+  color:#000;
+  padding:18px 22px;
+  border-radius:6px;
+  font-family:Arial, sans-serif;
+  font-size:11px;
+  line-height:1.45;
+  max-width:820px;
+  margin:0 auto;
+  border:1px solid var(--border);
+}
+.cc-placard-print-area .cph-header{text-align:center;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid #000}
+.cc-placard-print-area .cph-doc{font-size:9px;color:#555;letter-spacing:.08em}
+.cc-placard-print-area .cph-title{font-size:18px;font-weight:700;margin:4px 0}
+.cc-placard-print-area .cph-fields{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:8px 0}
+.cc-placard-print-area .cph-fields > div{font-size:11px;font-weight:600}
+.cc-placard-print-area .cph-fields .val{font-weight:400;border-bottom:1px solid #000;padding:0 4px;min-height:18px;display:inline-block;min-width:120px}
+.cc-placard-print-area .cpitem{border:1px solid #000;padding:7px 10px;margin-bottom:6px;page-break-inside:avoid}
+.cc-placard-print-area .cpitem-h{font-weight:700;font-size:12px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center}
+.cc-placard-print-area .cpitem-row{display:grid;grid-template-columns:1.7fr 1fr 1fr 1fr;gap:6px;margin-bottom:4px;font-size:10px}
+.cc-placard-print-area .cpitem-row > div{border-bottom:1px solid #000;padding:1px 4px;min-height:18px}
+.cc-placard-print-area .cpitem-row .lbl{border:none;font-size:8px;font-weight:700;color:#444;padding:0 4px}
+.cc-placard-print-area .cpitem-sigs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px;font-size:9px}
+.cc-placard-print-area .cpitem-sigs > div{border-top:1px solid #000;padding-top:2px;font-weight:600}
+.cc-placard-print-area .cpitem-loc{font-size:10px;color:#555;margin-bottom:4px}
+.cc-placard-print-area .cpfooter{margin-top:16px;padding-top:10px;border-top:1px solid #000}
+.cc-placard-print-area .cpfooter-row{font-size:11px;font-weight:600;margin-top:18px}
+.cc-placard-print-area .cpfooter-row .sig{border-bottom:1px solid #000;display:inline-block;min-width:280px;min-height:22px;margin-left:6px}
+.cc-placard-print-area .cpempty{text-align:center;padding:24px 0;color:#666;font-style:italic;font-size:12px}
+.cc-verify-input{width:70px;padding:2px 4px;font:inherit;font-size:10px;background:#fff;border:1px solid #000;color:#000;text-align:right}
+.cc-verify-check{width:16px;height:16px;cursor:pointer}
+/* Print: hide everything except the CC placard */
+@media print {
+  body.cc-print-mode * { visibility: hidden; }
+  body.cc-print-mode #cc-placard-printable, body.cc-print-mode #cc-placard-printable * { visibility: visible; }
+  body.cc-print-mode #cc-placard-printable { position:absolute; left:0; top:0; width:100%; }
+  body.cc-print-mode .no-print { display:none !important; }
+  body.cc-print-mode .nav, body.cc-print-mode .header, body.cc-print-mode .badges, body.cc-print-mode footer { display:none !important; }
+}
 </style><script src="hoc_theme.js"></script>
 <script src="hoc_events.js"></script>
 <script src="hoc_floor.js"></script>
@@ -199,88 +245,51 @@ select:focus,input:focus,textarea:focus{border-color:var(--blue)}
       </button>
       <span style="font-size:9px;color:var(--text3);margin-left:8px">Routes this batch to QC Lab's queue</span>
     </div>
-    <div class="upd-panel">
-      <div class="upd-section">Raw Material Verification Checklist</div>
-      <div id="vd-checks" style="margin-bottom:10px"></div>
-      <div class="upd-row"><span class="upd-label">Physical Verification</span>
-        <select id="v-status">
-          <option value="">— select decision —</option>
-          <option value="VERIFIED — PROCEED">✅ VERIFIED — All materials confirmed, proceed</option>
-          <option value="SHORT — PARTIAL BATCH">⚠️ SHORT — Partial batch possible</option>
-          <option value="SHORT — HOLD">🚫 SHORT — Cannot run, alerting team</option>
-          <option value="SHORT — EMERGENCY ORDER">🚨 SHORTAGE — Emergency procurement needed</option>
-        </select>
-      </div>
 
-      <!-- BATCH-SPECIFIC RAW MATERIALS (BOM verification) -->
-      <div style="background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.25);border-radius:8px;padding:10px;margin-bottom:8px">
-        <div style="font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#60A5FA;margin-bottom:8px">
-          Required Raw Materials for This Batch
-          <span id="bom-source" style="color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0;margin-left:6px"></span>
-        </div>
-        <div id="bom-list" style="font-size:11px;color:var(--text2);line-height:1.6">
-          <div style="font-style:italic;color:var(--text3)">Loading batch-specific raw materials…</div>
-        </div>
+    <!-- v6.34bp: VERIFICATION PLACARD — compact control strip + placard body -->
+    <!-- Control strip: alerts, notes, verified-by, save/proceed buttons. -->
+    <div class="no-print" style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:8px">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+        <span style="font-size:9px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.06em">If Short — Alert:</span>
+        <button class="btn-r" onclick="alertTeam('PRE-WEIGH')" style="font-size:9px;padding:3px 8px">Stop Pre-Weigh</button>
+        <button class="btn-r" onclick="alertTeam('COMPOUND')" style="font-size:9px;padding:3px 8px">Stop Compound</button>
+        <button class="btn-r" onclick="alertTeam('PROCUREMENT')" style="font-size:9px;padding:3px 8px">Alert Procurement</button>
+        <button class="btn-r" onclick="alertTeam('PLANNING')" style="font-size:9px;padding:3px 8px">Alert Planning</button>
+        <button class="btn-r" onclick="alertTeam('PRODUCTION')" style="font-size:9px;padding:3px 8px">Alert Production</button>
+        <div id="alert-log" style="font-size:9px;color:var(--text3);margin-left:auto"></div>
       </div>
-      
-      <!-- Multi-shortage entry -->
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px">
-        <div style="font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:8px">
-          Raw Material Shortages
-          <span id="shortage-count" style="color:var(--red);margin-left:6px"></span>
-        </div>
-        <div id="shortage-list" style="margin-bottom:8px;min-height:20px"></div>
-        <div style="display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:end">
-          <div>
-            <div style="font-size:9px;color:var(--text3);margin-bottom:3px">Add Short Item</div>
-            <select id="short-sku-select" style="width:100%">
-              <option value="">— select from low inventory —</option><option value="__MANUAL__">+ Enter manually...</option>
-            </select>
-          </div>
-          <div>
-            <div style="font-size:9px;color:var(--text3);margin-bottom:3px">Qty Needed</div>
-            <input type="number" id="short-qty-need" placeholder="Qty" style="width:90px">
-          </div>
-          <div>
-            <button onclick="addShortageItem()" style="padding:5px 10px;border-radius:5px;font:inherit;font-size:9px;font-weight:700;cursor:pointer;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:var(--red);white-space:nowrap">+ Add</button>
-          </div>
-        </div>
-        <div id="manual-sku-row" style="display:none;margin-top:6px;display:none">
-          <input type="text" id="short-sku-manual" placeholder="Manual SKU" style="width:48%;margin-right:2%">
-          <input type="text" id="short-desc-manual" placeholder="Description" style="width:48%">
-        </div>
+      <div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:8px;align-items:center">
+        <span style="font-size:10px;color:var(--text2);font-weight:600">Verified By:</span>
+        <input type="text" id="v-by" placeholder="Your name" style="padding:4px 8px;font:inherit;font-size:10px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text)">
+        <button class="btn-g" onclick="saveVerification()" style="font-size:10px;padding:5px 12px">Save Verification</button>
+        <button class="btn-b" onclick="markProceed()" style="font-size:10px;padding:5px 12px">✅ Mark Verified — Proceed</button>
       </div>
-      <div class="upd-row" style="display:none"><span class="upd-label">Short Item</span>
-        <input type="hidden" id="v-short-item" placeholder="SKU or description of short material" style="width:220px">
+      <div style="margin-top:6px">
+        <textarea id="v-notes" placeholder="Notes / action taken / who was notified..." style="width:100%;padding:4px 8px;font:inherit;font-size:10px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);min-height:36px;resize:vertical"></textarea>
       </div>
-      <div class="upd-row"><span class="upd-label">Short Quantity</span>
-        <input type="hidden" id="v-short-qty" placeholder="Lbs short" style="width:120px">
-      </div>
-      <div class="upd-row"><span class="upd-label">Verified By</span>
-        <input type="text" id="v-by" placeholder="Your name" style="width:150px">
-      </div>
-      <div class="upd-row" style="flex-direction:column;align-items:flex-start">
-        <span class="upd-label" style="margin-bottom:3px">Notes / Action Taken</span>
-        <textarea id="v-notes" placeholder="What was found, what action is being taken, who was notified..."></textarea>
-      </div>
-      <!-- ALERT BUTTONS -->
-      <div style="margin-top:10px;padding:8px 10px;background:rgba(239,68,68,.05);border:1px solid rgba(239,68,68,.15);border-radius:6px">
-        <div style="font-size:9px;font-weight:700;color:var(--red);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em">If Short — Alert These Teams</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn-r" onclick="alertTeam('PRE-WEIGH')">🚫 Stop Pre-Weigh</button>
-          <button class="btn-r" onclick="alertTeam('COMPOUND')">🚫 Stop Compound</button>
-          <button class="btn-r" onclick="alertTeam('PROCUREMENT')">📧 Alert Procurement</button>
-          <button class="btn-r" onclick="alertTeam('PLANNING')">📧 Alert Planning</button>
-          <button class="btn-r" onclick="alertTeam('PRODUCTION')">📧 Alert Production</button>
-        </div>
-        <div id="alert-log" style="margin-top:6px;font-size:9px;color:var(--text3)"></div>
-      </div>
-      <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
-        <button class="btn-g" onclick="saveVerification()">Save Verification</button>
-        <button class="btn-b" onclick="markProceed()">✅ Mark Verified — Proceed</button>
-        <span class="saved-msg" id="vd-saved" style="color:var(--blue)">✓ Saved &amp; synced to all tools</span>
-      </div>
+      <!-- Hidden inputs still referenced by save code -->
+      <select id="v-status" style="display:none">
+        <option value="">— select decision —</option>
+        <option value="VERIFIED — PROCEED">VERIFIED — PROCEED</option>
+        <option value="SHORT — PARTIAL BATCH">SHORT — PARTIAL BATCH</option>
+        <option value="SHORT — HOLD">SHORT — HOLD</option>
+        <option value="SHORT — EMERGENCY ORDER">SHORT — EMERGENCY ORDER</option>
+      </select>
+      <input type="hidden" id="v-short-item">
+      <input type="hidden" id="v-short-qty">
+      <div class="saved-msg" id="vd-saved" style="color:var(--blue);font-size:9px;text-align:right;margin-top:4px">✓ Saved &amp; synced to all tools</div>
     </div>
+
+    <!-- Print button strip -->
+    <div class="no-print" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-size:10px;color:var(--text2)">
+        <strong style="color:var(--text)">Chemical Verification Placard</strong> · <span id="cc-placard-chem-count">0</span> chemical(s) from Planning_Data
+      </div>
+      <button onclick="printCCPlacard()" style="padding:6px 14px;background:var(--green);border:none;border-radius:6px;color:#fff;font:inherit;font-size:10px;font-weight:700;cursor:pointer">🖨 Print Placard</button>
+    </div>
+
+    <!-- Printable placard -->
+    <div id="cc-placard-printable" class="cc-placard-print-area"></div>
   </div>
 </div></div>
 
@@ -989,6 +998,26 @@ function toggleItemVerified(batchId, sku, checked){
   }
 }
 window.toggleItemVerified = toggleItemVerified;
+
+// v6.34bp: Print the Chemical Verification Placard.
+// Adds a temporary body class that scopes the @media print rule to hide
+// everything except #cc-placard-printable. Class removed after print so
+// screen view is unaffected. Same pattern as Production Coordinator's
+// printPlacard() but scoped to its own element ID to avoid collision.
+function printCCPlacard(){
+  document.body.classList.add('cc-print-mode');
+  var cleanup = function(){
+    document.body.classList.remove('cc-print-mode');
+    window.removeEventListener('afterprint', cleanup);
+  };
+  window.addEventListener('afterprint', cleanup);
+  window.print();
+  // Safety: if afterprint doesn't fire (some browsers), remove after 1s
+  setTimeout(function(){
+    document.body.classList.remove('cc-print-mode');
+  }, 1500);
+}
+window.printCCPlacard = printCCPlacard;
 function getCCBlock(batchId){ return syncGet(batchId).cc?.blocked||false; }
 
 function rawBadge(s){
@@ -1208,14 +1237,21 @@ function openVD(id){
   ].map(([l,v])=>`<div class="df"><label>${l}</label><span>${v}</span></div>`).join('');
   
   // Checklist: standard raw verification steps
-  document.getElementById('vd-checks').innerHTML=`
+  // v6.34bp: vd-checks element removed — placard replaces this. Wrap in
+  // null check so legacy code path is safe if the DOM changes again.
+  var checksEl = document.getElementById('vd-checks');
+  if(checksEl){
+    checksEl.innerHTML=`
     <div class="check-row ${b.lbs>0?'':''}" ><span class="check-label">1. Formula lbs required confirmed</span><span class="check-val" style="color:var(--text)">${N(b.lbs)} lbs</span></div>
     <div class="check-row"><span class="check-label">2. Formula shortage from system</span><span class="check-val" style="color:${b.shortage<0?'var(--red)':'var(--green)'}">${b.shortage<0?N(b.shortage)+' lbs SHORT':'None'}</span></div>
     <div class="check-row"><span class="check-label">3. Correction flag from production</span><span class="check-val" style="font-size:9px;color:${b.correction&&b.correction.includes('VARIANCE')?'var(--amber)':'var(--green)'}">${b.correction?b.correction.slice(0,30):'✓ IN SYNC'}</span></div>
     <div class="check-row"><span class="check-label">4. Tank availability (from Compound tool)</span><span class="check-val" style="color:var(--text2)">${s.cmpd?.tank||'Check Compound Scheduler'}</span></div>
     <div class="check-row"><span class="check-label">5. Pre-weigh status</span><span class="check-val">${s.pw?.pw_status||'Not started'}</span></div>
     <div class="check-row"><span class="check-label">6. QC status (previous batch same formula)</span><span class="check-val">${s.qc?.qc_status||'No prior QC entry'}</span></div>`;
-  
+  }
+
+  // v6.34bp: Set persistent fields (v-status is now hidden but still needed
+  // by saveVerification; verified-by + notes moved to the control strip).
   document.getElementById('v-status').value=u.status||'';
   document.getElementById('v-short-item').value=u.short_item||'';
   document.getElementById('v-short-qty').value=u.short_qty||'';
@@ -1224,127 +1260,164 @@ function openVD(id){
   document.getElementById('alert-log').textContent=u.alerts_sent?'Alerts sent: '+u.alerts_sent.join(', '):'';
   document.getElementById('vd-saved').classList.remove('show');
 
-  // Populate batch-specific raw materials (BOM) section.
+
+  // v6.34bp: Render the Chemical Verification Placard for this batch.
   //
-  // v6.34bm: FIXED wrong-key lookup that had been silently failing.
-  // Previous code looked for up.bom_lookup[batch] and up.boms[formula] — those
-  // fields don't exist. The Planning_Data parser (Data Upload Hub) writes
-  // components to `up.bom` (array of {batch, components:[...]}). The lookup
-  // now reads from that authoritative source, matching Production
-  // Coordinator's working placard auto-populate.
+  // Mirrors Production Coordinator's Staging Placard visually but scoped
+  // to chemicals (8-*) instead of packaging (2-*/7-*/9-*), and framed as
+  // verification instead of staging. Each item shows Qty Needed / On Hand
+  // / Verified Qty with a checkbox and three signature roles (Compound
+  // Coordinator, Warehouse, Supervisor).
   //
-  // v6.34bo: Added per-item verification checkboxes with persistent state
-  // in localStorage. Each row lets the operator click ✓ to mark a specific
-  // chemical verified — persistence keyed by batch+SKU so navigating away
-  // and back preserves progress. Summary shows N of M verified.
-  //
-  // Join strategy: components come from up.bom (need qty), QOH from
-  // up.inventory (available qty). Joined on ComponentId/sku.
-  (function populateBOM(){
-    var bomList = document.getElementById('bom-list');
-    var bomSrc = document.getElementById('bom-source');
-    if(!bomList) return;
+  // Data source: up.bom (Planning_Data BOM) filtered to 8-* SKUs with
+  // UoM='LB'. Joined with up.inventory for on-hand quantity. Verified
+  // state persists in hoc_cc_item_verified_v1 keyed by batch+SKU.
+  (function renderCCPlacard(){
+    var wrap = document.getElementById('cc-placard-printable');
+    var chemCountEl = document.getElementById('cc-placard-chem-count');
+    if(!wrap) return;
     var up = (typeof _UPLOAD !== 'undefined') ? _UPLOAD : null;
-    var rows = null;
+
+    // Extract chemicals (8-*, UoM=LB) from Planning_Data BOM
+    var chems = [];
     if(up && Array.isArray(up.bom)){
       var bomEntry = up.bom.find(function(x){ return x.batch === b.batch; });
       if(bomEntry && Array.isArray(bomEntry.components)){
-        // Build QOH lookup from inventory for the join
         var qohBySku = {};
         if(Array.isArray(up.inventory)){
           up.inventory.forEach(function(inv){
             qohBySku[inv.sku] = parseFloat(inv.qoh) || 0;
           });
         }
-        // Filter to chemicals (8-*) since this is the Compound view.
-        // Packaging/labels/semi-finished (2-*/7-*/9-*) show on the Material
-        // Staging Placard in Production Coordinator instead.
-        rows = bomEntry.components
-          .filter(function(c){ return String(c.sku||'').indexOf('8-') === 0; })
+        // Also build location lookup from inventory (if available)
+        var locBySku = {};
+        if(Array.isArray(up.inventory)){
+          up.inventory.forEach(function(inv){
+            if(inv.location) locBySku[inv.sku] = inv.location;
+          });
+        }
+        chems = bomEntry.components
+          .filter(function(c){
+            var sku = String(c.sku || '');
+            var uom = String(c.uom || '').toUpperCase();
+            return sku.indexOf('8-') === 0 && uom === 'LB';
+          })
           .map(function(c){
             return {
               sku:      c.sku,
-              desc:     c.desc,
+              desc:     c.desc || '',
               qty_need: parseFloat(c.qty) || 0,
               qoh:      qohBySku[c.sku] || 0,
-              uom:      c.uom || ''
+              location: locBySku[c.sku] || '',
+              uom:      'LB'
             };
           });
-        if(rows.length){
-          bomSrc.textContent = '· from Planning_Data BOM (' + rows.length + ' chemicals)';
-        } else {
-          rows = null;   // no chemicals in this batch's BOM — fall through
-        }
       }
     }
-    if(rows && rows.length){
-      // v6.34bo: load persisted per-item verify state
-      var itemVerified = getBatchItemVerified(b.batch);
-      var verifiedCount = 0;
-      rows.forEach(function(r){ if(itemVerified[r.sku]) verifiedCount++; });
-      // Sub-header with verified count
-      bomSrc.innerHTML = '· from Planning_Data BOM (' + rows.length + ' chemicals · '
-                      + '<b style="color:' + (verifiedCount===rows.length?'var(--green)':'var(--amber)') + '">'
-                      + verifiedCount + '/' + rows.length + ' verified</b>)';
-      bomList.innerHTML = '<table style="width:100%;font-size:11px;border-collapse:collapse">' +
-        '<thead><tr>' +
-        '<th style="text-align:center;padding:4px;color:var(--text3);font-size:9px;font-weight:700;letter-spacing:.05em;border-bottom:1px solid var(--border);width:40px">Verify</th>' +
-        '<th style="text-align:left;padding:4px;color:var(--text3);font-size:9px;font-weight:700;letter-spacing:.05em;border-bottom:1px solid var(--border)">SKU</th>' +
-        '<th style="text-align:left;padding:4px;color:var(--text3);font-size:9px;font-weight:700;letter-spacing:.05em;border-bottom:1px solid var(--border)">Description</th>' +
-        '<th style="text-align:right;padding:4px;color:var(--text3);font-size:9px;font-weight:700;letter-spacing:.05em;border-bottom:1px solid var(--border)">Need (lbs)</th>' +
-        '<th style="text-align:right;padding:4px;color:var(--text3);font-size:9px;font-weight:700;letter-spacing:.05em;border-bottom:1px solid var(--border)">On Hand</th>' +
-        '<th style="text-align:center;padding:4px;color:var(--text3);font-size:9px;font-weight:700;letter-spacing:.05em;border-bottom:1px solid var(--border)">Status</th></tr></thead><tbody>' +
-        rows.map(function(r){
-          var need = parseFloat(r.qty_need || r.lbs_need || r.need || 0) || 0;
-          var have = parseFloat(r.qty_have || r.qoh || r.have || 0) || 0;
-          var hasStock = have >= need;
-          var isVerified = !!itemVerified[r.sku];
-          // Status logic:
-          //   verified & stock OK        → ✓ VERIFIED (green)
-          //   not verified but stock OK  → ⧗ AWAITING (amber)
-          //   stock short                → ⚠ SHORT (red)
-          var statusHtml;
-          if(!hasStock){
-            statusHtml = '<span style="color:var(--red);font-weight:700;font-size:10px">⚠ SHORT</span>';
-          } else if(isVerified){
-            statusHtml = '<span style="color:var(--green);font-weight:700;font-size:10px">✓ VERIFIED</span>';
-          } else {
-            statusHtml = '<span style="color:var(--amber);font-weight:600;font-size:10px">⧗ AWAITING</span>';
-          }
-          var skuEsc = String(r.sku||'').replace(/"/g,'&quot;');
-          var checkbox = '<input type="checkbox" ' + (isVerified?'checked':'')
-                       + ' onchange="toggleItemVerified(\'' + b.batch + '\', \'' + skuEsc + '\', this.checked)"'
-                       + ' style="cursor:pointer;width:14px;height:14px"'
-                       + (hasStock ? '' : ' title="Cannot verify — stock is short"')
-                       + '>';
-          return '<tr style="background:' + (isVerified?'rgba(34,197,94,.05)':'') + '">'
-              + '<td style="padding:4px;text-align:center">' + checkbox + '</td>'
-              + '<td style="padding:4px;font-family:ui-monospace,monospace;color:var(--text)">' + (r.sku||'—') + '</td>'
-              + '<td style="padding:4px;color:var(--text2)">' + (r.desc||r.description||'—') + '</td>'
-              + '<td style="padding:4px;text-align:right;color:var(--text)">' + need.toLocaleString(undefined,{maximumFractionDigits:1}) + '</td>'
-              + '<td style="padding:4px;text-align:right;color:' + (hasStock?'var(--text)':'var(--red)') + '">' + have.toLocaleString(undefined,{maximumFractionDigits:1}) + '</td>'
-              + '<td style="padding:4px;text-align:center">' + statusHtml + '</td></tr>';
-        }).join('') +
-        '</tbody></table>' +
-        '<div style="margin-top:8px;font-size:9px;color:var(--text3);font-style:italic">' +
-          'Check each item as you visually verify it in the warehouse. When all items are checked AND stock is OK, click "Mark Verified — Proceed" below.' +
-        '</div>';
-    } else {
-      // No BOM data available — explain the gap and what the operator should do
-      bomSrc.textContent = '· BOM not yet integrated';
-      bomList.innerHTML = '<div style="padding:6px 0">' +
-        '<div style="color:var(--text)">Formula <b>F.' + b.formula + '</b> · ' + N(b.lbs) + ' lbs total compound</div>' +
-        '<div style="color:var(--text3);margin-top:4px;font-size:10px">Per-batch BOM data is not yet uploaded. ' +
-          'To verify raw materials for this batch:</div>' +
-        '<ol style="color:var(--text3);margin:6px 0 0 16px;font-size:10px;line-height:1.7">' +
-          '<li>Pull formula sheet for F.' + b.formula + ' from Vicinity</li>' +
-          '<li>Walk staging area + chemical pull area</li>' +
-          '<li>Confirm each raw is on hand and at correct quantity</li>' +
-          '<li>If anything is short, log it below in "Raw Material Shortages"</li>' +
-        '</ol>' +
-        ((b.shortage && b.shortage < 0) ? '<div style="margin-top:6px;padding:5px 8px;background:rgba(239,68,68,.08);border-radius:4px;color:var(--red);font-size:10px">⚠ System flagged shortage: ' + N(b.shortage) + ' lbs</div>' : '') +
-        '</div>';
+
+    if(chemCountEl) chemCountEl.textContent = chems.length;
+
+    // Load persisted per-item verify state
+    var itemVerified = getBatchItemVerified(b.batch);
+
+    // Build the placard HTML — mirrors PC's Staging Placard structure
+    var html = '<div class="cph-header">' +
+      '<div class="cph-doc">RM-001 · Chemical Raw Material Verification</div>' +
+      '<div class="cph-title">Chemical Verification Placard</div>' +
+      '<div style="font-size:9px;color:#555">Compound Coordinator, Warehouse, and Supervisor sign each chemical line. Batch cannot proceed until every chemical is verified.</div>' +
+      '</div>';
+
+    html += '<div class="cph-fields">' +
+      '<div>ITEM NUMBER: <span class="val">'+(b.item||'&nbsp;')+'</span></div>' +
+      '<div>BATCH NUMBER: <span class="val">'+(b.batch||'&nbsp;')+'</span></div>' +
+      '<div>LINE NUMBER: <span class="val">'+(b.line ? 'Line '+b.line : '&nbsp;')+'</span></div>' +
+      '</div>';
+
+    if(b.desc){
+      html += '<div style="font-size:10px;font-style:italic;color:#444;margin-bottom:6px">Product: '+b.desc+'</div>';
     }
+    if(b.formula){
+      html += '<div style="font-size:10px;color:#444;margin-bottom:6px">Formula: <strong>F.'+b.formula+'</strong>'
+           + (b.chem_lbs > 0 ? ' &nbsp;·&nbsp; Total chemistry: <strong>'+Number(b.chem_lbs).toLocaleString(undefined,{maximumFractionDigits:1})+' lbs</strong>' : '')
+           + '</div>';
+    }
+
+    if(chems.length === 0){
+      // Empty state — honest about why
+      html += '<div class="cpempty">';
+      if(!up || !Array.isArray(up.bom)){
+        html += 'No chemical BOM available. Upload Planning_Data.xlsx in Data Upload Hub to populate this placard.';
+      } else {
+        html += 'This batch has no chemical (8-*, UoM=LB) components in the BOM. Nothing to verify from Compound Coordinator.';
+      }
+      html += '</div>';
+    } else {
+      // Render one item per chemical — no blank slot padding (per user request)
+      chems.forEach(function(it, i){
+        var need = it.qty_need;
+        var have = it.qoh;
+        var hasStock = have >= need;
+        var isVerified = !!itemVerified[it.sku];
+        var skuEsc = String(it.sku || '').replace(/"/g, '&quot;');
+        var statusHtml;
+        if(!hasStock){
+          statusHtml = '<span style="color:#c00;font-weight:700;font-size:10px">⚠ SHORT</span>';
+        } else if(isVerified){
+          statusHtml = '<span style="color:#080;font-weight:700;font-size:10px">✓ VERIFIED</span>';
+        } else {
+          statusHtml = '<span style="color:#b48000;font-weight:600;font-size:10px">⧗ AWAITING</span>';
+        }
+        html += '<div class="cpitem">';
+        html += '<div class="cpitem-h">' +
+          '<span>Item #' + (i + 1) + ' &nbsp; <span style="font-weight:400;font-size:10px;color:#555">' + (it.sku || '') + '</span></span>' +
+          '<span>' + statusHtml + '</span>' +
+          '</div>';
+        html += '<div class="cpitem-row">' +
+          '<div>' + (it.sku || '') + (it.desc ? ' — ' + it.desc : '') + '</div>' +
+          '<div>' + need.toLocaleString(undefined,{maximumFractionDigits:1}) + ' lbs</div>' +
+          '<div>' + have.toLocaleString(undefined,{maximumFractionDigits:1}) + ' lbs</div>' +
+          '<div>&nbsp;</div>' +
+          '</div>';
+        html += '<div class="cpitem-row">' +
+          '<div class="lbl">Product Number / Description</div>' +
+          '<div class="lbl">Quantity Needed (LBS)</div>' +
+          '<div class="lbl">Quantity On Hand</div>' +
+          '<div class="lbl">Verified Quantity</div>' +
+          '</div>';
+        if(it.location){
+          html += '<div class="cpitem-loc">📍 Storage location: <strong>' + it.location + '</strong></div>';
+        }
+        html += '<div class="cpitem-sigs">' +
+          '<div>Compound Coordinator Initials</div>' +
+          '<div>Warehouse Initials</div>' +
+          '<div>Supervisor Initials</div>' +
+          '</div>';
+        // On-screen only — checkbox to mark verified. Hidden on print via
+        // .no-print (the signatures are the paper-verification mechanism).
+        html += '<div class="no-print" style="display:flex;align-items:center;gap:8px;margin-top:6px;padding-top:6px;border-top:1px dashed #ccc">' +
+          '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:#000;font-weight:600">' +
+          '<input type="checkbox" class="cc-verify-check" ' + (isVerified ? 'checked' : '') +
+          (hasStock ? '' : ' title="Cannot verify — stock is short"') +
+          ' onchange="toggleItemVerified(\'' + b.batch + '\', \'' + skuEsc + '\', this.checked)">' +
+          'Mark verified in system' +
+          '</label>' +
+          '<span style="font-size:9px;color:#666;font-style:italic;margin-left:auto">' +
+          'Digital sync — physical signatures still required on printed placard' +
+          '</span>' +
+          '</div>';
+        html += '</div>';   // .cpitem
+      });
+    }
+
+    // Footer with Coordinator signature — same pattern as Staging Placard
+    html += '<div class="cpfooter">' +
+      '<div class="cpfooter-row">Compound Coordinator Signature: <span class="sig"></span></div>' +
+      '<div style="margin-top:14px;font-size:9px;color:#555;display:flex;justify-content:space-between">' +
+      '<span>Date Generated: ' + new Date().toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'}) + '</span>' +
+      '<span>Page 1 of 1</span>' +
+      '</div></div>';
+
+    wrap.innerHTML = html;
   })();
 
   // v6.34ag: Render floor-state strip + Mix Complete button gating
