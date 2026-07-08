@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34bp">
+<meta name="hoc-build" content="v6.34bq">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Compound Coordinator</title>
@@ -749,9 +749,12 @@ function _loadBatches(){
         var total = 0;
         entry.components.forEach(function(c){
           var sku = String(c.sku || '');
-          var uom = String(c.uom || '').toUpperCase();
+          var uom = String(c.uom || '').toUpperCase().trim();
           if(sku.indexOf('8-') !== 0) return;   // chemicals only
-          if(uom !== 'LB') return;              // pounds only, not EACH/CASE
+          // v6.34bq: accept both 'LB' and 'LBS' — real Planning_Data uses
+          // both forms (~4360 rows use LB, ~209 use LBS). Strict 'LB'-only
+          // was undercounting chem_lbs for batches with LBS-tagged rows.
+          if(uom !== 'LB' && uom !== 'LBS') return;
           total += parseFloat(c.qty) || 0;
         });
         chemLbsByBatch[entry.batch] = total;
@@ -1276,9 +1279,22 @@ function openVD(id){
     var wrap = document.getElementById('cc-placard-printable');
     var chemCountEl = document.getElementById('cc-placard-chem-count');
     if(!wrap) return;
-    var up = (typeof _UPLOAD !== 'undefined') ? _UPLOAD : null;
+    // v6.34bq: FIX — was reading from `_UPLOAD` variable which was never
+    // defined in this file (that's Production Coordinator's variable name).
+    // typeof check always came back undefined → up stayed null → chems
+    // never populated → placard was permanently empty.
+    // Now reads localStorage directly, same pattern as _loadBatches().
+    var up = null;
+    try {
+      var raw = localStorage.getItem('hoc_upload_v1');
+      if(raw) up = JSON.parse(raw);
+    } catch(e){
+      console.warn('renderCCPlacard: could not parse hoc_upload_v1', e);
+    }
 
-    // Extract chemicals (8-*, UoM=LB) from Planning_Data BOM
+    // Extract chemicals (8-*, UoM=LB or LBS) from Planning_Data BOM
+    // v6.34bq: Also accept UoM='LBS' — 209 rows in real Planning_Data use
+    // the plural form, and strict 'LB'-only was dropping them silently.
     var chems = [];
     if(up && Array.isArray(up.bom)){
       var bomEntry = up.bom.find(function(x){ return x.batch === b.batch; });
@@ -1299,8 +1315,8 @@ function openVD(id){
         chems = bomEntry.components
           .filter(function(c){
             var sku = String(c.sku || '');
-            var uom = String(c.uom || '').toUpperCase();
-            return sku.indexOf('8-') === 0 && uom === 'LB';
+            var uom = String(c.uom || '').toUpperCase().trim();
+            return sku.indexOf('8-') === 0 && (uom === 'LB' || uom === 'LBS');
           })
           .map(function(c){
             return {
@@ -1647,7 +1663,16 @@ function markProceed(){
   // known), we let the user proceed on their overall judgement — the old
   // pre-BOM behavior. Better than blocking a legitimate proceed when we
   // simply lack the data to enforce the check.
-  var up = (typeof _UPLOAD !== 'undefined') ? _UPLOAD : null;
+  // v6.34bq: FIX — was reading `_UPLOAD` which was never defined here.
+  // Result: markProceed's verification-enforcement always fell to the
+  // "no BOM available, allow proceed" fallback, so operators could hit
+  // Proceed even when items weren't verified. Now reads localStorage
+  // directly, so the enforcement actually runs.
+  var up = null;
+  try {
+    var raw = localStorage.getItem('hoc_upload_v1');
+    if(raw) up = JSON.parse(raw);
+  } catch(e){}
   if(up && Array.isArray(up.bom)){
     var bomEntry = up.bom.find(function(x){ return x.batch === activeVer; });
     if(bomEntry && Array.isArray(bomEntry.components)){
