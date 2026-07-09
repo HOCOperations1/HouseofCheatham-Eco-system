@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34br">
+<meta name="hoc-build" content="v6.34bt">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Compound Coordinator</title>
@@ -281,9 +281,10 @@ select:focus,input:focus,textarea:focus{border-color:var(--blue)}
     </div>
 
     <!-- Print button strip -->
-    <div class="no-print" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <div class="no-print" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px">
       <div style="font-size:10px;color:var(--text2)">
         <strong style="color:var(--text)">Chemical Verification Placard</strong> · <span id="cc-placard-chem-count">0</span> chemical(s) from Planning_Data
+        <span id="cc-placard-shortage-badge" style="display:none;margin-left:8px;padding:2px 8px;border-radius:10px;background:rgba(239,68,68,.15);color:var(--red);font-size:10px;font-weight:700;border:1px solid rgba(239,68,68,.3)"></span>
       </div>
       <button onclick="printCCPlacard()" style="padding:6px 14px;background:var(--green);border:none;border-radius:6px;color:#fff;font:inherit;font-size:10px;font-weight:700;cursor:pointer">🖨 Print Placard</button>
     </div>
@@ -292,6 +293,55 @@ select:focus,input:focus,textarea:focus{border-color:var(--blue)}
     <div id="cc-placard-printable" class="cc-placard-print-area"></div>
   </div>
 </div></div>
+
+<!-- v6.34bs: Flag Short dialog overlay — screen-only, appears when operator
+     clicks the per-item "Flag Short" button on the placard. Auto-populated
+     from BOM + inventory; operator can adjust actual on-hand and add note. -->
+<div id="short-dialog" class="no-print" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9998;justify-content:center;align-items:center;padding:20px">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px 18px;max-width:480px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.4)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="font-size:13px;font-weight:700;color:var(--red)">🚨 Flag Raw Material Short</div>
+      <button onclick="closeShortDialog()" style="background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:0;line-height:1">×</button>
+    </div>
+    <div id="short-dialog-batch" style="font-size:10px;color:var(--text3);margin-bottom:12px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">
+      <div>
+        <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">SKU</div>
+        <input type="text" id="short-dlg-sku" readonly style="width:100%;padding:5px 8px;font:inherit;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);opacity:.7">
+      </div>
+      <div>
+        <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Type</div>
+        <input type="text" id="short-dlg-type" value="Raw Material" style="width:100%;padding:5px 8px;font:inherit;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text)">
+      </div>
+    </div>
+    <div style="margin-bottom:8px">
+      <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Description</div>
+      <input type="text" id="short-dlg-desc" style="width:100%;padding:5px 8px;font:inherit;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text)">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">
+      <div>
+        <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Qty Needed (lbs)</div>
+        <input type="number" step="any" id="short-dlg-need" style="width:100%;padding:5px 8px;font:inherit;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text)">
+      </div>
+      <div>
+        <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Actual On Hand (lbs)</div>
+        <input type="number" step="any" id="short-dlg-have" style="width:100%;padding:5px 8px;font:inherit;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text)">
+      </div>
+    </div>
+    <div style="margin-bottom:10px;padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;font-size:10px">
+      <span style="color:var(--text3)">Short by:</span>
+      <span id="short-dlg-diff" style="color:var(--red);font-weight:700">—</span>
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Reason / Notes</div>
+      <textarea id="short-dlg-reason" placeholder="e.g. damaged tote, expired, mislabeled bin, wrong lot..." style="width:100%;padding:5px 8px;font:inherit;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);min-height:50px;resize:vertical"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="closeShortDialog()" style="padding:6px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text);font:inherit;font-size:11px;cursor:pointer">Cancel</button>
+      <button onclick="submitShortDialog()" style="padding:6px 14px;background:var(--red);border:none;border-radius:5px;color:#fff;font:inherit;font-size:11px;font-weight:700;cursor:pointer">Log Shortage</button>
+    </div>
+  </div>
+</div>
 
 <!-- RAW INVENTORY -->
 <div class="page" id="page-inventory"><div class="content">
@@ -599,6 +649,93 @@ select:focus,input:focus,textarea:focus{border-color:var(--blue)}
 // ── Multi-shortage management ───────────────────────────────────────
 var currentShortages = [];  // {sku, desc, qty_need, qty_have, qty_short, type}
 
+// v6.34bs: Per-item Flag Short dialog.
+// Called from the placard "Flag Short" button on each row. Auto-fills
+// from BOM (need qty) + inventory (have qty), operator can adjust and
+// add reason, then Log Shortage appends to currentShortages so
+// saveVerification() persists it with the batch.
+var _shortDialogState = { batch:null, sku:null };
+function openShortDialog(batchId, sku, desc, qtyNeed, qtyHave){
+  _shortDialogState = { batch: batchId, sku: sku };
+  var dlg = document.getElementById('short-dialog');
+  if(!dlg) return;
+  document.getElementById('short-dialog-batch').textContent = 'Batch ' + batchId;
+  document.getElementById('short-dlg-sku').value = sku || '';
+  document.getElementById('short-dlg-desc').value = desc || '';
+  document.getElementById('short-dlg-type').value = 'Raw Material';
+  document.getElementById('short-dlg-need').value = qtyNeed || 0;
+  document.getElementById('short-dlg-have').value = qtyHave || 0;
+  document.getElementById('short-dlg-reason').value = '';
+  updateShortDialogDiff();
+  // Wire live diff computation
+  document.getElementById('short-dlg-need').oninput = updateShortDialogDiff;
+  document.getElementById('short-dlg-have').oninput = updateShortDialogDiff;
+  dlg.style.display = 'flex';
+}
+function updateShortDialogDiff(){
+  var need = parseFloat(document.getElementById('short-dlg-need').value) || 0;
+  var have = parseFloat(document.getElementById('short-dlg-have').value) || 0;
+  var diff = have - need;
+  var el = document.getElementById('short-dlg-diff');
+  if(diff >= 0){
+    el.style.color = 'var(--green)';
+    el.textContent = 'OK (surplus ' + diff.toLocaleString(undefined,{maximumFractionDigits:2}) + ' lbs) — no shortage';
+  } else {
+    el.style.color = 'var(--red)';
+    el.textContent = Math.abs(diff).toLocaleString(undefined,{maximumFractionDigits:2}) + ' lbs SHORT';
+  }
+}
+function closeShortDialog(){
+  var dlg = document.getElementById('short-dialog');
+  if(dlg) dlg.style.display = 'none';
+  _shortDialogState = { batch:null, sku:null };
+}
+function submitShortDialog(){
+  var sku  = document.getElementById('short-dlg-sku').value.trim();
+  var desc = document.getElementById('short-dlg-desc').value.trim();
+  var type = document.getElementById('short-dlg-type').value.trim() || 'Raw Material';
+  var need = parseFloat(document.getElementById('short-dlg-need').value) || 0;
+  var have = parseFloat(document.getElementById('short-dlg-have').value) || 0;
+  var reason = document.getElementById('short-dlg-reason').value.trim();
+  if(!sku){ alert('SKU is required.'); return; }
+  var qtyShort = have - need;  // negative when short
+  // Replace existing entry for this SKU, otherwise append
+  var existingIdx = currentShortages.findIndex(function(s){ return s.sku === sku; });
+  var entry = {
+    sku: sku, desc: desc, type: type,
+    qty_have:  Math.round(have  * 100) / 100,
+    qty_need:  Math.round(need  * 100) / 100,
+    qty_short: Math.round(qtyShort * 100) / 100,
+    reason: reason,
+    logged_at: new Date().toISOString()
+  };
+  if(existingIdx >= 0){
+    currentShortages[existingIdx] = entry;
+  } else {
+    currentShortages.push(entry);
+  }
+  closeShortDialog();
+  // Auto-save so shortage persists even if operator doesn't click Save
+  // Verification. This matches the honest expectation: "I logged a
+  // shortage" should stick, not evaporate on page reload.
+  if(activeVer && typeof saveVerification === 'function'){
+    // Guard against saveVerification requiring status — set to SHORT — HOLD
+    // if not already set to something SHORT-related.
+    var stEl = document.getElementById('v-status');
+    if(stEl && !stEl.value){ stEl.value = 'SHORT — HOLD'; }
+    saveVerification();
+  }
+  // Re-render placard so the row updates to "⚠ SHORT · LOGGED"
+  if(typeof openVD === 'function' && activeVer){
+    openVD(activeVer);
+  }
+}
+window.openShortDialog   = openShortDialog;
+window.closeShortDialog  = closeShortDialog;
+window.submitShortDialog = submitShortDialog;
+
+// Legacy function — no longer wired to any UI (removed with old shortage form).
+// Kept as no-op stub so any residual references don't crash.
 function addShortageItem() {
   var selectEl = document.getElementById('short-sku-select');
   var skuVal = selectEl ? selectEl.value : '';
@@ -1174,7 +1311,28 @@ function renderKPIs(){
 }
 
 function renderCmdTable(){
-  document.getElementById('cmd-tbody').innerHTML=BATCHES.map(b=>{
+  // v6.34bt: Hide COMPLETED batches from Command Center table AFTER their
+  // visible-window expires. Rule: completed batches remain visible on the
+  // day their `b.date` matches today; from the next day forward they are
+  // filtered out.
+  //
+  // Honest limitation: the Production Tracker's `Date` column is the
+  // SCHEDULED date, not the actual completion date. For batches that ran
+  // late (scheduled Monday, actually finished Wednesday), the visibility
+  // window will look wrong — the batch will drop off the day AFTER its
+  // scheduled date even though it was still being worked. In practice most
+  // batches finish on their scheduled date so this is a reasonable proxy,
+  // but a real completion timestamp field in the Tracker would fix this.
+  //
+  // Non-completed batches always show regardless of date.
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const hideOldCompleted = function(b){
+    if(b.status !== 'COMPLETED') return true;   // keep all non-completed
+    // Keep if scheduled date is today OR in the future (safety for early completes)
+    const d = String(b.date || '').slice(0, 10);
+    return d >= todayISO;
+  };
+  document.getElementById('cmd-tbody').innerHTML=BATCHES.filter(hideOldCompleted).map(b=>{
     const cc=getCCStatus(b.batch);
     const bc=b.urgency==='CRITICAL'?'rgba(239,68,68,.03)':b.urgency==='AT RISK'?'rgba(245,158,11,.02)':'';
     // v6.34bo: Lbs Needed — from Planning_Data 8-* chemical BOM. Show
@@ -1199,9 +1357,18 @@ function renderCmdTable(){
 }
 
 function renderVerify(){
-  const cnts={ALL:BATCHES.length,CRITICAL:BATCHES.filter(b=>b.urgency==='CRITICAL').length,'AT RISK':BATCHES.filter(b=>b.urgency==='AT RISK').length,UNVERIFIED:BATCHES.filter(b=>!getCCStatus(b.batch)&&b.urgency!=='DONE').length,BLOCKED:Object.values(syncRead()).filter(v=>v.cc&&v.cc.blocked).length,VERIFIED:BATCHES.filter(b=>getCCStatus(b.batch).includes('PROCEED')).length};
+  // v6.34bt: Same "hide completed after today" rule as Command Center.
+  // Applies to the count pills AND the row list. Kept out of the Alerts
+  // and Raw Inventory views per user's explicit scope.
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const visible = BATCHES.filter(function(b){
+    if(b.status !== 'COMPLETED') return true;
+    const d = String(b.date || '').slice(0, 10);
+    return d >= todayISO;
+  });
+  const cnts={ALL:visible.length,CRITICAL:visible.filter(b=>b.urgency==='CRITICAL').length,'AT RISK':visible.filter(b=>b.urgency==='AT RISK').length,UNVERIFIED:visible.filter(b=>!getCCStatus(b.batch)&&b.urgency!=='DONE').length,BLOCKED:Object.values(syncRead()).filter(v=>v.cc&&v.cc.blocked).length,VERIFIED:visible.filter(b=>getCCStatus(b.batch).includes('PROCEED')).length};
   document.getElementById('vf').innerHTML=Object.keys(cnts).map(f=>`<button class="fb${vFilter===f?' active':''}" onclick="setVF('${f}')">${f} (${cnts[f]})</button>`).join('');
-  let rows=[...BATCHES];
+  let rows=[...visible];
   if(vFilter==='CRITICAL') rows=rows.filter(b=>b.urgency==='CRITICAL');
   else if(vFilter==='AT RISK') rows=rows.filter(b=>b.urgency==='AT RISK');
   else if(vFilter==='UNVERIFIED') rows=rows.filter(b=>!getCCStatus(b.batch)&&b.urgency!=='DONE');
@@ -1332,6 +1499,18 @@ function openVD(id){
     }
 
     if(chemCountEl) chemCountEl.textContent = chems.length;
+    // v6.34bs: Shortage-count badge — reflects any items already logged
+    // as short for this batch. Persisted via currentShortages.
+    var shortBadge = document.getElementById('cc-placard-shortage-badge');
+    if(shortBadge){
+      var shortCount = (typeof currentShortages !== 'undefined') ? currentShortages.length : 0;
+      if(shortCount > 0){
+        shortBadge.style.display = 'inline-block';
+        shortBadge.textContent = '⚠ ' + shortCount + ' shortage' + (shortCount===1?'':'s') + ' logged';
+      } else {
+        shortBadge.style.display = 'none';
+      }
+    }
 
     // Load persisted per-item verify state
     var itemVerified = getBatchItemVerified(b.batch);
@@ -1407,8 +1586,13 @@ function openVD(id){
         var haveDisplay = haveInSameUnit.toLocaleString(undefined,{maximumFractionDigits:haveDecimals});
         var needLabel = needFmt.unit === 'g' ? 'Quantity Needed (G)' : 'Quantity Needed (LBS)';
         var haveLabel = needFmt.unit === 'g' ? 'Quantity On Hand (G)' : 'Quantity On Hand (LBS)';
+        var loggedShort = (typeof currentShortages !== 'undefined')
+          ? currentShortages.find(function(s){ return s.sku === it.sku; })
+          : null;
         var statusHtml;
-        if(!hasStock){
+        if(loggedShort){
+          statusHtml = '<span style="color:#c00;font-weight:700;font-size:10px">⚠ SHORT · LOGGED</span>';
+        } else if(!hasStock){
           statusHtml = '<span style="color:#c00;font-weight:700;font-size:10px">⚠ SHORT</span>';
         } else if(isVerified){
           statusHtml = '<span style="color:#080;font-weight:700;font-size:10px">✓ VERIFIED</span>';
@@ -1440,15 +1624,47 @@ function openVD(id){
           '<div>Warehouse Initials</div>' +
           '<div>Supervisor Initials</div>' +
           '</div>';
-        // On-screen only — checkbox to mark verified. Hidden on print via
-        // .no-print (the signatures are the paper-verification mechanism).
-        html += '<div class="no-print" style="display:flex;align-items:center;gap:8px;margin-top:6px;padding-top:6px;border-top:1px dashed #ccc">' +
+        // On-screen only — checkbox to mark verified + Flag Short button.
+        // Hidden on print via .no-print (the signatures are the paper-
+        // verification mechanism).
+        //
+        // v6.34bs: Per-item Flag Short button.
+        // - Item is "logged short" if currentShortages contains its SKU
+        //   → button shows as ✓ LOGGED (green), can click to re-open dialog
+        //     for edits or remove.
+        // - Item has On Hand < Need but not yet logged → button pre-
+        //   highlighted red as "⚠ FLAG SHORT" prompting operator to log.
+        // - Item is stocked OK and not logged → subtle gray "Flag Short"
+        //   (operator finding physical shortage: damaged, expired, mislabeled).
+        var loggedEntry = (typeof currentShortages !== 'undefined')
+          ? currentShortages.find(function(s){ return s.sku === it.sku; })
+          : null;
+        var flagBtnLabel, flagBtnStyle;
+        if(loggedEntry){
+          flagBtnLabel = '✓ SHORT LOGGED · edit';
+          flagBtnStyle = 'background:rgba(34,197,94,.15);color:var(--green);border:1px solid var(--green)';
+        } else if(!hasStock){
+          flagBtnLabel = '⚠ FLAG SHORT';
+          flagBtnStyle = 'background:var(--red);color:#fff;border:1px solid var(--red);font-weight:700';
+        } else {
+          flagBtnLabel = 'Flag Short';
+          flagBtnStyle = 'background:var(--bg3);color:var(--text2);border:1px solid var(--border)';
+        }
+        // Auto-fill values for the dialog — use raw lbs (not the display
+        // unit) since currentShortages persists in lbs for consistency
+        // with rest of shortage handling.
+        var descEsc = String(it.desc || '').replace(/"/g,'&quot;').replace(/'/g,"\\'");
+        html += '<div class="no-print" style="display:flex;align-items:center;gap:8px;margin-top:6px;padding-top:6px;border-top:1px dashed #ccc;flex-wrap:wrap">' +
           '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:#000;font-weight:600">' +
           '<input type="checkbox" class="cc-verify-check" ' + (isVerified ? 'checked' : '') +
           (hasStock ? '' : ' title="Cannot verify — stock is short"') +
           ' onchange="toggleItemVerified(\'' + b.batch + '\', \'' + skuEsc + '\', this.checked)">' +
           'Mark verified in system' +
           '</label>' +
+          '<button onclick="openShortDialog(\'' + b.batch + '\', \'' + skuEsc + '\', \'' + descEsc + '\', ' + need + ', ' + have + ')" ' +
+          'style="padding:3px 10px;border-radius:4px;font:inherit;font-size:10px;cursor:pointer;' + flagBtnStyle + '">' +
+          flagBtnLabel +
+          '</button>' +
           '<span style="font-size:9px;color:#666;font-style:italic;margin-left:auto">' +
           'Digital sync — physical signatures still required on printed placard' +
           '</span>' +
