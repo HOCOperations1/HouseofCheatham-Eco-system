@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34bu">
+<meta name="hoc-build" content="v6.34bv">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Production Supervisor</title>
@@ -1324,11 +1324,30 @@ function showPage(id, map) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  document.querySelectorAll('.nb')[map[id]].classList.add('active');
+  // v6.34bv: Fix regression from v6.34bk (Line Setup tab addition).
+  // Old code used querySelectorAll('.nb')[map[id]] which relied on a
+  // hardcoded numeric index in the PM map — but adding the Line Setup tab
+  // shifted every button's index without updating PM, and unrelated .nb
+  // class buttons (Save All / Revert / Add Line inside the Line Setup tab
+  // body) further inflated the count. Result: clicking tabs highlighted
+  // the wrong one, and clicking Line Setup silently threw.
+  // New approach: match the nav button by its own onclick target, so
+  // any structural insertions elsewhere on the page can't misalign it.
+  var navBtns = document.querySelectorAll('nav.nav .nb');
+  for (var i = 0; i < navBtns.length; i++) {
+    var oc = navBtns[i].getAttribute('onclick') || '';
+    if (oc.indexOf("P('" + id + "')") !== -1 || oc.indexOf('P("' + id + '")') !== -1) {
+      navBtns[i].classList.add('active');
+      break;
+    }
+  }
 }
 
 let bF='ALL', fcF='ALL', activeBatch=null;
-const PM = {cmd:0,forecast:1,linesum:2,engine:3,lines:4,batches:5,sync:6};
+// v6.34bv: PM map is no longer used by showPage() (which now matches by
+// onclick string). Kept updated for any legacy code that may still read
+// it. New key `linesetup` added; downstream keys renumbered accordingly.
+const PM = {cmd:0,forecast:1,linesum:2,linesetup:3,engine:4,lines:5,batches:6,sync:7};
 function P(id){showPage(id,PM);if(id==='batches')renderBatches();if(id==='forecast')renderFC();if(id==='linesum')renderLineSum();if(id==='linesetup')lsetupInit();if(id==='engine')renderEngine();}
 
 function renderAll(){

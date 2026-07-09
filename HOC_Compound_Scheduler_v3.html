@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34bu">
+<meta name="hoc-build" content="v6.34bv">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -835,10 +835,18 @@ function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  // Order matches the nav buttons (Command Center, Schedule by Line, All Batches, Formula Standards, Cycle Time Intelligence, Export / Sync).
-  // 'prebatch' kept as an alias so any stale links still resolve gracefully — falls through to standards.
-  const map={cmd:0,sched:1,batches:2,standards:3,cycle:4,export:5,prebatch:3};
-  document.querySelectorAll('.nb')[map[id]].classList.add('active');
+  // v6.34bv: Match by onclick target instead of numeric index. Prevents
+  // regressions when tabs are added/removed or when unrelated buttons
+  // with class="nb" appear elsewhere on the page.
+  var navBtns = document.querySelectorAll('nav.nav .nb');
+  var target = id === 'prebatch' ? 'standards' : id;  // preserve alias behavior
+  for (var i = 0; i < navBtns.length; i++) {
+    var oc = navBtns[i].getAttribute('onclick') || '';
+    if (oc.indexOf("P('" + target + "')") !== -1 || oc.indexOf('P("' + target + '")') !== -1) {
+      navBtns[i].classList.add('active');
+      break;
+    }
+  }
 }
 
 // v6.34ag: Render QC HOLD/REWORK strip — sourced from HOC_Floor

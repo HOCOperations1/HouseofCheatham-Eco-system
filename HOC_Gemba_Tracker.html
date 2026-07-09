@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34bu">
+<meta name="hoc-build" content="v6.34bv">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Gemba Walk Tracker</title>
@@ -583,7 +583,17 @@ function showPage(id, map) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+id).classList.add('active');
-  document.querySelectorAll('.nb')[map[id]].classList.add('active');
+  // v6.34bv: Match by onclick target instead of numeric index. Prevents
+  // regressions when tabs are added/removed or when unrelated buttons
+  // with class="nb" appear elsewhere on the page.
+  var navBtns = document.querySelectorAll('nav.nav .nb');
+  for (var i = 0; i < navBtns.length; i++) {
+    var oc = navBtns[i].getAttribute('onclick') || '';
+    if (oc.indexOf("P('" + id + "')") !== -1 || oc.indexOf('P("' + id + '")') !== -1) {
+      navBtns[i].classList.add('active');
+      break;
+    }
+  }
 }
 
 function pct(v){return typeof v==='number'?(Math.round(v*1000)/10)+'%':'—';}
