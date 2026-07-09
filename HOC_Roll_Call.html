@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34bt">
+<meta name="hoc-build" content="v6.34bu">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Roll Call</title>
@@ -195,6 +195,7 @@ textarea{width:100%;resize:vertical;min-height:46px;margin-top:4px}
 <meta http-equiv="Expires" content="0">
 <script>var HOC_OES_VERSION="1778588401";</script>
 <script src="hoc_theme.js"></script>
+<script src="hoc_line_filter.js"></script>
 </head><body>
 
 
@@ -234,6 +235,7 @@ textarea{width:100%;resize:vertical;min-height:46px;margin-top:4px}
     <button class="nb" onclick="P('points')">Points & Flags</button>
   </nav>
   <div class="badges" id="badges"></div>
+  <div id="line-filter-mount" style="margin-left:12px"></div>
 </div>
 
 <!-- SHIFT SUMMARY PAGE -->
@@ -1217,6 +1219,19 @@ try {
 (function(){
   var today = new Date().toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'});
   document.querySelectorAll('.js-today-date').forEach(function(el){ el.textContent = today; });
+})();
+</script>
+
+<script>
+// v6.34bu: mount shared line filter dropdown
+(function(){
+  function _mountLF(){
+    if(window.HocLineFilter && document.getElementById("line-filter-mount")){
+      window.HocLineFilter.mount("#line-filter-mount", { hint: true });
+    }
+  }
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", _mountLF);
+  else _mountLF();
 })();
 </script>
 </body></html>

@@ -26,7 +26,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="hoc-oes-version" content="v6.34bt">
+<meta name="hoc-oes-version" content="v6.34bu">
 <title>Next Month Preview · HOC-OES</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
@@ -75,6 +75,7 @@
   .empty-state{text-align:center;padding:40px 20px;color:var(--text3);font-size:11px}
   .diag{font-size:10px;padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;margin-bottom:10px}
 </style>
+<script src="hoc_line_filter.js"></script>
 </head>
 <body>
 
@@ -87,6 +88,8 @@
       <div class="brand-sub" id="brand-sub">—</div>
     </div>
   </div>
+
+  <div id="line-filter-mount" style="margin-left:auto"></div>
 </div>
 
 <div class="content">
@@ -370,5 +373,18 @@ window.addEventListener('storage', function(e){
 render();
 </script>
 
+
+<script>
+// v6.34bu: mount shared line filter dropdown
+(function(){
+  function _mountLF(){
+    if(window.HocLineFilter && document.getElementById("line-filter-mount")){
+      window.HocLineFilter.mount("#line-filter-mount", {});
+    }
+  }
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", _mountLF);
+  else _mountLF();
+})();
+</script>
 </body>
 </html>

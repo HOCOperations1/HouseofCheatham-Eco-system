@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34bt">
+<meta name="hoc-build" content="v6.34bu">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -103,6 +103,7 @@ tr.warn td{background:rgba(245,158,11,.04)}
 .alert-banner.good{background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(16,185,129,.04));border-color:rgba(16,185,129,.3)}
 </style>
 <script src="hoc_theme.js"></script>
+<script src="hoc_line_filter.js"></script>
 </head>
 <body>
 
@@ -125,6 +126,7 @@ tr.warn td{background:rgba(245,158,11,.04)}
     <button class="nb" onclick="P('library', this)">SMED Library</button>
   </nav>
   <div class="badges" id="badges"></div>
+  <div id="line-filter-mount" style="margin-left:12px"></div>
 </div>
 
 <div class="page active" id="page-cmd"><div class="content">
@@ -1172,5 +1174,18 @@ renderAll();
 </script>
 
 <script src="hoc_events.js"></script>
+
+<script>
+// v6.34bu: mount shared line filter dropdown
+(function(){
+  function _mountLF(){
+    if(window.HocLineFilter && document.getElementById("line-filter-mount")){
+      window.HocLineFilter.mount("#line-filter-mount", {});
+    }
+  }
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", _mountLF);
+  else _mountLF();
+})();
+</script>
 </body>
 </html>

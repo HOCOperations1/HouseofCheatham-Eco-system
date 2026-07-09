@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34bt">
+<meta name="hoc-build" content="v6.34bu">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -74,6 +74,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .pill-blue{background:rgba(59,130,246,.12);color:var(--blue);border:1px solid rgba(59,130,246,.25)}
 </style>
 <script src="hoc_theme.js"></script>
+<script src="hoc_line_filter.js"></script>
 </head>
 <body>
 
@@ -87,6 +88,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
   <div class="spacer"></div>
   <button class="btn btn-ghost" onclick="exportCSV()" style="font-size:10px">↓ Export CSV</button>
   <button class="btn btn-danger" onclick="clearAll()" style="font-size:10px">Clear All</button>
+
+  <div id="line-filter-mount" style="margin-left:auto"></div>
 </div>
 
 <div class="nav">
@@ -648,6 +651,19 @@ window.addEventListener('load', function(){
   pullFromSupabase();
   setInterval(pullFromSupabase, 60000);
 });
+</script>
+
+<script>
+// v6.34bu: mount shared line filter dropdown
+(function(){
+  function _mountLF(){
+    if(window.HocLineFilter && document.getElementById("line-filter-mount")){
+      window.HocLineFilter.mount("#line-filter-mount", {});
+    }
+  }
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", _mountLF);
+  else _mountLF();
+})();
 </script>
 </body>
 </html>

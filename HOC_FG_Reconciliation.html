@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en"><head>
-<meta name="hoc-build" content="v6.34bt">
+<meta name="hoc-build" content="v6.34bu">
 
 <!-- v6.34h dynamic month -->
 <script>
@@ -94,6 +94,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--blue)}
 .upd-tag{font-size:8px;padding:2px 6px;border-radius:4px;background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.2);margin-left:4px}
 .logo{background:linear-gradient(135deg,#10B981,#059669)}</style>
 <script src="hoc_theme.js"></script>
+<script src="hoc_line_filter.js"></script>
 </head><body>
 <div class="topbar">
   <div class="brand">
@@ -103,6 +104,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--blue)}
   </div>
   <nav class="nav"><button class="nb active" onclick="P('cmd')">Overview</button><button class="nb" onclick="P('entry')">FG Entry</button><button class="nb" onclick="P('released')">Released</button></nav>
   <div class="badges" id="badges"></div>
+  <div id="line-filter-mount" style="margin-left:12px"></div>
 </div>
 <div class="modal" id="fg-modal" onclick="if(event.target===this)closeFG()">
   <div class="modal-box">
@@ -424,4 +426,17 @@ window.addEventListener('load',function(){
 });
 window.addEventListener('storage',function(e){if(e.key===UPLOAD_KEY||e.key===FLOOR_KEY){loadAll();renderAll();}});
 </script><script src="hoc_events.js"></script>
+
+<script>
+// v6.34bu: mount shared line filter dropdown
+(function(){
+  function _mountLF(){
+    if(window.HocLineFilter && document.getElementById("line-filter-mount")){
+      window.HocLineFilter.mount("#line-filter-mount", {});
+    }
+  }
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", _mountLF);
+  else _mountLF();
+})();
+</script>
 </body></html>

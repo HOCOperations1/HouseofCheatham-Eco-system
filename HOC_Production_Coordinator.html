@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34bt">
+<meta name="hoc-build" content="v6.34bu">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Production Coordinator</title>
@@ -123,6 +123,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--amber)}
 .check-label{font-size:10px;flex:1}
 .check-val{font-size:10px;font-weight:700;min-width:80px;text-align:right}
 </style><script src="hoc_theme.js"></script>
+<script src="hoc_line_filter.js"></script>
 </head><body>
 
 <div class="topbar">
@@ -140,6 +141,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--amber)}
   </nav>
   <a href="index.html" style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text2);text-decoration:none;font-size:9px;font-weight:700;flex-shrink:0;white-space:nowrap" title="Back to HOC-OES Menu">← HOC-OES</a><a href="HOC_Inventory.html" style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;background:rgba(34,211,238,.12);border:1px solid rgba(34,211,238,.3);color:#22D3EE;text-decoration:none;font-size:9px;font-weight:700;flex-shrink:0;white-space:nowrap" title="Back to HOC-OES Menu">📦 Inventory</a>
   <div class="badges" id="badges"></div>
+  <div id="line-filter-mount" style="margin-left:12px"></div>
 </div>
 
 <!-- CMD -->
@@ -1404,6 +1406,19 @@ function printPlacard(){
 (function(){
   var today = new Date().toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'});
   document.querySelectorAll('.js-today-date').forEach(function(el){ el.textContent = today; });
+})();
+</script>
+
+<script>
+// v6.34bu: mount shared line filter dropdown
+(function(){
+  function _mountLF(){
+    if(window.HocLineFilter && document.getElementById("line-filter-mount")){
+      window.HocLineFilter.mount("#line-filter-mount", {});
+    }
+  }
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", _mountLF);
+  else _mountLF();
 })();
 </script>
 </body></html>

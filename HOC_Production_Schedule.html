@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34bt">
+<meta name="hoc-build" content="v6.34bu">
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HOC Production Schedule</title><style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
@@ -61,7 +61,9 @@ input:focus,select:focus,textarea:focus{border-color:var(--blue)}
 .saved-msg{font-size:9px;font-weight:700;color:var(--green);opacity:0;transition:opacity .3s}
 .saved-msg.show{opacity:1}
 .logo{background:linear-gradient(135deg,#3B82F6,#8B5CF6)}.nb.active{color:var(--blue);border-bottom-color:var(--blue)}</style><script src="hoc_theme.js"></script>
-</head><body><div class="topbar"><div class="brand"><a href="index.html" style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text2);text-decoration:none;font-size:9px;font-weight:700;flex-shrink:0">← HOC-OES</a><div class="logo">PS</div><div><div class="brand-name">Production Schedule</div><div class="brand-sub" id="brand-sub">Full schedule · All lines · All periods</div></div></div><nav class="nav" id="period-tabs"></nav><div class="badges" id="badges"></div></div><div class="content"><div class="sync-bar" id="sync-bar"></div>
+<script src="hoc_line_filter.js"></script>
+</head><body><div class="topbar"><div class="brand"><a href="index.html" style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text2);text-decoration:none;font-size:9px;font-weight:700;flex-shrink:0">← HOC-OES</a><div class="logo">PS</div><div><div class="brand-name">Production Schedule</div><div class="brand-sub" id="brand-sub">Full schedule · All lines · All periods</div></div></div><nav class="nav" id="period-tabs"></nav><div class="badges" id="badges"></div>
+  <div id="line-filter-mount" style="margin-left:12px"></div></div><div class="content"><div class="sync-bar" id="sync-bar"></div>
 <div class="empty-state" id="empty-ps">
   <div class="empty-icon">📅</div>
   <div class="empty-title">No schedule data loaded</div>
@@ -395,4 +397,17 @@ window.addEventListener("storage",function(e){if(e.key==="hoc_upload_v1"||e.key=
 setInterval(function(){loadUploadedData();renderAll();},15000);
 setInterval(function(){pullScheduleFromSupabase(function(){loadUploadedData();renderAll();});pullFloorFromSupabase(renderAll);},30000);
 </script><script src="hoc_events.js"></script>
+
+<script>
+// v6.34bu: mount shared line filter dropdown
+(function(){
+  function _mountLF(){
+    if(window.HocLineFilter && document.getElementById("line-filter-mount")){
+      window.HocLineFilter.mount("#line-filter-mount", {});
+    }
+  }
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", _mountLF);
+  else _mountLF();
+})();
+</script>
 </body></html>

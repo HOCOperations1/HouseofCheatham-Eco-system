@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34bt">
+<meta name="hoc-build" content="v6.34bu">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -95,6 +95,7 @@ textarea{width:100%;resize:vertical;min-height:50px;margin-top:4px}
 </style>
 <script src="hoc_theme.js"></script>
 <script src="hoc_floor.js"></script>
+<script src="hoc_line_filter.js"></script>
 </head>
 <body>
 <div class="topbar">
@@ -112,6 +113,7 @@ textarea{width:100%;resize:vertical;min-height:50px;margin-top:4px}
     <button class="nb"         onclick="showPage('export')">Export / Sync</button>
   </nav>
   <div class="badges" id="badges"></div>
+  <div id="line-filter-mount" style="margin-left:12px"></div>
 </div>
 <div class="content">
 
@@ -1355,5 +1357,18 @@ applyOverridesToSTD();
 
 </script>
 <script src="hoc_events.js"></script>
+
+<script>
+// v6.34bu: mount shared line filter dropdown
+(function(){
+  function _mountLF(){
+    if(window.HocLineFilter && document.getElementById("line-filter-mount")){
+      window.HocLineFilter.mount("#line-filter-mount", {});
+    }
+  }
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", _mountLF);
+  else _mountLF();
+})();
+</script>
 </body>
 </html>

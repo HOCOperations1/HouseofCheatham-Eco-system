@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34bt">
+<meta name="hoc-build" content="v6.34bu">
 
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC OES — Compound Tank Board</title>
@@ -135,6 +135,7 @@ tr.no-hover:hover td{background:transparent;cursor:default}
 a{color:var(--blue)}
 </style>
 <script src="hoc_theme.js"></script>
+<script src="hoc_line_filter.js"></script>
 </head>
 <body>
 
@@ -153,6 +154,7 @@ a{color:var(--blue)}
     <button class="nb" onclick="P('history')">Recent Activity</button>
     <button class="nb" onclick="P('config')">Tank Config</button>
   </nav>
+  <div id="line-filter-mount" style="margin-left:12px;display:inline-block"></div>
 </div>
 
 <div class="content">
@@ -890,4 +892,17 @@ document.body.insertAdjacentHTML('beforeend',
   '<button onclick="window.location.href=\'HOC_Onboarding.html\'" title="Onboarding & operations guide" style="position:fixed;bottom:24px;right:24px;width:44px;height:44px;border-radius:50%;background:#14B8A6;color:white;border:none;font-size:20px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(20,184,166,.4);z-index:998">?</button>');
 </script>
 <script src="hoc_events.js"></script>
+
+<script>
+// v6.34bu: mount shared line filter dropdown
+(function(){
+  function _mountLF(){
+    if(window.HocLineFilter && document.getElementById("line-filter-mount")){
+      window.HocLineFilter.mount("#line-filter-mount", { hint: true });
+    }
+  }
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", _mountLF);
+  else _mountLF();
+})();
+</script>
 </body></html>

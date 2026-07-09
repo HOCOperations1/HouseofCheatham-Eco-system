@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34bt">
+<meta name="hoc-build" content="v6.34bu">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Compound Coordinator</title>
@@ -171,6 +171,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--blue)}
 </style><script src="hoc_theme.js"></script>
 <script src="hoc_events.js"></script>
 <script src="hoc_floor.js"></script>
+<script src="hoc_line_filter.js"></script>
 </head><body>
 
 <div class="topbar">
@@ -188,6 +189,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--blue)}
   </nav>
   <a href="index.html" style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text2);text-decoration:none;font-size:9px;font-weight:700;flex-shrink:0;white-space:nowrap" title="Back to HOC-OES Menu">← HOC-OES</a><a href="HOC_Inventory.html" style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;background:rgba(34,211,238,.12);border:1px solid rgba(34,211,238,.3);color:#22D3EE;text-decoration:none;font-size:9px;font-weight:700;flex-shrink:0;white-space:nowrap" title="Back to HOC-OES Menu">📦 Inventory</a>
   <div class="badges" id="badges"></div>
+  <div id="line-filter-mount" style="margin-left:12px"></div>
 </div>
 
 <!-- CMD -->
@@ -1332,7 +1334,7 @@ function renderCmdTable(){
     const d = String(b.date || '').slice(0, 10);
     return d >= todayISO;
   };
-  document.getElementById('cmd-tbody').innerHTML=BATCHES.filter(hideOldCompleted).map(b=>{
+  document.getElementById('cmd-tbody').innerHTML=BATCHES.filter(hideOldCompleted).filter(function(b){ return !window.HocLineFilter || window.HocLineFilter.matchesRow(b); }).map(b=>{
     const cc=getCCStatus(b.batch);
     const bc=b.urgency==='CRITICAL'?'rgba(239,68,68,.03)':b.urgency==='AT RISK'?'rgba(245,158,11,.02)':'';
     // v6.34bo: Lbs Needed — from Planning_Data 8-* chemical BOM. Show
@@ -1365,6 +1367,9 @@ function renderVerify(){
     if(b.status !== 'COMPLETED') return true;
     const d = String(b.date || '').slice(0, 10);
     return d >= todayISO;
+  }).filter(function(b){
+    // v6.34bu: apply shared line filter
+    return !window.HocLineFilter || window.HocLineFilter.matchesRow(b);
   });
   const cnts={ALL:visible.length,CRITICAL:visible.filter(b=>b.urgency==='CRITICAL').length,'AT RISK':visible.filter(b=>b.urgency==='AT RISK').length,UNVERIFIED:visible.filter(b=>!getCCStatus(b.batch)&&b.urgency!=='DONE').length,BLOCKED:Object.values(syncRead()).filter(v=>v.cc&&v.cc.blocked).length,VERIFIED:visible.filter(b=>getCCStatus(b.batch).includes('PROCEED')).length};
   document.getElementById('vf').innerHTML=Object.keys(cnts).map(f=>`<button class="fb${vFilter===f?' active':''}" onclick="setVF('${f}')">${f} (${cnts[f]})</button>`).join('');
@@ -2356,6 +2361,27 @@ function clResetAll(){
 (function(){
   var today = new Date().toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'});
   document.querySelectorAll('.js-today-date').forEach(function(el){ el.textContent = today; });
+})();
+</script>
+
+
+<script>
+// v6.34bu: Re-render Compound Coordinator tables when line filter changes.
+window.addEventListener('linefilter:change', function(){
+  try { if(typeof renderCmdTable === 'function') renderCmdTable(); } catch(e){}
+  try { if(typeof renderVerify === 'function') renderVerify(); } catch(e){}
+});
+</script>
+<script>
+// v6.34bu: mount shared line filter dropdown
+(function(){
+  function _mountLF(){
+    if(window.HocLineFilter && document.getElementById("line-filter-mount")){
+      window.HocLineFilter.mount("#line-filter-mount", {});
+    }
+  }
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", _mountLF);
+  else _mountLF();
 })();
 </script>
 </body></html>

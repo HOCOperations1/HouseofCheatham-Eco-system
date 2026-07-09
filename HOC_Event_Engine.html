@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34bt">
+<meta name="hoc-build" content="v6.34bu">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -75,6 +75,7 @@ td{padding:5px 8px;border-bottom:1px solid rgba(30,41,59,.5);vertical-align:top}
 @media(max-width:720px){.row-2{grid-template-columns:1fr}}
 </style>
 <script src="hoc_theme.js"></script>
+<script src="hoc_line_filter.js"></script>
 </head>
 <body>
 
@@ -94,6 +95,7 @@ td{padding:5px 8px;border-bottom:1px solid rgba(30,41,59,.5);vertical-align:top}
     <button class="nb"        id="tab-flow"   onclick="P('flow')">Power Automate Setup</button>
   </div>
   <div class="badges" id="badges"></div>
+  <div id="line-filter-mount" style="margin-left:12px"></div>
 </div>
 
 <!-- ─── EVENT FEED ─────────────────────────────────────────────── -->
@@ -752,5 +754,18 @@ window.addEventListener('load', function(){
 });
 </script>
 <script src="hoc_events.js"></script>
+
+<script>
+// v6.34bu: mount shared line filter dropdown
+(function(){
+  function _mountLF(){
+    if(window.HocLineFilter && document.getElementById("line-filter-mount")){
+      window.HocLineFilter.mount("#line-filter-mount", {});
+    }
+  }
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", _mountLF);
+  else _mountLF();
+})();
+</script>
 </body>
 </html>

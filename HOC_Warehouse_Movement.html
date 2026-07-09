@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34bt">
+<meta name="hoc-build" content="v6.34bu">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -91,6 +91,7 @@ button.btn{font:inherit;font-size:11px;font-weight:700;padding:8px 14px;border-r
 .pick-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
 </style>
 <script src="hoc_theme.js"></script>
+<script src="hoc_line_filter.js"></script>
 </head>
 <body>
 
@@ -111,6 +112,7 @@ button.btn{font:inherit;font-size:11px;font-weight:700;padding:8px 14px;border-r
   <button class="nb"        onclick="P('locate')">🗺 Locations</button>
   <button class="nb"        onclick="P('log')">📜 Movement Log</button>
 </nav>
+  <div id="line-filter-mount" style="margin-left:12px;display:inline-block"></div>
 
 <div class="page active" id="page-pick"><div class="content">
   <div class="kpi-grid">
@@ -1037,5 +1039,18 @@ document.body.insertAdjacentHTML('beforeend',
   '<button onclick="window.location.href=\'HOC_Onboarding.html\'" title="Onboarding & operations guide" style="position:fixed;bottom:24px;right:24px;width:44px;height:44px;border-radius:50%;background:var(--orange);color:#000;border:none;font-size:20px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(249,115,22,.4);z-index:998">?</button>');
 </script>
 <script src="hoc_events.js"></script>
+
+<script>
+// v6.34bu: mount shared line filter dropdown
+(function(){
+  function _mountLF(){
+    if(window.HocLineFilter && document.getElementById("line-filter-mount")){
+      window.HocLineFilter.mount("#line-filter-mount", { hint: true });
+    }
+  }
+  if(document.readyState === "loading") document.addEventListener("DOMContentLoaded", _mountLF);
+  else _mountLF();
+})();
+</script>
 </body>
 </html>
