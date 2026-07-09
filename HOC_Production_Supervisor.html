@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34bv">
+<meta name="hoc-build" content="v6.34bx">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Production Supervisor</title>
@@ -17,11 +17,11 @@
   font-family:ui-monospace,"Cascadia Code","Fira Code",monospace;
 }
 body{background:var(--bg);color:var(--text);min-height:100vh;font-size:12px}
-.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 14px;display:flex;align-items:stretch;position:sticky;top:0;z-index:100}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 14px;display:flex;align-items:stretch;position:sticky;top:0;z-index:100;flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:8px;padding:9px 13px 9px 0;border-right:1px solid var(--border);margin-right:11px;flex-shrink:0}
 .logo{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
 .brand-name{font-weight:700;font-size:12px}.brand-sub{font-size:9px;color:var(--text3)}
-.nav{display:flex;flex:1;overflow-x:auto}
+.nav{display:flex;flex:1;overflow-x:auto;min-width:200px}
 .nb{padding:0 11px;background:none;border:none;border-bottom:2px solid transparent;color:var(--text2);cursor:pointer;font:inherit;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;transition:all .15s;white-space:nowrap}
 .nb:hover{color:var(--text)}
 .badges{display:flex;gap:5px;align-items:center;padding:7px 0;margin-left:auto;flex-shrink:0}
@@ -156,9 +156,9 @@ select:focus,input:focus,textarea:focus{border-color:var(--green)}
     <button class="nb" onclick="P('batches')">All Batches</button>
     <button class="nb" onclick="P('sync')">Sync &amp; Export</button>
   </nav>
+  <div id="line-filter-mount" style="display:flex;align-items:center;padding:0 10px;flex-shrink:0"></div>
   <a href="index.html" style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text2);text-decoration:none;font-size:9px;font-weight:700;flex-shrink:0;white-space:nowrap" title="Back to HOC-OES Menu">← HOC-OES</a>
   <div class="badges" id="badges"></div>
-  <div id="line-filter-mount" style="margin-left:12px"></div>
 </div>
 
 <!-- CMD -->
@@ -1630,7 +1630,11 @@ function renderKPIs(){
 }
 
 function renderLineTable(){
-  document.getElementById('line-tbody').innerHTML=LINES.map(l=>`
+  // v6.34bw: Apply shared line filter to the Line Summary table.
+  var _lsVisible = LINES.filter(function(l){
+    return !window.HocLineFilter || window.HocLineFilter.matchesRow({line: l.line});
+  });
+  document.getElementById('line-tbody').innerHTML=_lsVisible.map(l=>`
     <tr onclick="P('lines');openLD(${l.line})" style="cursor:pointer">
       <td style="font-weight:700;color:var(--green)">Line ${l.line}</td>
       <td style="text-align:center">${l.total}</td><td style="text-align:center;color:var(--green)">${l.done}</td>
@@ -1654,7 +1658,11 @@ function renderLineTable(){
 
 function renderCmpdByLine(){
   const lns=[...new Set(BATCHES.map(b=>b.line))].sort((a,b)=>a-b);
-  document.getElementById('cmpd-tbody').innerHTML=lns.map(ln=>{
+  // v6.34bw: Apply shared line filter.
+  const _cmpdVisible = lns.filter(function(ln){
+    return !window.HocLineFilter || window.HocLineFilter.matchesRow({line: ln});
+  });
+  document.getElementById('cmpd-tbody').innerHTML=_cmpdVisible.map(ln=>{
     const lb=BATCHES.filter(b=>b.line===ln&&getStatus(b)!=='COMPLETED');
     const od=lb.filter(b=>b.cmpd==='COMPOUND OVERDUE'||b.cmpd==='COMPOUND CRITICAL').length;
     const ar=lb.filter(b=>b.cmpd==='COMPOUND AT RISK').length;
@@ -1723,7 +1731,13 @@ function renderFC(){
 function setFC(f){fcF=f;['ALL','MUST','SHOULD'].forEach(x=>document.getElementById('fc-'+x).classList.remove('active'));document.getElementById('fc-'+f).classList.add('active');renderFC();}
 
 function renderLineCards(){
-  document.getElementById('line-cards').innerHTML=LINES.map(l=>{
+  // v6.34bw: Apply shared line filter — cards for non-selected lines are
+  // hidden entirely. Top summary pills stay plant-wide (situational
+  // awareness), only the card grid filters.
+  var visibleLines = LINES.filter(function(l){
+    return !window.HocLineFilter || window.HocLineFilter.matchesRow({line: l.line});
+  });
+  document.getElementById('line-cards').innerHTML=visibleLines.map(l=>{
     const bar=l.availmin>0?Math.min(100,Math.round(l.remmin/l.availmin*100)):0;
     const bc=bar>90?'var(--red)':bar>70?'var(--amber)':'var(--green)';
     const bord=l.signal==='⚠ CRITICAL'?'rgba(239,68,68,.4)':l.signal==='! WATCH'?'rgba(245,158,11,.35)':'var(--border)';
@@ -2367,6 +2381,10 @@ function renderBatches(){
   };
   document.getElementById('bf').innerHTML=Object.keys(cnts).map(f=>`<button class="fb${bF===f?' active':''}" onclick="setBF('${f}')">${f} (${cnts[f]})</button>`).join('');
   let rows=[...BATCHES];
+  // v6.34bw: Apply shared line filter to All Batches list.
+  rows = rows.filter(function(b){
+    return !window.HocLineFilter || window.HocLineFilter.matchesRow(b);
+  });
   if(bF==='RUNNING') rows=rows.filter(b=>getStatus(b)==='RUNNING');
   else if(bF==='NOT STARTED') rows=rows.filter(b=>getStatus(b)==='NOT STARTED');
   else if(bF==='COMPLETED') rows=rows.filter(b=>getStatus(b)==='COMPLETED');
@@ -2733,6 +2751,15 @@ setInterval(function() {
 })();
 </script>
 
+<script>
+// v6.34bw: re-render Production Supervisor tables when line filter changes
+window.addEventListener('linefilter:change', function(){
+  try { if(typeof renderLineCards === 'function') renderLineCards(); } catch(e){}
+  try { if(typeof renderLineSum   === 'function') renderLineSum();   } catch(e){}
+  try { if(typeof renderCmpdByLine === 'function') renderCmpdByLine(); } catch(e){}
+  try { if(typeof renderBatches   === 'function') renderBatches();   } catch(e){}
+});
+</script>
 <script>
 // v6.34bu: mount shared line filter dropdown
 (function(){
