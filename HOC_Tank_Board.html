@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34bx">
+<meta name="hoc-build" content="v6.34by">
 
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC OES — Compound Tank Board</title>
@@ -254,17 +254,20 @@ const TANK_CONFIG_KEY  = 'hoc_tank_config_v1';
 // source of truth for physical tank properties. Configurable fields
 // (category, notes, current contents/status) live separately in
 // localStorage so this never gets edited inadvertently.
+// v6.34by: Capacity values updated per operations. Reductions reflect
+// working (safe-fill) capacity rather than gross volume. MT-11/12/13/18
+// unchanged.
 const TANK_MASTER = [
-  {id:'MT-1',  capacity:3600, heated:false, double_sweep:false},
-  {id:'MT-2',  capacity:3600, heated:false, double_sweep:false},
-  {id:'MT-3',  capacity:3000, heated:true,  double_sweep:false},
-  {id:'MT-4',  capacity:5400, heated:true,  double_sweep:false},
-  {id:'MT-5',  capacity:1500, heated:true,  double_sweep:true},
-  {id:'MT-6',  capacity:1500, heated:true,  double_sweep:true},
-  {id:'MT-7',  capacity:1500, heated:true,  double_sweep:true},
-  {id:'MT-8',  capacity:1500, heated:true,  double_sweep:true},
-  {id:'MT-9',  capacity:800,  heated:true,  double_sweep:false},
-  {id:'MT-10', capacity:1000, heated:true,  double_sweep:true},
+  {id:'MT-1',  capacity:3000, heated:false, double_sweep:false},
+  {id:'MT-2',  capacity:3000, heated:false, double_sweep:false},
+  {id:'MT-3',  capacity:2400, heated:true,  double_sweep:false},
+  {id:'MT-4',  capacity:4400, heated:true,  double_sweep:false},
+  {id:'MT-5',  capacity:1400, heated:true,  double_sweep:true},
+  {id:'MT-6',  capacity:1400, heated:true,  double_sweep:true},
+  {id:'MT-7',  capacity:1400, heated:true,  double_sweep:true},
+  {id:'MT-8',  capacity:1400, heated:true,  double_sweep:true},
+  {id:'MT-9',  capacity:750,  heated:true,  double_sweep:false},
+  {id:'MT-10', capacity:900,  heated:true,  double_sweep:true},
   {id:'MT-11', capacity:750,  heated:true,  double_sweep:true},
   {id:'MT-12', capacity:750,  heated:true,  double_sweep:true},
   {id:'MT-13', capacity:750,  heated:true,  double_sweep:true},

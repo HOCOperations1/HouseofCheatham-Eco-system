@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34bx">
+<meta name="hoc-build" content="v6.34by">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Compound Coordinator</title>
@@ -288,7 +288,10 @@ select:focus,input:focus,textarea:focus{border-color:var(--blue)}
         <strong style="color:var(--text)">Chemical Verification Placard</strong> · <span id="cc-placard-chem-count">0</span> chemical(s) from Planning_Data
         <span id="cc-placard-shortage-badge" style="display:none;margin-left:8px;padding:2px 8px;border-radius:10px;background:rgba(239,68,68,.15);color:var(--red);font-size:10px;font-weight:700;border:1px solid rgba(239,68,68,.3)"></span>
       </div>
-      <button onclick="printCCPlacard()" style="padding:6px 14px;background:var(--green);border:none;border-radius:6px;color:#fff;font:inherit;font-size:10px;font-weight:700;cursor:pointer">🖨 Print Placard</button>
+      <div style="display:flex;gap:8px">
+        <button onclick="emailCCPlacard()" style="padding:6px 14px;background:var(--blue);border:none;border-radius:6px;color:#fff;font:inherit;font-size:10px;font-weight:700;cursor:pointer">📧 Email to Outlook</button>
+        <button onclick="printCCPlacard()" style="padding:6px 14px;background:var(--green);border:none;border-radius:6px;color:#fff;font:inherit;font-size:10px;font-weight:700;cursor:pointer">🖨 Print Placard</button>
+      </div>
     </div>
 
     <!-- Printable placard -->
@@ -1170,6 +1173,135 @@ function printCCPlacard(){
   }, 1500);
 }
 window.printCCPlacard = printCCPlacard;
+
+// v6.34by: Email the placard via Outlook Web deep link.
+// Builds a plain-text summary (subject + body) and opens
+// https://outlook.office.com/mail/deeplink/compose?subject=…&body=…
+// in a new tab. Requires the user to be signed into O365 in the browser.
+//
+// Honest limitations:
+//  - Plain text only (Outlook Web deep link doesn't accept HTML body).
+//  - Deep link URL has a browser-imposed length cap (~2000 chars); if the
+//    placard has many chemicals, the body may be truncated. Fallback:
+//    we alert the operator if we detect truncation and suggest printing.
+//  - Recipient field is left blank — operator types it in Outlook.
+//  - If user isn't signed into O365 in the browser, Outlook Web will
+//    prompt for sign-in before showing the compose window.
+function emailCCPlacard(){
+  if(!activeVer){
+    alert('No batch selected. Open a batch first.');
+    return;
+  }
+  var b = BATCHES.find(function(x){ return x.batch === activeVer; });
+  if(!b){
+    alert('Could not find batch ' + activeVer + ' in current data.');
+    return;
+  }
+  // Rebuild the chems list (same logic as renderCCPlacard)
+  var up = null;
+  try {
+    var raw = localStorage.getItem('hoc_upload_v1');
+    if(raw) up = JSON.parse(raw);
+  } catch(e){}
+  var chems = [];
+  if(up && Array.isArray(up.bom)){
+    var bomEntry = up.bom.find(function(x){ return x.batch === b.batch; });
+    if(bomEntry && Array.isArray(bomEntry.components)){
+      var qohBySku = {};
+      if(Array.isArray(up.inventory)){
+        up.inventory.forEach(function(inv){
+          qohBySku[inv.sku] = parseFloat(inv.qoh) || 0;
+        });
+      }
+      chems = bomEntry.components
+        .filter(function(c){
+          var sku = String(c.sku || '');
+          var uom = String(c.uom || '').toUpperCase().trim();
+          return sku.indexOf('8-') === 0 && (uom === 'LB' || uom === 'LBS');
+        })
+        .map(function(c){
+          return {
+            sku:      c.sku,
+            desc:     c.desc || '',
+            qty_need: parseFloat(c.qty) || 0,
+            qoh:      qohBySku[c.sku] || 0
+          };
+        });
+    }
+  }
+  var itemVerified = getBatchItemVerified(b.batch);
+
+  // Build the plain-text body
+  var LBS_TO_G_email = 453.592;
+  function fmtBoth(lbs){
+    // Same tiered precision as placard — see formatBoth() comment.
+    var lbDec = lbs < 0.01 ? 4 : (lbs < 1 ? 3 : 1);
+    var lbStr = lbs.toLocaleString(undefined, {maximumFractionDigits: lbDec});
+    var g = lbs * LBS_TO_G_email;
+    var gDec = g < 1 ? 2 : (g < 10 ? 1 : 0);
+    var gStr = g.toLocaleString(undefined, {maximumFractionDigits: gDec});
+    return lbStr + ' lbs (' + gStr + ' g)';
+  }
+
+  var lines = [];
+  lines.push('CHEMICAL VERIFICATION PLACARD');
+  lines.push('RM-001 · Chemical Raw Material Verification');
+  lines.push('');
+  lines.push('Batch:   ' + b.batch);
+  lines.push('Line:    ' + (b.line ? 'Line ' + b.line : '—'));
+  lines.push('Item:    ' + (b.item || '—'));
+  lines.push('Formula: F.' + (b.formula || '—'));
+  if(b.desc) lines.push('Product: ' + b.desc);
+  if(b.chem_lbs > 0) lines.push('Total chemistry: ' + Number(b.chem_lbs).toLocaleString(undefined,{maximumFractionDigits:1}) + ' lbs');
+  lines.push('');
+  lines.push('CHEMICAL COMPONENTS (' + chems.length + '):');
+  lines.push('----------------------------------------------------------------');
+  if(chems.length === 0){
+    lines.push('  (No chemical BOM available for this batch.)');
+  } else {
+    chems.forEach(function(it, i){
+      var loggedShort = (typeof currentShortages !== 'undefined')
+        ? currentShortages.find(function(s){ return s.sku === it.sku; })
+        : null;
+      var status;
+      if(loggedShort) status = 'SHORT · LOGGED';
+      else if(it.qoh < it.qty_need) status = 'SHORT';
+      else if(itemVerified[it.sku]) status = 'VERIFIED';
+      else status = 'AWAITING';
+      lines.push('#' + (i+1) + '  ' + (it.sku || '—') + '  [' + status + ']');
+      if(it.desc) lines.push('    ' + it.desc);
+      lines.push('    Need:    ' + fmtBoth(it.qty_need));
+      lines.push('    OnHand:  ' + fmtBoth(it.qoh));
+      if(loggedShort && loggedShort.reason) lines.push('    Reason:  ' + loggedShort.reason);
+      lines.push('');
+    });
+  }
+  // Signature block
+  lines.push('----------------------------------------------------------------');
+  lines.push('SIGNATURES REQUIRED:');
+  lines.push('  Compound Coordinator: __________________________');
+  lines.push('  Warehouse:            __________________________');
+  lines.push('  Supervisor:           __________________________');
+  lines.push('');
+  lines.push('Generated: ' + new Date().toLocaleString());
+  lines.push('Source: HOC-OES Compound Coordinator');
+
+  var body = lines.join('\r\n');
+  var subject = 'Chemical Verification Placard — Batch ' + b.batch + (b.line ? ' (Line ' + b.line + ')' : '');
+
+  // Outlook Web deep link
+  var url = 'https://outlook.office.com/mail/deeplink/compose'
+          + '?subject=' + encodeURIComponent(subject)
+          + '&body='    + encodeURIComponent(body);
+
+  // Honest length check — most browsers cap URLs at ~2000 chars
+  if(url.length > 2000){
+    var proceed = confirm('This placard is long — ' + url.length + ' characters. Some browsers may truncate the email body.\n\nClick OK to try anyway, or Cancel to just print it.');
+    if(!proceed) return;
+  }
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+window.emailCCPlacard = emailCCPlacard;
 function getCCBlock(batchId){ return syncGet(batchId).cc?.blocked||false; }
 
 function rawBadge(s){
@@ -1562,27 +1694,27 @@ function openVD(id){
       }
       html += '</div>';
     } else {
-      // v6.34br: Auto-switch units per item based on magnitude.
-      //   qty >= 1 lb → display in lbs (tenths precision)
-      //   qty < 1 lb  → display in grams (tiered precision based on size)
-      //     < 1 g    → 2 decimals (0.21 g Cocoa Butter)
-      //     < 10 g   → 1 decimal (3.2 g)
-      //     >= 10 g  → 0 decimals (116 g)
-      // On Hand shows in the SAME unit as Need so the comparison is direct
-      // (yes, that means '385,102 g' on-hand for a micro-need item, but
-      // apples-to-apples comparison is more valuable than pretty numbers).
+      // v6.34by: Show BOTH lbs and grams on every item. Prior behavior
+      // (v6.34br) auto-switched based on magnitude — operators asked for
+      // both units side-by-side so they don't have to convert either
+      // direction mentally.
       //
-      // 543 rows in real Planning_Data have qty < 0.05 lb which used to
-      // round to '0 lbs' — grams display makes those visible and weighable.
+      // Format: "35.3 lbs (16,010 g)" for large items,
+      //         "0.256 lbs (116 g)"   for small items.
+      // Precision: lbs shown to 3 decimals for values < 1 (so 0.256 not 0.3),
+      //            grams tiered (0.21 g / 3.2 g / 116 g / 16,010 g).
       var LBS_TO_G = 453.592;
-      function formatQty(lbs){
-        if(lbs >= 1){
-          return {value: lbs.toLocaleString(undefined,{maximumFractionDigits:1}), unit:'lbs'};
-        }
-        // Small — convert to grams
+      function formatBoth(lbs){
+        // v6.34by: Tiered lbs precision so tiny values (0.00046 lb Cocoa
+        // Butter) don't round to '0 lbs'. Precision grows for smaller
+        // magnitudes: <0.01 → 4 decimals, <1 → 3, else 1.
+        var lbDec = lbs < 0.01 ? 4 : (lbs < 1 ? 3 : 1);
+        var lbStr = lbs.toLocaleString(undefined, {maximumFractionDigits: lbDec});
+        // Grams tiered precision
         var g = lbs * LBS_TO_G;
-        var decimals = g < 1 ? 2 : (g < 10 ? 1 : 0);
-        return {value: g.toLocaleString(undefined,{maximumFractionDigits:decimals}), unit:'g'};
+        var gDec = g < 1 ? 2 : (g < 10 ? 1 : 0);
+        var gStr = g.toLocaleString(undefined, {maximumFractionDigits: gDec});
+        return lbStr + ' lbs <span style="color:#666;font-size:9px">(' + gStr + ' g)</span>';
       }
       // Render one item per chemical — no blank slot padding (per user request)
       chems.forEach(function(it, i){
@@ -1591,16 +1723,10 @@ function openVD(id){
         var hasStock = have >= need;
         var isVerified = !!itemVerified[it.sku];
         var skuEsc = String(it.sku || '').replace(/"/g, '&quot;');
-        // Choose display unit based on the NEED amount; render both need
-        // and have in that unit so operator can compare directly.
-        var needFmt = formatQty(need);
-        var haveInSameUnit = needFmt.unit === 'g' ? have * LBS_TO_G : have;
-        var haveDecimals = needFmt.unit === 'g'
-          ? (haveInSameUnit < 1 ? 2 : (haveInSameUnit < 10 ? 1 : 0))
-          : 1;
-        var haveDisplay = haveInSameUnit.toLocaleString(undefined,{maximumFractionDigits:haveDecimals});
-        var needLabel = needFmt.unit === 'g' ? 'Quantity Needed (G)' : 'Quantity Needed (LBS)';
-        var haveLabel = needFmt.unit === 'g' ? 'Quantity On Hand (G)' : 'Quantity On Hand (LBS)';
+        var needDisplay = formatBoth(need);
+        var haveDisplay = formatBoth(have);
+        var needLabel = 'Quantity Needed (LBS / G)';
+        var haveLabel = 'Quantity On Hand (LBS / G)';
         var loggedShort = (typeof currentShortages !== 'undefined')
           ? currentShortages.find(function(s){ return s.sku === it.sku; })
           : null;
@@ -1621,8 +1747,8 @@ function openVD(id){
           '</div>';
         html += '<div class="cpitem-row">' +
           '<div>' + (it.sku || '') + (it.desc ? ' — ' + it.desc : '') + '</div>' +
-          '<div>' + needFmt.value + ' ' + needFmt.unit + '</div>' +
-          '<div>' + haveDisplay + ' ' + needFmt.unit + '</div>' +
+          '<div>' + needDisplay + '</div>' +
+          '<div>' + haveDisplay + '</div>' +
           '<div>&nbsp;</div>' +
           '</div>';
         html += '<div class="cpitem-row">' +
