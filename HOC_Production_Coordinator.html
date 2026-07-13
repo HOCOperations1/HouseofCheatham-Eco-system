@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34by">
+<meta name="hoc-build" content="v6.34bz">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Production Coordinator</title>
@@ -333,9 +333,15 @@ select:focus,input:focus,textarea:focus{border-color:var(--amber)}
     <p style="font-size:11px;color:var(--text2);line-height:1.7;margin-bottom:10px">
       Per <strong style="color:var(--text)">LG-010-00 Logistic Lines Staging Process</strong>. Select a batch, add the items needed for staging (Material Handler will use FASCOR scan-gun to find pick locations: Moveable Units → Inquiry Move → Date Inquiry → Scan SKU). Pick locations from prior placards are suggested automatically. Print the placard, then attach to the BOM.
     </p>
+    <!-- v6.34bz: search box + line-sorted dropdown -->
+    <div style="margin-bottom:6px">
+      <input type="text" id="placard-batch-search" placeholder="🔍 Search by batch # / line / description..."
+             oninput="renderPlacardForm()" autocomplete="off"
+             style="width:100%;font:inherit;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:6px 8px">
+    </div>
     <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-bottom:10px">
       <div>
-        <div style="font-size:9px;color:var(--text3);margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Select Batch</div>
+        <div style="font-size:9px;color:var(--text3);margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">Select Batch <span style="color:var(--text3);text-transform:none;letter-spacing:0">(sorted by line)</span></div>
         <select id="placard-batch-sel" onchange="onPlacardBatchSelect()" style="width:100%;font:inherit;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:6px 8px">
           <option value="">— select a batch —</option>
         </select>
@@ -836,7 +842,10 @@ function renderKPIs(){
 }
 
 function renderCmdTable(){
-  document.getElementById('cmd-tbody').innerHTML=BATCHES.filter(b=>b.status!=='COMPLETED').map(b=>{
+  // v6.34bz: Apply shared line filter to Command Center rows.
+  document.getElementById('cmd-tbody').innerHTML=BATCHES.filter(b=>b.status!=='COMPLETED')
+    .filter(function(b){ return !window.HocLineFilter || window.HocLineFilter.matchesRow(b); })
+    .map(b=>{
     const pcs=getPCStatus(b.batch);
     const blocked=isPCBlocked(b.batch);
     return`<tr onclick="P('check');openCD('${b.batch}')" style="cursor:pointer;${blocked?'background:rgba(239,68,68,.03)':pcs.includes('ALL CLEAR')?'background:rgba(34,197,94,.02)':''}">
@@ -874,6 +883,8 @@ function renderCheck(){
   const cnts={ALL:BATCHES.filter(b=>b.status!=='COMPLETED').length,'WILL MISS':BATCHES.filter(b=>b.risk==='WILL MISS'&&b.status!=='COMPLETED').length,'AT RISK':BATCHES.filter(b=>b.risk==='AT RISK'&&b.status!=='COMPLETED').length,CLEARED:BATCHES.filter(b=>getPCStatus(b.batch).includes('ALL CLEAR')).length,BLOCKED:BATCHES.filter(b=>isPCBlocked(b.batch)).length,UNCHECKED:BATCHES.filter(b=>!getPCStatus(b.batch)&&b.status!=='COMPLETED').length};
   document.getElementById('cf').innerHTML=Object.keys(cnts).map(f=>`<button class="fb${cFilter===f?' active':''}" onclick="setCF('${f}')">${f} (${cnts[f]})</button>`).join('');
   let rows=BATCHES.filter(b=>b.status!=='COMPLETED');
+  // v6.34bz: Apply shared line filter (before status/risk filters below).
+  rows = rows.filter(function(b){ return !window.HocLineFilter || window.HocLineFilter.matchesRow(b); });
   if(cFilter==='WILL MISS') rows=rows.filter(b=>b.risk==='WILL MISS');
   else if(cFilter==='AT RISK') rows=rows.filter(b=>b.risk==='AT RISK');
   else if(cFilter==='CLEARED') rows=rows.filter(b=>getPCStatus(b.batch).includes('ALL CLEAR'));
@@ -1121,14 +1132,55 @@ function savePlacardLocations(map){
 }
 
 function renderPlacardForm(){
-  // Populate batch dropdown with all non-completed batches
+  // v6.34bz: Sort by line ascending, then batch number within each line.
+  // Apply search-box text and shared line-filter dropdown.
   var sel = document.getElementById('placard-batch-sel');
   if(!sel) return;
-  var open = BATCHES.filter(function(b){ return b.status !== 'COMPLETED'; })
-                    .sort(function(a,b){ return String(a.date).localeCompare(String(b.date)); });
-  sel.innerHTML = '<option value="">— select a batch —</option>' + open.map(function(b){
-    return '<option value="'+b.batch+'">'+b.batch+' · Ln'+b.line+' · '+b.desc.slice(0,42)+' · '+(b.date||'')+'</option>';
-  }).join('');
+  var searchTxt = '';
+  var searchEl = document.getElementById('placard-batch-search');
+  if(searchEl) searchTxt = String(searchEl.value || '').trim().toLowerCase();
+
+  var open = BATCHES.filter(function(b){ return b.status !== 'COMPLETED'; });
+
+  // Apply shared line filter if a specific line is picked
+  if(window.HocLineFilter){
+    open = open.filter(function(b){ return window.HocLineFilter.matchesRow(b); });
+  }
+
+  // Apply search-box text (matches batch, line, or description)
+  if(searchTxt){
+    open = open.filter(function(b){
+      var hay = (String(b.batch||'') + ' ln' + (b.line||'') + ' ' + String(b.desc||'')).toLowerCase();
+      return hay.indexOf(searchTxt) !== -1;
+    });
+  }
+
+  // Sort by line ascending, then batch id (which encodes seq within line)
+  open.sort(function(a, b){
+    var la = parseInt(a.line, 10); if(isNaN(la)) la = 999;
+    var lb = parseInt(b.line, 10); if(isNaN(lb)) lb = 999;
+    if(la !== lb) return la - lb;
+    return String(a.batch).localeCompare(String(b.batch));
+  });
+
+  // Group visually by line with disabled optgroup-like separators
+  var lastLine = null;
+  var opts = ['<option value="">— select a batch —</option>'];
+  open.forEach(function(b){
+    if(b.line !== lastLine){
+      opts.push('<option value="" disabled style="background:var(--bg2);color:var(--text3);font-weight:700">── Line ' + (b.line || '?') + ' ──</option>');
+      lastLine = b.line;
+    }
+    opts.push('<option value="'+b.batch+'">'+b.batch+' · Ln'+b.line+' · '+String(b.desc||'').slice(0,42)+' · '+(b.date||'')+'</option>');
+  });
+
+  // Preserve the currently-selected batch across re-renders (so typing in
+  // the search box doesn't drop the operator's selection)
+  var currentVal = sel.value;
+  sel.innerHTML = opts.join('');
+  if(currentVal && open.find(function(x){ return x.batch === currentVal; })){
+    sel.value = currentVal;
+  }
 
   // Populate SKU datalist from COMPONENTS array (real warehouse SKUs)
   var skuList = document.getElementById('placard-sku-list');
@@ -1419,6 +1471,14 @@ function printPlacard(){
 })();
 </script>
 
+<script>
+// v6.34bz: re-render Production Coordinator tables when line filter changes
+window.addEventListener('linefilter:change', function(){
+  try { if(typeof renderCmdTable    === 'function') renderCmdTable();    } catch(e){}
+  try { if(typeof renderCheck       === 'function') renderCheck();       } catch(e){}
+  try { if(typeof renderPlacardForm === 'function') renderPlacardForm(); } catch(e){}
+});
+</script>
 <script>
 // v6.34bu: mount shared line filter dropdown
 (function(){

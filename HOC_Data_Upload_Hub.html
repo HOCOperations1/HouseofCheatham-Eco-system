@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34by">
+<meta name="hoc-build" content="v6.34bz">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -2082,12 +2082,30 @@ function updateAllDashboards() {
           });
           var inventory = Object.values(byComp).map(function(c) {
             var net = c.qoh + c.po_qty - Math.abs(c.prod_req);
+            // v6.34bz: Derive comp_type from description keywords so
+            // Production Coordinator's category tabs (Bottles / Caps /
+            // Labels / Cartons / Jars) actually filter. Prior to this
+            // release, comp_type was never populated, so every category
+            // tab showed zero rows. Chemistry (8-*) categorized by prefix
+            // since descriptions vary too much for reliable keyword match.
+            var desc = String(c.descr || '').toLowerCase();
+            var sku = String(c.sku || '');
+            var comp_type = '';
+            if(sku.indexOf('8-') === 0) comp_type = 'Chemical';
+            else if(/\bbottle\b/.test(desc)) comp_type = 'Bottle';
+            else if(/\bcap\b/.test(desc))    comp_type = 'Cap';
+            else if(/\blabel\b/.test(desc))  comp_type = 'Label';
+            else if(/\bcarton\b|\bshipper\b/.test(desc)) comp_type = 'Carton/Shipper';
+            else if(/\bjar\b/.test(desc))    comp_type = 'Jar';
+            else if(sku.indexOf('2-') === 0) comp_type = 'Bulk';
+            else if(sku.indexOf('1-') === 0) comp_type = 'Finished Good';
             return Object.assign({}, c, {
               net: Math.round(net*100)/100,
               status: net < 0 ? 'LOW' : 'OK',
               qoh: Math.round(c.qoh*100)/100,
               po_qty: Math.round(c.po_qty*100)/100,
-              prod_req: Math.round(c.prod_req*100)/100
+              prod_req: Math.round(c.prod_req*100)/100,
+              comp_type: comp_type
             });
           });
           result.inventory = inventory;
