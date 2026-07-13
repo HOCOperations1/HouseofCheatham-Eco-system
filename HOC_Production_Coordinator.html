@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34cb">
+<meta name="hoc-build" content="v6.34cc">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Production Coordinator</title>
@@ -135,6 +135,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--amber)}
     <button class="nb active" onclick="P('cmd')">Command Center</button>
     <button class="nb" onclick="P('check')">Component Check</button>
     <button class="nb" onclick="P('components')">Inventory</button>
+    <button class="nb" onclick="P('openpos')">Open POs</button>
     <button class="nb" onclick="P('alerts')">Alerts &amp; Escalations</button>
     <button class="nb" onclick="P('placard')">Staging Placard</button>
     <button class="nb" onclick="P('sync')">Sync</button>
@@ -261,7 +262,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--amber)}
     <button class="fb" id="ci-Jar" onclick="setCI('Jar')">Jars</button>
   </div>
   <div class="tbl-wrap"><table>
-    <thead><tr><th>SKU</th><th>Type</th><th>Description</th><th>QOH</th><th>Required</th><th>PO Qty</th><th>Net Avail</th><th>Status</th><th>POs</th></tr></thead>
+    <thead><tr><th>SKU</th><th>Type</th><th>Description</th><th>QOH</th><th>Required</th><th>PO Qty</th><th>Vendor</th><th>Next Delivery</th><th>Net Avail</th><th>Status</th><th>POs</th></tr></thead>
     <tbody id="ci-tbody"></tbody>
   </table></div>
 </div></div>
@@ -317,6 +318,33 @@ select:focus,input:focus,textarea:focus{border-color:var(--amber)}
     <div class="exp-step" style="border-color:var(--amber)">2 — Export CSV below</div>
     <div class="exp-step" style="border-color:var(--amber)">3 — Paste component check results into production coordination log</div>
     <div style="margin-top:10px"><button class="btn-a" onclick="exportAllCSV()">⬇ Export CSV</button></div>
+  </div>
+</div></div>
+
+<!-- v6.34cc: OPEN POS — dedicated view of the Open PO Report data, pre-filtered to packaging (7-*) and labels (9-*) for Production Coordinator. -->
+<div class="page" id="page-openpos"><div class="content">
+  <div id="openpo-status" style="font-size:10px;margin-bottom:8px;padding:6px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:5px"></div>
+  <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center">
+    <input type="text" id="openpo-search" placeholder="🔍 Search SKU / vendor / PO #..." oninput="renderOpenPOs()" autocomplete="off"
+           style="flex:1;min-width:220px;padding:5px 8px;font:inherit;font-size:10px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text)">
+    <label style="font-size:9px;color:var(--text3);display:flex;align-items:center;gap:5px">
+      Sort:
+      <select id="openpo-sort" onchange="renderOpenPOs()" style="padding:3px 6px;font:inherit;font-size:10px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text)">
+        <option value="date">Required Date (earliest)</option>
+        <option value="vendor">Vendor</option>
+        <option value="sku">SKU</option>
+        <option value="qty_desc">Qty (largest)</option>
+      </select>
+    </label>
+  </div>
+  <div class="tbl-wrap"><table>
+    <thead><tr>
+      <th>Required</th><th>SKU</th><th>Type</th><th>Description</th><th>Vendor</th><th>PO #</th><th>Qty Ordered</th>
+    </tr></thead>
+    <tbody id="openpo-tbody"></tbody>
+  </table></div>
+  <div style="margin-top:12px;font-size:9px;color:var(--text3);font-style:italic">
+    Filtered to packaging (7-*) and label (9-*) SKUs from the Open PO Report upload. Upload the file in Data Upload Hub to populate.
   </div>
 </div></div>
 
@@ -737,7 +765,7 @@ function showPage(id, map) {
 
 let cFilter='ALL', ciFilter='ALL', activeBatch=null;
 const PM={cmd:0,check:1,components:2,alerts:3,placard:4,sync:5};
-function P(id){showPage(id,PM);if(id==='check')renderCheck();if(id==='components')renderComponents();if(id==='alerts')renderAlerts();if(id==='placard')renderPlacardForm();}
+function P(id){showPage(id,PM);if(id==='check')renderCheck();if(id==='components')renderComponents();if(id==='openpos')renderOpenPOs();if(id==='alerts')renderAlerts();if(id==='placard')renderPlacardForm();}
 
 function getPCStatus(id){ return syncGet(id).pc?.result||''; }
 function isPCBlocked(id){ return syncGet(id).pc?.blocked||false; }
@@ -991,7 +1019,42 @@ function renderComponents(){
     if(ciFilter==='LOW') rows=rows.filter(c=>c.status==='LOW');
     else rows=rows.filter(c=>c.comp_type===ciFilter);
   }
-  document.getElementById('ci-tbody').innerHTML=rows.map((c,i)=>`
+  // v6.34cc: Build PO lookup from Open PO Report upload
+  var poBySku = (function(){
+    try {
+      var raw = localStorage.getItem('hoc_po_report_v1');
+      if(!raw) return {};
+      var pr = JSON.parse(raw);
+      if(!pr || !Array.isArray(pr.rows)) return {};
+      var lookup = {};
+      pr.rows.forEach(function(r){
+        if(!r.sku) return;
+        if(!lookup[r.sku]) lookup[r.sku] = [];
+        lookup[r.sku].push(r);
+      });
+      Object.keys(lookup).forEach(function(sku){
+        lookup[sku].sort(function(a,b){
+          return String(a.required_date || '9999').localeCompare(String(b.required_date || '9999'));
+        });
+      });
+      return lookup;
+    } catch(e){ return {}; }
+  })();
+  document.getElementById('ci-tbody').innerHTML=rows.map((c,i)=>{
+    var pos = poBySku[c.sku] || [];
+    var vendorCell = '<span style="font-size:9px;color:var(--text3)">—</span>';
+    var deliveryCell = '<span style="font-size:9px;color:var(--text3)">—</span>';
+    if(pos.length){
+      var earliest = pos[0];
+      vendorCell = '<span style="font-size:10px">' + (earliest.vendor_name || earliest.vendor_id || '—') + '</span>';
+      if(pos.length > 1){
+        vendorCell += ' <span style="font-size:8px;color:var(--text3)">(+' + (pos.length - 1) + ')</span>';
+      }
+      deliveryCell = earliest.required_date
+        ? '<span style="font-size:10px">' + earliest.required_date + '</span>'
+        : '<span style="font-size:9px;color:var(--text3)">—</span>';
+    }
+    return `
     <tr style="background:${i%2?'rgba(255,255,255,.01)':'transparent'}">
       <td style="font-size:9px;color:var(--text2)">${c.sku}</td>
       <td><span style="font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;background:var(--gray-l);color:var(--text2)">${c.comp_type||'—'}</span></td>
@@ -999,10 +1062,13 @@ function renderComponents(){
       <td style="text-align:right">${N(c.qoh)}</td>
       <td style="text-align:right">${N(c.req)}</td>
       <td style="text-align:right;color:var(--teal)">${N(c.po_qty)}</td>
+      <td>${vendorCell}</td>
+      <td>${deliveryCell}</td>
       <td style="text-align:right" class="${c.net<0?'num-red':c.status==='LOW'?'num-red':''} ">${N(c.net)}</td>
       <td><span class="pill ${c.status==='LOW'?'p-ar':'p-ot'}">${c.status}</span></td>
       <td style="font-size:9px;color:var(--text3)">${c.pos&&c.pos.length?c.pos.slice(0,2).map(p=>p.po+' ('+p.weeks_out+'wk)').join(', '):'—'}</td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 function setCI(f){
   ciFilter=f;
@@ -1012,6 +1078,77 @@ function setCI(f){
   });
   const el=document.getElementById('ci-'+f);if(el)el.classList.add('active');
   renderComponents();
+}
+
+// v6.34cc: Open POs tab renderer. Reads hoc_po_report_v1 (populated by
+// Data Upload Hub upload of Open PO Report). PC filters to packaging
+// (7-*) and labels (9-*) — the SKU categories production coordinators
+// actually care about. Supports search-as-you-type + sort dropdown.
+function renderOpenPOs(){
+  var tbody = document.getElementById('openpo-tbody');
+  var statusEl = document.getElementById('openpo-status');
+  if(!tbody) return;
+  var pr = null;
+  try {
+    var raw = localStorage.getItem('hoc_po_report_v1');
+    if(raw) pr = JSON.parse(raw);
+  } catch(e){}
+  if(!pr || !Array.isArray(pr.rows) || !pr.rows.length){
+    tbody.innerHTML = '<tr><td colspan="7" style="padding:20px;text-align:center;color:var(--text3);font-style:italic;font-size:11px">No Open PO Report uploaded. Upload in Data Upload Hub to populate this view.</td></tr>';
+    if(statusEl) statusEl.innerHTML = '<span style="color:var(--amber)">⚠ No Open PO data</span>';
+    return;
+  }
+  // Filter to packaging (7-*) and labels (9-*) for Production Coordinator
+  var rows = pr.rows.filter(function(r){
+    var s = String(r.sku||'');
+    return s.indexOf('7-') === 0 || s.indexOf('9-') === 0;
+  });
+  var totalPackagingPOs = rows.length;
+  // Apply search
+  var q = String((document.getElementById('openpo-search')||{}).value || '').trim().toLowerCase();
+  if(q){
+    rows = rows.filter(function(r){
+      var hay = (r.sku + ' ' + r.desc + ' ' + r.vendor_name + ' ' + r.vendor_id + ' ' + r.po_number).toLowerCase();
+      return hay.indexOf(q) !== -1;
+    });
+  }
+  // Apply sort
+  var sortMode = (document.getElementById('openpo-sort')||{value:'date'}).value;
+  rows.sort(function(a, b){
+    if(sortMode === 'vendor')  return String(a.vendor_name||'').localeCompare(String(b.vendor_name||''));
+    if(sortMode === 'sku')     return String(a.sku||'').localeCompare(String(b.sku||''));
+    if(sortMode === 'qty_desc')return (parseFloat(b.qty_ordered)||0) - (parseFloat(a.qty_ordered)||0);
+    return String(a.required_date || '9999').localeCompare(String(b.required_date || '9999'));
+  });
+  if(statusEl){
+    var uploaded = pr._updated ? new Date(pr._updated).toLocaleString() : 'unknown';
+    statusEl.innerHTML = '<b>' + rows.length + '</b> of ' + totalPackagingPOs + ' packaging/label PO line(s)'
+      + ' <span style="color:var(--text3)">· last upload: ' + uploaded + '</span>';
+  }
+  tbody.innerHTML = rows.map(function(r, i){
+    var today = new Date().toISOString().slice(0,10);
+    var late = r.required_date && r.required_date < today;
+    var soon = r.required_date && !late && r.required_date <= new Date(Date.now() + 7*86400000).toISOString().slice(0,10);
+    var dateColor = late ? 'var(--red)' : (soon ? 'var(--amber)' : 'var(--text)');
+    var dateLabel = late ? ' <span style="font-size:8px;color:var(--red);font-weight:700">LATE</span>' : '';
+    // Derive type from SKU prefix + desc for the mini type badge
+    var skuStr = String(r.sku || '');
+    var typeLabel = skuStr.indexOf('9-') === 0 ? 'Label' : 'Packaging';
+    var descLower = String(r.desc || '').toLowerCase();
+    if(descLower.indexOf('bottle') >= 0) typeLabel = 'Bottle';
+    else if(descLower.indexOf('cap') >= 0) typeLabel = 'Cap';
+    else if(descLower.indexOf('jar') >= 0) typeLabel = 'Jar';
+    else if(descLower.indexOf('carton') >= 0 || descLower.indexOf('shipper') >= 0) typeLabel = 'Carton';
+    return '<tr style="background:' + (i%2 ? 'rgba(255,255,255,.01)' : 'transparent') + '">'
+      + '<td style="font-size:10px;color:' + dateColor + ';font-weight:600">' + (r.required_date || '—') + dateLabel + '</td>'
+      + '<td style="font-size:10px;color:var(--text2)">' + r.sku + '</td>'
+      + '<td><span style="font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;background:var(--gray-l);color:var(--text2)">' + typeLabel + '</span></td>'
+      + '<td style="font-size:10px">' + (r.desc || '—') + '</td>'
+      + '<td style="font-size:10px">' + (r.vendor_name || r.vendor_id || '—') + '</td>'
+      + '<td style="font-size:10px;color:var(--text3)">' + (r.po_number || '—') + '</td>'
+      + '<td style="text-align:right;color:var(--teal)">' + N(r.qty_ordered) + '</td>'
+      + '</tr>';
+  }).join('');
 }
 
 function renderAlerts(){
@@ -1113,6 +1250,17 @@ setInterval(function() {
   try { reloadBatches(); renderAll(); } catch(err) {}
 }, 30000);
 renderComponents();
+
+// v6.34cc: URL hash → open specific tab (same pattern as CC).
+(function(){
+  try {
+    var h = window.location.hash;
+    if(h && h.length > 1){
+      var target = h.slice(1);
+      if(typeof P === 'function') P(target);
+    }
+  } catch(e){}
+})();
 
 // ═════════════════════════════════════════════════════════════════════
 // MATERIAL STAGING PLACARD (LG-010-00)

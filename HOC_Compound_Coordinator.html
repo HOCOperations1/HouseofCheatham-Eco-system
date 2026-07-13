@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34cb">
+<meta name="hoc-build" content="v6.34cc">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Compound Coordinator</title>
@@ -183,6 +183,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--blue)}
     <button class="nb active" onclick="P('cmd')">Command Center</button>
     <button class="nb" onclick="P('verify')">Batch Verification</button>
     <button class="nb" onclick="P('inventory')">Raw Inventory</button>
+    <button class="nb" onclick="P('openpos')">Open POs</button>
     <button class="nb" onclick="P('alerts')">Alerts &amp; Escalations</button>
     <button class="nb" onclick="P('sync')">Sync</button>
     <button class="nb" onclick="P('checklist')">Checklist</button>
@@ -361,7 +362,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--blue)}
   </div>
   <div class="tbl-wrap"><table>
     <thead><tr>
-      <th>SKU</th><th>Description</th><th>QOH</th><th>Required</th><th>PO Qty</th><th>Net Avail</th><th>Status</th>
+      <th>SKU</th><th>Description</th><th>QOH</th><th>Required</th><th>PO Qty</th><th>Vendor</th><th>Next Delivery</th><th>Net Avail</th><th>Status</th>
     </tr></thead>
     <tbody id="inv-tbody"></tbody>
   </table></div>
@@ -399,6 +400,33 @@ select:focus,input:focus,textarea:focus{border-color:var(--blue)}
   <div class="card">
     <div class="card-title">Batches Currently Blocked</div>
     <div id="blocked-list" style="font-size:10px;color:var(--text2)">Loading...</div>
+  </div>
+</div></div>
+
+<!-- v6.34cc: OPEN POS — dedicated view of the Open PO Report data, pre-filtered to chemicals (8-*) for Compound Coordinator. -->
+<div class="page" id="page-openpos"><div class="content">
+  <div id="openpo-status" style="font-size:10px;margin-bottom:8px;padding:6px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:5px"></div>
+  <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center">
+    <input type="text" id="openpo-search" placeholder="🔍 Search SKU / vendor / PO #..." oninput="renderOpenPOs()" autocomplete="off"
+           style="flex:1;min-width:220px;padding:5px 8px;font:inherit;font-size:10px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text)">
+    <label style="font-size:9px;color:var(--text3);display:flex;align-items:center;gap:5px">
+      Sort:
+      <select id="openpo-sort" onchange="renderOpenPOs()" style="padding:3px 6px;font:inherit;font-size:10px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text)">
+        <option value="date">Required Date (earliest)</option>
+        <option value="vendor">Vendor</option>
+        <option value="sku">SKU</option>
+        <option value="qty_desc">Qty (largest)</option>
+      </select>
+    </label>
+  </div>
+  <div class="tbl-wrap"><table>
+    <thead><tr>
+      <th>Required</th><th>SKU</th><th>Description</th><th>Vendor</th><th>PO #</th><th>Qty Ordered</th>
+    </tr></thead>
+    <tbody id="openpo-tbody"></tbody>
+  </table></div>
+  <div style="margin-top:12px;font-size:9px;color:var(--text3);font-style:italic">
+    Filtered to chemical SKUs (8-*) from the Open PO Report upload. Upload the file in Data Upload Hub to populate.
   </div>
 </div></div>
 
@@ -1116,7 +1144,7 @@ function showPage(id, map) {
 
 let vFilter='ALL', invFilter='ALL', activeVer=null, alertsSent=[];
 const PM = {cmd:0,verify:1,inventory:2,alerts:3,sync:4,checklist:5};
-function P(id){showPage(id,PM);if(id==='verify')renderVerify();if(id==='inventory')renderInventory();if(id==='alerts')renderAlerts();if(id==='checklist')clInit();}
+function P(id){showPage(id,PM);if(id==='verify')renderVerify();if(id==='inventory')renderInventory();if(id==='openpos')renderOpenPOs();if(id==='alerts')renderAlerts();if(id==='checklist')clInit();}
 
 function getCCStatus(batchId){ return syncGet(batchId).cc?.status||''; }
 
@@ -2161,18 +2189,122 @@ function renderInventory(){
       + '<span style="color:var(--text3);font-size:9px">last upload: ' + ts + '</span>';
   }
 
-  document.getElementById('inv-tbody').innerHTML = rows.map((c,i) => `
+  // v6.34cc: Build PO lookup keyed by SKU. Earliest-required PO wins for
+  // the primary "Next Delivery" display. If multiple POs exist for one
+  // SKU, we show the earliest + a "+N" badge for the extras.
+  var poBySku = (function(){
+    try {
+      var raw = localStorage.getItem('hoc_po_report_v1');
+      if(!raw) return {};
+      var pr = JSON.parse(raw);
+      if(!pr || !Array.isArray(pr.rows)) return {};
+      var lookup = {};
+      pr.rows.forEach(function(r){
+        if(!r.sku) return;
+        if(!lookup[r.sku]) lookup[r.sku] = [];
+        lookup[r.sku].push(r);
+      });
+      // Sort each SKU's POs by required_date ascending (earliest first)
+      Object.keys(lookup).forEach(function(sku){
+        lookup[sku].sort(function(a,b){
+          return String(a.required_date || '9999').localeCompare(String(b.required_date || '9999'));
+        });
+      });
+      return lookup;
+    } catch(e){ return {}; }
+  })();
+
+  document.getElementById('inv-tbody').innerHTML = rows.map((c,i) => {
+    var pos = poBySku[c.sku] || [];
+    var vendorCell = '<span class="t3">—</span>';
+    var deliveryCell = '<span class="t3">—</span>';
+    if(pos.length){
+      var earliest = pos[0];
+      vendorCell = '<span style="font-size:10px">' + (earliest.vendor_name || earliest.vendor_id || '—') + '</span>';
+      if(pos.length > 1){
+        vendorCell += ' <span style="font-size:8px;color:var(--text3)">(+' + (pos.length - 1) + ')</span>';
+      }
+      deliveryCell = earliest.required_date
+        ? '<span style="font-size:10px">' + earliest.required_date + '</span>'
+        : '<span class="t3">—</span>';
+    }
+    return `
     <tr style="background:${i%2?'rgba(255,255,255,.01)':'transparent'}">
       <td style="font-size:10px;color:var(--text2)">${c.sku}</td>
       <td style="font-size:10px">${c.descr}</td>
       <td style="text-align:right">${N(c.qoh)}</td>
       <td style="text-align:right">${N(c.req)}</td>
       <td style="text-align:right;color:var(--teal)">${N(c.po)}</td>
+      <td>${vendorCell}</td>
+      <td>${deliveryCell}</td>
       <td style="text-align:right" class="${c.net<0?'num-red':c.status==='LOW'?'':'num-grn'}">${N(c.net)}</td>
       <td>${rawBadge(c.status)}</td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 function setInv(f){invFilter=f;['ALL','SHORT','LOW','OK'].forEach(x=>document.getElementById('inv-'+x).classList.remove('active'));document.getElementById('inv-'+f).classList.add('active');renderInventory();}
+
+// v6.34cc: Open POs tab renderer. Reads hoc_po_report_v1 (populated by
+// Data Upload Hub upload of Open PO Report). CC filters to chemicals
+// (8-*) since compound room doesn't care about packaging POs. Supports
+// search-as-you-type + sort dropdown.
+function renderOpenPOs(){
+  var tbody = document.getElementById('openpo-tbody');
+  var statusEl = document.getElementById('openpo-status');
+  if(!tbody) return;
+  var pr = null;
+  try {
+    var raw = localStorage.getItem('hoc_po_report_v1');
+    if(raw) pr = JSON.parse(raw);
+  } catch(e){}
+  if(!pr || !Array.isArray(pr.rows) || !pr.rows.length){
+    tbody.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--text3);font-style:italic;font-size:11px">No Open PO Report uploaded. Upload in Data Upload Hub to populate this view.</td></tr>';
+    if(statusEl) statusEl.innerHTML = '<span style="color:var(--amber)">⚠ No Open PO data</span>';
+    return;
+  }
+  // Filter to chemicals only for Compound Coordinator
+  var rows = pr.rows.filter(function(r){ return String(r.sku||'').indexOf('8-') === 0; });
+  var totalChemicalPOs = rows.length;
+  // Apply search
+  var q = String((document.getElementById('openpo-search')||{}).value || '').trim().toLowerCase();
+  if(q){
+    rows = rows.filter(function(r){
+      var hay = (r.sku + ' ' + r.desc + ' ' + r.vendor_name + ' ' + r.vendor_id + ' ' + r.po_number).toLowerCase();
+      return hay.indexOf(q) !== -1;
+    });
+  }
+  // Apply sort
+  var sortMode = (document.getElementById('openpo-sort')||{value:'date'}).value;
+  rows.sort(function(a, b){
+    if(sortMode === 'vendor')  return String(a.vendor_name||'').localeCompare(String(b.vendor_name||''));
+    if(sortMode === 'sku')     return String(a.sku||'').localeCompare(String(b.sku||''));
+    if(sortMode === 'qty_desc')return (parseFloat(b.qty_ordered)||0) - (parseFloat(a.qty_ordered)||0);
+    // default: date ascending (earliest first)
+    return String(a.required_date || '9999').localeCompare(String(b.required_date || '9999'));
+  });
+  // Status header
+  if(statusEl){
+    var uploaded = pr._updated ? new Date(pr._updated).toLocaleString() : 'unknown';
+    statusEl.innerHTML = '<b>' + rows.length + '</b> of ' + totalChemicalPOs + ' chemical PO line(s)'
+      + ' <span style="color:var(--text3)">· last upload: ' + uploaded + '</span>';
+  }
+  // Render rows
+  tbody.innerHTML = rows.map(function(r, i){
+    var today = new Date().toISOString().slice(0,10);
+    var late = r.required_date && r.required_date < today;
+    var soon = r.required_date && !late && r.required_date <= new Date(Date.now() + 7*86400000).toISOString().slice(0,10);
+    var dateColor = late ? 'var(--red)' : (soon ? 'var(--amber)' : 'var(--text)');
+    var dateLabel = late ? ' <span style="font-size:8px;color:var(--red);font-weight:700">LATE</span>' : '';
+    return '<tr style="background:' + (i%2 ? 'rgba(255,255,255,.01)' : 'transparent') + '">'
+      + '<td style="font-size:10px;color:' + dateColor + ';font-weight:600">' + (r.required_date || '—') + dateLabel + '</td>'
+      + '<td style="font-size:10px;color:var(--text2)">' + r.sku + '</td>'
+      + '<td style="font-size:10px">' + (r.desc || '—') + '</td>'
+      + '<td style="font-size:10px">' + (r.vendor_name || r.vendor_id || '—') + '</td>'
+      + '<td style="font-size:10px;color:var(--text3)">' + (r.po_number || '—') + '</td>'
+      + '<td style="text-align:right;color:var(--teal)">' + N(r.qty_ordered) + '</td>'
+      + '</tr>';
+  }).join('');
+}
 
 function renderAlerts(){
   const all=syncRead();
@@ -2276,6 +2408,19 @@ setInterval(function() {
   try { reloadBatches(); renderAll(); } catch(err) {}
 }, 30000);
 renderInventory();
+
+// v6.34cc: URL hash → open specific tab. Home tile links use this so
+// clicking the Open POs tile on the home page lands you directly on the
+// Open POs tab rather than the default Command Center view.
+(function(){
+  try {
+    var h = window.location.hash;
+    if(h && h.length > 1){
+      var target = h.slice(1);
+      if(typeof P === 'function') P(target);
+    }
+  } catch(e){}
+})();
 
 // ═══════════════════════════════════════════════════════════════════════
 // v6.34s — Compound Coordinator Checklist module
