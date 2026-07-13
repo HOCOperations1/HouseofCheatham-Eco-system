@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34cd">
+<meta name="hoc-build" content="v6.34ce">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Compound Coordinator</title>
@@ -338,6 +338,8 @@ select:focus,input:focus,textarea:focus{border-color:var(--blue)}
       <span style="color:var(--text3)">Short by:</span>
       <span id="short-dlg-diff" style="color:var(--red);font-weight:700">—</span>
     </div>
+    <!-- v6.34ce: PO Coverage panel — populated by openShortDialog. Shown/hidden based on whether SKU has a PO on the Open PO Report. -->
+    <div id="short-dlg-po-panel" style="display:none;margin-bottom:10px;padding:6px 10px;border-radius:4px;font-size:10px;line-height:1.4"></div>
     <div style="margin-bottom:12px">
       <div style="font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Reason / Notes</div>
       <textarea id="short-dlg-reason" placeholder="e.g. damaged tote, expired, mislabeled bin, wrong lot..." style="width:100%;padding:5px 8px;font:inherit;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);min-height:50px;resize:vertical"></textarea>
@@ -700,6 +702,51 @@ function openShortDialog(batchId, sku, desc, qtyNeed, qtyHave){
   document.getElementById('short-dlg-have').value = qtyHave || 0;
   document.getElementById('short-dlg-reason').value = '';
   updateShortDialogDiff();
+  // v6.34ce: Populate PO Coverage panel from Open PO Report
+  (function populatePOPanel(){
+    var panel = document.getElementById('short-dlg-po-panel');
+    if(!panel) return;
+    var pos = [];
+    try {
+      var raw = localStorage.getItem('hoc_po_report_v1');
+      if(raw){
+        var pr = JSON.parse(raw);
+        if(pr && Array.isArray(pr.rows)){
+          pos = pr.rows.filter(function(r){ return r.sku === sku; })
+            .sort(function(a,b){
+              return String(a.required_date || '9999').localeCompare(String(b.required_date || '9999'));
+            });
+        }
+      }
+    } catch(e){}
+    var gap = (parseFloat(qtyNeed) || 0) - (parseFloat(qtyHave) || 0);
+    if(pos.length){
+      var totalPoQty = pos.reduce(function(s,p){ return s + (parseFloat(p.qty_ordered)||0); }, 0);
+      var qtyDisplay = totalPoQty.toLocaleString(undefined, {maximumFractionDigits:1});
+      var covers = totalPoQty >= gap;
+      var lines = pos.slice(0,3).map(function(p){
+        return '• ' + (p.po_number||'—') + ' · ' + (p.vendor_name||p.vendor_id||'Vendor') +
+          ' · ' + (parseFloat(p.qty_ordered)||0).toLocaleString(undefined,{maximumFractionDigits:1}) + ' lb · due ' + (p.required_date||'—');
+      }).join('<br>');
+      var extra = pos.length > 3 ? '<br><span style="color:#888">…+' + (pos.length-3) + ' more</span>' : '';
+      panel.style.background = covers ? '#e6f4ea' : '#fff8e1';
+      panel.style.border = '1px solid ' + (covers ? '#4caf50' : '#f5c452');
+      panel.style.color = covers ? '#1b5e20' : '#5a4200';
+      panel.innerHTML = '<strong>PO Coverage: ' + (covers ? 'PO covers gap' : 'PARTIAL (' + qtyDisplay + ' of ' + gap.toLocaleString(undefined,{maximumFractionDigits:1}) + ' lb needed)') + '</strong><br>' + lines + extra +
+        '<br><span style="font-size:9px;margin-top:3px;display:inline-block">' +
+        (covers ? 'Suggested action: <strong>WAIT for PO</strong>' : 'Suggested action: <strong>PARTIAL WAIT + escalate remainder</strong>') +
+        '</span>';
+      panel.style.display = 'block';
+    } else {
+      panel.style.background = '#fdecea';
+      panel.style.border = '1px solid #d32f2f';
+      panel.style.color = '#5a0000';
+      panel.innerHTML = '<strong>PO Coverage: No PO on order</strong><br>' +
+        'This SKU is not on the Open PO Report. Cannot wait.<br>' +
+        '<span style="font-size:9px">Suggested action: <strong>ESCALATE to Planning</strong> — expedite purchase or substitute</span>';
+      panel.style.display = 'block';
+    }
+  })();
   // Wire live diff computation
   document.getElementById('short-dlg-need').oninput = updateShortDialogDiff;
   document.getElementById('short-dlg-have').oninput = updateShortDialogDiff;
@@ -1744,6 +1791,49 @@ function openVD(id){
         var gStr = g.toLocaleString(undefined, {maximumFractionDigits: gDec});
         return lbStr + ' lbs <span style="color:#666;font-size:9px">(' + gStr + ' g)</span>';
       }
+      // v6.34ce: Build PO lookup from Open PO Report so each SHORT item can
+      // show whether a PO is on order + suggested action. Earliest-due PO
+      // wins. If the on-order qty covers the shortfall it's "PO covers gap";
+      // if it's partial, "PO partial"; if no PO, needs escalation/remake.
+      //
+      // ASTERISK CONVENTION: SKU is prefixed with '*' when a PO exists on
+      // the Open PO Report. Survives print. Universally readable.
+      var poBySku634ce = (function(){
+        try {
+          var raw = localStorage.getItem('hoc_po_report_v1');
+          if(!raw) return {};
+          var pr = JSON.parse(raw);
+          if(!pr || !Array.isArray(pr.rows)) return {};
+          var lookup = {};
+          pr.rows.forEach(function(r){
+            if(!r.sku) return;
+            if(!lookup[r.sku]) lookup[r.sku] = [];
+            lookup[r.sku].push(r);
+          });
+          Object.keys(lookup).forEach(function(sku){
+            lookup[sku].sort(function(a,b){
+              return String(a.required_date || '9999').localeCompare(String(b.required_date || '9999'));
+            });
+          });
+          return lookup;
+        } catch(e){ return {}; }
+      })();
+      // Rollup: how many of THIS batch's shortages have PO coverage?
+      var shortCovered634ce = 0, shortUncovered634ce = 0;
+      chems.forEach(function(it){
+        var have = it.qoh, need = it.qty_need;
+        if(have >= need) return;
+        var pos = poBySku634ce[it.sku] || [];
+        if(pos.length) shortCovered634ce++;
+        else shortUncovered634ce++;
+      });
+      if(shortCovered634ce + shortUncovered634ce > 0){
+        html += '<div style="margin:6px 0;padding:6px 10px;background:#fff8e1;border:1px solid #f5c452;border-radius:4px;font-size:10px;color:#5a4200;line-height:1.4">' +
+          '<strong>Shortage summary:</strong> ' +
+          shortCovered634ce + ' with PO coverage (marked <strong>*</strong>) · ' +
+          shortUncovered634ce + ' need remake or escalation' +
+          '</div>';
+      }
       // Render one item per chemical — no blank slot padding (per user request)
       chems.forEach(function(it, i){
         var need = it.qty_need;
@@ -1751,6 +1841,11 @@ function openVD(id){
         var hasStock = have >= need;
         var isVerified = !!itemVerified[it.sku];
         var skuEsc = String(it.sku || '').replace(/"/g, '&quot;');
+        // v6.34ce: PO lookup for this SKU
+        var posForSku = poBySku634ce[it.sku] || [];
+        var hasPO = posForSku.length > 0;
+        // Asterisk marker: SKU prefix if PO exists on Open PO Report
+        var skuDisplay = (hasPO ? '<strong>*</strong>' : '') + (it.sku || '');
         var needDisplay = formatBoth(need);
         var haveDisplay = formatBoth(have);
         var needLabel = 'Quantity Needed (LBS / G)';
@@ -1770,11 +1865,11 @@ function openVD(id){
         }
         html += '<div class="cpitem">';
         html += '<div class="cpitem-h">' +
-          '<span>Item #' + (i + 1) + ' &nbsp; <span style="font-weight:400;font-size:10px;color:#555">' + (it.sku || '') + '</span></span>' +
+          '<span>Item #' + (i + 1) + ' &nbsp; <span style="font-weight:400;font-size:10px;color:#555">' + skuDisplay + '</span></span>' +
           '<span>' + statusHtml + '</span>' +
           '</div>';
         html += '<div class="cpitem-row">' +
-          '<div>' + (it.sku || '') + (it.desc ? ' — ' + it.desc : '') + '</div>' +
+          '<div>' + skuDisplay + (it.desc ? ' — ' + it.desc : '') + '</div>' +
           '<div>' + needDisplay + '</div>' +
           '<div>' + haveDisplay + '</div>' +
           '<div>&nbsp;</div>' +
@@ -1787,6 +1882,55 @@ function openVD(id){
           '</div>';
         if(it.location){
           html += '<div class="cpitem-loc">📍 Storage location: <strong>' + it.location + '</strong></div>';
+        }
+        // v6.34ce: PO hint line — only shown when item is SHORT.
+        // Green if PO qty covers gap, amber if partial, red if no PO.
+        // Print-friendly (no icons, plain text with asterisk convention).
+        if(!hasStock){
+          var gap634ce = need - have;
+          var poHintHtml;
+          if(hasPO){
+            var nextPO = posForSku[0];
+            var totalPoQty = posForSku.reduce(function(s,p){ return s + (parseFloat(p.qty_ordered)||0); }, 0);
+            var vendor = nextPO.vendor_name || nextPO.vendor_id || 'Vendor';
+            var poNum = nextPO.po_number || '—';
+            var reqDate = nextPO.required_date || '—';
+            var qtyDisplay = totalPoQty.toLocaleString(undefined, {maximumFractionDigits:1});
+            var multiPO = posForSku.length > 1 ? ' (+' + (posForSku.length - 1) + ' more PO' + (posForSku.length>2?'s':'') + ')' : '';
+            // Days until PO arrives
+            var daysOut = null;
+            if(reqDate && /^\d{4}-\d{2}-\d{2}$/.test(reqDate)){
+              var poDate = new Date(reqDate + 'T00:00:00');
+              var today = new Date(); today.setHours(0,0,0,0);
+              daysOut = Math.round((poDate - today) / 86400000);
+            }
+            var daysLabel = daysOut === null ? '' : (daysOut < 0 ? ' · <strong>' + Math.abs(daysOut) + 'd LATE</strong>' : daysOut === 0 ? ' · <strong>due today</strong>' : ' · in ' + daysOut + 'd');
+            var coversLabel, hintBg, hintBorder, hintColor, action;
+            if(totalPoQty >= gap634ce){
+              coversLabel = 'PO covers gap';
+              hintBg = '#e6f4ea'; hintBorder = '#4caf50'; hintColor = '#1b5e20';
+              action = 'Suggested action: <strong>WAIT</strong> — PO arrival covers this shortfall';
+            } else {
+              coversLabel = 'PO partial (' + qtyDisplay + ' of ' + gap634ce.toLocaleString(undefined,{maximumFractionDigits:1}) + ' lb needed)';
+              hintBg = '#fff8e1'; hintBorder = '#f5c452'; hintColor = '#5a4200';
+              action = 'Suggested action: <strong>PARTIAL WAIT + REMAKE remainder</strong>';
+            }
+            poHintHtml = '<div style="margin-top:4px;padding:5px 8px;background:' + hintBg + ';border:1px solid ' + hintBorder + ';border-radius:3px;font-size:10px;color:' + hintColor + ';line-height:1.4">' +
+              '<strong>' + coversLabel + '</strong>' + daysLabel + '<br>' +
+              'PO ' + poNum + ' · ' + vendor + ' · ' + qtyDisplay + ' lb ordered · due ' + reqDate + multiPO + '<br>' +
+              '<span style="font-size:9px">' + action + '</span>' +
+              '</div>';
+          } else {
+            // No PO on order — needs escalation or remake
+            // Note: 8-* chemicals are purchased (not compounded in-house),
+            // so "remake" doesn't apply — this is an escalation.
+            poHintHtml = '<div style="margin-top:4px;padding:5px 8px;background:#fdecea;border:1px solid #d32f2f;border-radius:3px;font-size:10px;color:#5a0000;line-height:1.4">' +
+              '<strong>No PO on order</strong><br>' +
+              'Not on Open PO Report · Cannot wait<br>' +
+              '<span style="font-size:9px">Suggested action: <strong>ESCALATE to Planning</strong> — expedite purchase or substitute</span>' +
+              '</div>';
+          }
+          html += poHintHtml;
         }
         html += '<div class="cpitem-sigs">' +
           '<div>Compound Coordinator Initials</div>' +

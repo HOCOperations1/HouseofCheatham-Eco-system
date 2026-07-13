@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34cd">
+<meta name="hoc-build" content="v6.34ce">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Production Coordinator</title>
@@ -1496,6 +1496,35 @@ function renderPlacardPreview(){
   if(countEl) countEl.textContent = p ? p.items.length : 0;
   if(!p){ wrap.innerHTML = ''; return; }
 
+  // v6.34ce: Build QOH + PO lookups so each item can be evaluated for
+  // shortage + PO coverage. Same asterisk convention as CC placard.
+  var qohBySku634ce = {};
+  var poBySku634ce = {};
+  try {
+    var up = JSON.parse(localStorage.getItem('hoc_upload_v1') || '{}');
+    if(Array.isArray(up.inventory)){
+      up.inventory.forEach(function(inv){ qohBySku634ce[inv.sku] = parseFloat(inv.qoh) || 0; });
+    }
+  } catch(e){}
+  try {
+    var raw = localStorage.getItem('hoc_po_report_v1');
+    if(raw){
+      var pr = JSON.parse(raw);
+      if(pr && Array.isArray(pr.rows)){
+        pr.rows.forEach(function(r){
+          if(!r.sku) return;
+          if(!poBySku634ce[r.sku]) poBySku634ce[r.sku] = [];
+          poBySku634ce[r.sku].push(r);
+        });
+        Object.keys(poBySku634ce).forEach(function(sku){
+          poBySku634ce[sku].sort(function(a,b){
+            return String(a.required_date || '9999').localeCompare(String(b.required_date || '9999'));
+          });
+        });
+      }
+    }
+  } catch(e){}
+
   // Header
   var html = '<div class="ph-header">' +
     '<div class="ph-doc">LG-010-00 · Production Lines Staging Process</div>' +
@@ -1514,18 +1543,47 @@ function renderPlacardPreview(){
     html += '<div style="font-size:10px;font-style:italic;color:#444;margin-bottom:6px">Product: '+p.desc+'</div>';
   }
 
+  // v6.34ce: Shortage-summary rollup — count items where QOH < need,
+  // split by PO-covered vs uncovered. Only render if there are shortages.
+  var shortCov634ce = 0, shortUncov634ce = 0;
+  p.items.forEach(function(it){
+    if(!it) return;
+    var need = parseFloat(it.qty_need) || 0;
+    var have = qohBySku634ce[it.sku] || 0;
+    if(have >= need) return;
+    if((poBySku634ce[it.sku] || []).length) shortCov634ce++;
+    else shortUncov634ce++;
+  });
+  if(shortCov634ce + shortUncov634ce > 0){
+    html += '<div style="margin:6px 0;padding:6px 10px;background:#fff8e1;border:1px solid #f5c452;border-radius:4px;font-size:10px;color:#5a4200;line-height:1.4">' +
+      '<strong>Shortage summary:</strong> ' +
+      shortCov634ce + ' with PO coverage (marked <strong>*</strong>) · ' +
+      shortUncov634ce + ' need remake or escalation' +
+      '</div>';
+  }
+
   // Items 1-10 — render filled slots from data, then blank slots up to 10
   for(var i = 0; i < 10; i++){
     var it = p.items[i];
     html += '<div class="pitem">';
     if(it){
+      // v6.34ce: Compute shortage status + asterisk for PO'd items
+      var need634ce = parseFloat(it.qty_need) || 0;
+      var have634ce = qohBySku634ce[it.sku] || 0;
+      var hasStock634ce = have634ce >= need634ce;
+      var posForSku634ce = poBySku634ce[it.sku] || [];
+      var hasPO634ce = posForSku634ce.length > 0;
+      var skuDisplay634ce = (hasPO634ce ? '<strong>*</strong>' : '') + (it.sku || '');
+      var shortMarker634ce = hasStock634ce
+        ? ''
+        : ' <span style="color:#c00;font-weight:700;font-size:9px;margin-left:6px">⚠ SHORT</span>';
       // Remove button (hidden on print via .no-print)
       html += '<div style="display:flex;justify-content:space-between;align-items:flex-start">' +
-        '<div class="pitem-h">Item #'+(i+1)+'</div>' +
+        '<div class="pitem-h">Item #'+(i+1) + shortMarker634ce + '</div>' +
         '<button class="no-print" onclick="removePlacardItem('+i+')" style="font:inherit;font-size:9px;padding:1px 6px;background:transparent;border:1px solid #ccc;color:#888;border-radius:3px;cursor:pointer">remove</button>' +
         '</div>';
       html += '<div class="pitem-row">' +
-        '<div>'+(it.sku||'')+(it.desc ? ' — '+it.desc : '')+'</div>' +
+        '<div>'+skuDisplay634ce+(it.desc ? ' — '+it.desc : '')+'</div>' +
         '<div>'+(it.qty_need ? Number(it.qty_need).toLocaleString() : '&nbsp;')+'</div>' +
         '<div>&nbsp;</div>' +
         '<div>&nbsp;</div>' +
@@ -1538,6 +1596,53 @@ function renderPlacardPreview(){
         '</div>';
       if(it.location){
         html += '<div style="font-size:10px;color:#555;margin-bottom:4px">📍 Pick location: <strong>'+it.location+'</strong></div>';
+      }
+      // v6.34ce: PO hint under short items. Semi-finished (2-*) can be
+      // remade in-house; packaging (7-*, 9-*) must be purchased.
+      if(!hasStock634ce){
+        var gap634ce = need634ce - have634ce;
+        var firstChar634ce = String(it.sku||'').charAt(0);
+        var isSemiFin634ce = firstChar634ce === '2';  // remake path available
+        var hint634ce;
+        if(hasPO634ce){
+          var nextPO634ce = posForSku634ce[0];
+          var totalPO634ce = posForSku634ce.reduce(function(s,po){ return s + (parseFloat(po.qty_ordered)||0); }, 0);
+          var qtyStr634ce = totalPO634ce.toLocaleString(undefined,{maximumFractionDigits:0});
+          var vendor634ce = nextPO634ce.vendor_name || nextPO634ce.vendor_id || 'Vendor';
+          var poNum634ce = nextPO634ce.po_number || '—';
+          var reqDate634ce = nextPO634ce.required_date || '—';
+          var multi634ce = posForSku634ce.length > 1 ? ' (+' + (posForSku634ce.length - 1) + ' more)' : '';
+          var daysOut634ce = null;
+          if(reqDate634ce && /^\d{4}-\d{2}-\d{2}$/.test(reqDate634ce)){
+            var pd634ce = new Date(reqDate634ce + 'T00:00:00');
+            var td634ce = new Date(); td634ce.setHours(0,0,0,0);
+            daysOut634ce = Math.round((pd634ce - td634ce) / 86400000);
+          }
+          var daysLbl634ce = daysOut634ce === null ? '' : (daysOut634ce < 0 ? ' · <strong>' + Math.abs(daysOut634ce) + 'd LATE</strong>' : daysOut634ce === 0 ? ' · <strong>due today</strong>' : ' · in ' + daysOut634ce + 'd');
+          var covers634ce = totalPO634ce >= gap634ce;
+          var bg634ce = covers634ce ? '#e6f4ea' : '#fff8e1';
+          var bd634ce = covers634ce ? '#4caf50' : '#f5c452';
+          var col634ce = covers634ce ? '#1b5e20' : '#5a4200';
+          var action634ce = covers634ce
+            ? 'Suggested action: <strong>WAIT</strong> — PO covers shortfall'
+            : 'Suggested action: <strong>PARTIAL WAIT + escalate remainder</strong>';
+          hint634ce = '<div style="margin-top:4px;padding:5px 8px;background:' + bg634ce + ';border:1px solid ' + bd634ce + ';border-radius:3px;font-size:10px;color:' + col634ce + ';line-height:1.4">' +
+            '<strong>' + (covers634ce ? 'PO covers gap' : 'PO partial') + '</strong>' + daysLbl634ce + '<br>' +
+            'PO ' + poNum634ce + ' · ' + vendor634ce + ' · ' + qtyStr634ce + ' units ordered · due ' + reqDate634ce + multi634ce + '<br>' +
+            '<span style="font-size:9px">' + action634ce + '</span>' +
+            '</div>';
+        } else {
+          // No PO — semi-finished can be remade in-house, packaging must be ordered
+          var noPoAction634ce = isSemiFin634ce
+            ? 'Suggested action: <strong>REMAKE</strong> — semi-finished bulk, produce in-house'
+            : 'Suggested action: <strong>ESCALATE to Planning</strong> — expedite purchase or substitute';
+          hint634ce = '<div style="margin-top:4px;padding:5px 8px;background:#fdecea;border:1px solid #d32f2f;border-radius:3px;font-size:10px;color:#5a0000;line-height:1.4">' +
+            '<strong>No PO on order</strong><br>' +
+            'Not on Open PO Report' + (isSemiFin634ce ? ' · in-house material' : '') + '<br>' +
+            '<span style="font-size:9px">' + noPoAction634ce + '</span>' +
+            '</div>';
+        }
+        html += hint634ce;
       }
     } else {
       html += '<div class="pitem-h" style="color:#bbb">Item #'+(i+1)+' <span style="font-weight:400;font-size:9px">(empty)</span></div>';
