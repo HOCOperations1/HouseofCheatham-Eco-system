@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34bz">
+<meta name="hoc-build" content="v6.34cb">
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -221,6 +221,18 @@ input:focus,select:focus,textarea:focus{border-color:var(--blue)}
         <div class="drop-title">StopsReport (Patch)</div>
         <div class="drop-sub">Per-line top-loss categories from Patch · powers Top Loss on Production Supervisor line cards</div>
         <div class="drop-status" id="status-ps" style="color:var(--text3)">Drop file here or click to browse</div>
+      </div>
+    </div>
+
+    <!-- v6.34cb: Open PO Report — vendor + delivery-date info for open POs. -->
+    <div>
+      <div style="font-size:10px;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.08em">📋 Open PO Report</div>
+      <div class="drop-zone" id="zone-openpo" onclick="document.getElementById('file-openpo').click()" ondragover="dragOver(event,'openpo')" ondragleave="dragLeave('openpo')" ondrop="dropFile(event,'openpo')">
+        <input type="file" id="file-openpo" accept=".xlsx,.xls,.csv" style="display:none" onchange="loadFile(this.files[0],'openpo')">
+        <div class="drop-icon">📋</div>
+        <div class="drop-title">Open PO Report</div>
+        <div class="drop-sub">Vendor · PO # · Item · Qty Ordered · Required Date · one row per line item</div>
+        <div class="drop-status" id="status-openpo" style="color:var(--text3)">Drop file here or click to browse</div>
       </div>
     </div>
   </div>
@@ -946,7 +958,7 @@ function parseAttainmentPaste(rows, statusEl){
 // ═══════════════════════════════════════════════════════════════════
 
 function checkReady() {
-  document.getElementById('update-btn').disabled = !(loaded.pt || loaded.pd || loaded.nmp || loaded.co || loaded.lb || loaded.ls || loaded.po || loaded.ps);
+  document.getElementById('update-btn').disabled = !(loaded.pt || loaded.pd || loaded.nmp || loaded.co || loaded.lb || loaded.ls || loaded.po || loaded.ps || loaded.openpo);
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -2050,6 +2062,91 @@ function updateAllDashboards() {
         }
       }
 
+      // ── v6.34cb: Parse Open PO Report ────────────────────────────
+      // Expected columns (may have whitespace or slight naming variance):
+      //   Vendor ID | Vendor Name | PO Number | Item Number |
+      //   Item Description | QTY Ordered | Required Date
+      //
+      // Persisted as: hoc_po_report_v1 = { rows: [...], _updated }
+      // No downstream consumer yet — data stored for later use by
+      // inventory / procurement views. See Compound Coordinator + Open PO
+      // integration in future release.
+      if(loaded.openpo) {
+        progress('Reading Open PO Report...');
+        try {
+          var wbPO = loaded.openpo.wb;
+          var poSheetName = wbPO.SheetNames[0];  // first sheet
+          var poSheet = wbPO.Sheets[poSheetName];
+          if(!poSheet){
+            progress('⚠ Open PO Report: no sheets found', 'warn');
+          } else {
+            var poRawRows = XLSX.utils.sheet_to_json(poSheet, {defval:'', raw:false});
+            // Whitespace-tolerant field accessor — same pattern used
+            // for Planning Data. Handles " Vendor ID " / "Vendor ID"
+            // header variants without silent drops.
+            function fpo(row, name){
+              if(row[name] !== undefined) return row[name];
+              for(var k in row){
+                if(String(k).trim() === name) return row[k];
+              }
+              return undefined;
+            }
+            var poRows = [];
+            var vendors = {};
+            var skus = {};
+            poRawRows.forEach(function(r){
+              var sku = String(fpo(r, 'Item Number') || '').trim();
+              if(!sku) return;  // skip blank rows
+              var qty = parseFloat(fpo(r, 'QTY Ordered') || 0) || 0;
+              var reqDate = fpo(r, 'Required Date');
+              // Normalize date: XLSX serial → ISO string, or pass through
+              var reqIso = '';
+              if(reqDate instanceof Date){
+                reqIso = reqDate.toISOString().slice(0, 10);
+              } else if(typeof reqDate === 'number' && reqDate > 0){
+                // Excel serial date (days since 1899-12-30)
+                var d = new Date(Math.round((reqDate - 25569) * 86400 * 1000));
+                if(!isNaN(d.getTime())) reqIso = d.toISOString().slice(0, 10);
+              } else if(typeof reqDate === 'string' && reqDate.trim()){
+                reqIso = reqDate.trim();
+              }
+              var vendorName = String(fpo(r, 'Vendor Name') || '').trim();
+              var vendorId   = String(fpo(r, 'Vendor ID') || '').trim();
+              var poNumber   = String(fpo(r, 'PO Number') || '').trim();
+              var desc       = String(fpo(r, 'Item Description') || '').trim();
+              poRows.push({
+                sku:         sku,
+                desc:        desc,
+                vendor_id:   vendorId,
+                vendor_name: vendorName,
+                po_number:   poNumber,
+                qty_ordered: qty,
+                required_date: reqIso
+              });
+              vendors[vendorId || vendorName] = true;
+              skus[sku] = true;
+            });
+            var poPayload = {
+              rows: poRows,
+              _updated: ts,
+              _source: loaded.openpo.name || 'Open_PO_Report'
+            };
+            try {
+              localStorage.setItem('hoc_po_report_v1', JSON.stringify(poPayload));
+            } catch(e){
+              progress('⚠ Open PO Report: localStorage full', 'warn');
+            }
+            result.po_report = poPayload;
+            result.po_report_ts = ts;
+            progress('✓ Open PO Report: ' + poRows.length + ' line items · '
+              + Object.keys(skus).length + ' unique SKUs · '
+              + Object.keys(vendors).length + ' vendors', 'ok');
+          }
+        } catch(e){
+          progress('⚠ Open PO Report parse failed: ' + e.message, 'warn');
+        }
+      }
+
       // ── Parse Planning Data ───────────────────────────────────────
       if(loaded.pd) {
         progress('Reading Planning Data (Vicinity)...');
@@ -2082,6 +2179,32 @@ function updateAllDashboards() {
           });
           var inventory = Object.values(byComp).map(function(c) {
             var net = c.qoh + c.po_qty - Math.abs(c.prod_req);
+            // v6.34ca: Real coverage-based status.
+            // Old logic (net < 0 = LOW, else OK) never produced SHORT and
+            // rarely produced LOW because most SKUs have PO qty large
+            // enough to make net non-negative. That hid genuine near-outs
+            // from operators.
+            //
+            // Coverage = (QOH + PO) / |prod_req|
+            //   SHORT: coverage < 1.0   (won't cover next scheduled production)
+            //   LOW:   1.0 <= cov < 1.5 (covers but no buffer — running thin)
+            //   OK:    coverage >= 1.5   OR   no production requirement
+            //
+            // Chemistry (8-*) categorized by prefix since descriptions vary
+            // too much for reliable keyword match.
+            var demand = Math.abs(c.prod_req);
+            var supply = c.qoh + c.po_qty;
+            var status;
+            if(demand <= 0){
+              status = 'OK';  // no requirement → nothing to be short of
+            } else {
+              var coverage = supply / demand;
+              if(coverage < 1.0)      status = 'SHORT';
+              else if(coverage < 1.5) status = 'LOW';
+              else                    status = 'OK';
+            }
+            // Also carry the coverage number for optional display/sort
+            var coverage = demand > 0 ? Math.round((supply / demand) * 100) / 100 : null;
             // v6.34bz: Derive comp_type from description keywords so
             // Production Coordinator's category tabs (Bottles / Caps /
             // Labels / Cartons / Jars) actually filter. Prior to this
@@ -2101,7 +2224,8 @@ function updateAllDashboards() {
             else if(sku.indexOf('1-') === 0) comp_type = 'Finished Good';
             return Object.assign({}, c, {
               net: Math.round(net*100)/100,
-              status: net < 0 ? 'LOW' : 'OK',
+              status: status,
+              coverage: coverage,
               qoh: Math.round(c.qoh*100)/100,
               po_qty: Math.round(c.po_qty*100)/100,
               prod_req: Math.round(c.prod_req*100)/100,
@@ -2908,6 +3032,8 @@ function clearAllData() {
   localStorage.removeItem('hoc_cars');
   // v6.34bo: Per-item verified state on Compound Coordinator
   localStorage.removeItem('hoc_cc_item_verified_v1');
+  // v6.34cb: Open PO Report (vendor + delivery-date info for open POs)
+  localStorage.removeItem('hoc_po_report_v1');
   // v6.34aq: also clear new keys + BOM
   localStorage.removeItem('hoc_chem_pulls_req_v1');
   // v6.34ba: also clear NMP isolated storage

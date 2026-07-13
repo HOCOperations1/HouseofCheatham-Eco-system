@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head>
-<meta name="hoc-build" content="v6.34bz">
+<meta name="hoc-build" content="v6.34cb">
 
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HOC Compound Coordinator</title>
@@ -2102,14 +2102,33 @@ function renderInventory(){
     return 0;
   }
   function fields(c){
+    // v6.34ca: status may already be set by parser (v6.34ca+). Fall back
+    // to same coverage-based logic for legacy uploads or edge cases where
+    // status is missing. Same thresholds: SHORT < 1.0x, LOW < 1.5x, OK
+    // otherwise (or no requirement).
+    var qoh = num(c, ['qoh', 'qty_on_hand', 'qty', 'quantity', 'on_hand']);
+    var req = num(c, ['prod_req', 'req', 'requirement', 'production']);
+    var po  = num(c, ['po_qty', 'po', 'purchase_order', 'on_order']);
+    var derivedStatus;
+    if(c.status){
+      derivedStatus = c.status;
+    } else {
+      var demand = Math.abs(req);
+      var supply = qoh + po;
+      if(demand <= 0)                 derivedStatus = 'OK';
+      else if((supply / demand) < 1.0) derivedStatus = 'SHORT';
+      else if((supply / demand) < 1.5) derivedStatus = 'LOW';
+      else                             derivedStatus = 'OK';
+    }
     return {
       sku:     c.sku || c.SKU || c.ComponentId || '',
       descr:   c.descr || c.desc || c.description || c.ComponentDescription || '—',
-      qoh:     num(c, ['qoh', 'qty_on_hand', 'qty', 'quantity', 'on_hand']),
-      req:     num(c, ['prod_req', 'req', 'requirement', 'production']),
-      po:      num(c, ['po_qty', 'po', 'purchase_order', 'on_order']),
+      qoh:     qoh,
+      req:     req,
+      po:      po,
       net:     num(c, ['net']),
-      status:  c.status || (num(c, ['net']) < 0 ? 'LOW' : 'OK')
+      status:  derivedStatus,
+      coverage: c.coverage != null ? c.coverage : (Math.abs(req) > 0 ? Math.round(((qoh + po) / Math.abs(req)) * 100) / 100 : null)
     };
   }
 
