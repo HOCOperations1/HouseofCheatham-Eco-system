@@ -273,12 +273,22 @@
     document.title = fileTag;
 
     // 2. Inject print-only header + footer (removed after print)
+    // v6.34cg: Read version from meta tag instead of hardcoding — was
+    // stuck on "v6.34ak" for months, giving every exported PDF a wrong
+    // version label.
+    var pdfVer = '';
+    try {
+      var vm = document.querySelector('meta[name="hoc-oes-version"]') ||
+               document.querySelector('meta[name="hoc-build"]') ||
+               document.querySelector('meta[name="version"]');
+      if (vm) pdfVer = vm.getAttribute('content') || '';
+    } catch(e){}
     var header = document.createElement('div');
     header.className = 'hoc-print-header';
     header.id = '__hoc_print_header';
     header.innerHTML =
       '<div class="h-title">House of Cheatham · ' + escapeHTML(dashName) + '</div>' +
-      '<div class="h-meta">Generated ' + escapeHTML(dateStr) + ' at ' + escapeHTML(timeStr) + ' · HOC-OES v6.34ak</div>';
+      '<div class="h-meta">Generated ' + escapeHTML(dateStr) + ' at ' + escapeHTML(timeStr) + ' · HOC-OES ' + escapeHTML(pdfVer || 'v?') + '</div>';
     document.body.insertBefore(header, document.body.firstChild);
 
     var footer = document.createElement('div');

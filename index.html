@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="hoc-build" content="v6.34ce">
+<meta name="hoc-build" content="v6.34cg">
 
 <meta charset="UTF-8">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -130,12 +130,25 @@ html,body{min-height:100%;background:var(--bg);color:var(--text)}
 
 <script>
 // v6.34h: Version stamp + badge. Bump on every deploy.
-var HOC_OES_VERSION = 'v6.34cc-20260713';
-var HOC_OES_BUILD_TS = '1779870500';
+// v6.34cg: This is now the SINGLE source of truth for version display.
+// The visible badge in the topbar (id="ver-badge") is auto-populated
+// from this constant on load, so bumping here propagates everywhere.
+var HOC_OES_VERSION = 'v6.34cg-20260713';
 if(localStorage.getItem('hoc_oes_version') !== HOC_OES_VERSION){
   localStorage.setItem('hoc_oes_version', HOC_OES_VERSION);
   console.log('[HOC-OES] Version updated to ' + HOC_OES_VERSION);
 }
+// v6.34cg: Force topbar badge to match HOC_OES_VERSION on load. Prevents
+// stale hardcoded values in the HTML from misleading operators about
+// which version they're actually on.
+document.addEventListener('DOMContentLoaded', function(){
+  var badge = document.getElementById('ver-badge');
+  if(badge){
+    // Show short form only (v6.34cf), not the date suffix
+    var shortVer = HOC_OES_VERSION.split('-')[0];
+    badge.textContent = shortVer;
+  }
+});
 // v6.34h: dynamic month labels in topbar + KPIs
 (function(){
   var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -163,7 +176,7 @@ if(localStorage.getItem('hoc_oes_version') !== HOC_OES_VERSION){
   <div class="tb-logo">HC</div>
   <div>
     <div class="tb-title">HOC-OES</div>
-    <div class="tb-sub">House of Cheatham Operational Ecosystem · <span id="hoc-month-year">May 2026</span> · <span id="ver-badge" style="background:rgba(34,197,94,.15);color:#22C55E;padding:1px 6px;border-radius:4px;font-weight:700;font-family:ui-monospace;font-size:9px;letter-spacing:.05em">v6.34cc</span> · <a href="reset.html" style="color:#8899AA;font-size:9px;text-decoration:underline;margin-left:6px">reset cache</a></div>
+    <div class="tb-sub">House of Cheatham Operational Ecosystem · <span id="hoc-month-year">May 2026</span> · <span id="ver-badge" style="background:rgba(34,197,94,.15);color:#22C55E;padding:1px 6px;border-radius:4px;font-weight:700;font-family:ui-monospace;font-size:9px;letter-spacing:.05em">v6.34cg</span> · <a href="reset.html" style="color:#8899AA;font-size:9px;text-decoration:underline;margin-left:6px">reset cache</a></div>
   </div>
   <div class="tb-right">
     <div class="sync-pill" onclick="toggleSync()">
@@ -971,47 +984,11 @@ async function installPWA() {
   deferredInstall = null;
 }
 
-// Service worker — with auto-update detection (v6.34e: cache-bypass for sw.js itself)
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(function(reg){
-    // Check for updates every 60 seconds while page is open
-    setInterval(function(){ reg.update().catch(function(){}); }, 60000);
-
-    // When a new service worker is waiting, notify the user
-    reg.addEventListener('updatefound', function(){
-      var newWorker = reg.installing;
-      if(!newWorker) return;
-      newWorker.addEventListener('statechange', function(){
-        if(newWorker.state === 'installed' && navigator.serviceWorker.controller){
-          // New version is ready
-          if(confirm('A new version of HOC-OES is available. Reload now to update?')){
-            newWorker.postMessage('SKIP_WAITING');
-            window.location.reload();
-          }
-        }
-      });
-    });
-  }).catch(function(){});
-
-  // When the new SW takes over, force a reload so the user gets fresh code
-  var reloading = false;
-  navigator.serviceWorker.addEventListener('controllerchange', function(){
-    if(reloading) return;
-    reloading = true;
-    window.location.reload();
-  });
-
-  // v6.34e: Listen for SW_UPDATED postMessage from new SW activation.
-  // When received, soft-reload the page so the user sees fresh content
-  // without needing to manually unregister the SW or hard-refresh.
-  navigator.serviceWorker.addEventListener('message', function(e){
-    if(e.data && e.data.type === 'SW_UPDATED'){
-      if(reloading) return;
-      reloading = true;
-      window.location.reload();
-    }
-  });
-}
+// Service worker registration + update flow is handled by hoc_updater.js
+// (loaded at the bottom of the page). Previously this block used a
+// crappy window.confirm() dialog to prompt for reload — hoc_updater
+// replaces it with a persistent version chip + safe auto-reload that
+// waits for the operator to be idle before reloading.
 
 // Watch for sync changes
 window.addEventListener('storage', function(e) {
@@ -1438,5 +1415,6 @@ function closeQuickStart(){
 </script>
 
 <script src="hoc_events.js"></script>
+<script src="hoc_updater.js"></script>
 </body>
 </html>
